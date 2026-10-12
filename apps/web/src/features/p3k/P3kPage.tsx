@@ -5,6 +5,7 @@ import { id as idLocale } from 'date-fns/locale';
 import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
 import { P3kInspectionModal } from './P3kInspectionModal';
 import { petakanGridP3k } from './petaApi';
+import { UnduhPdfButton } from '@/components/ui';
 import {
   useKotakP3k,
   useInspeksiP3k,
@@ -13,7 +14,6 @@ import {
   useHapusInspeksiP3k,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { ApprovalBar, UnduhPdfButton } from '@/components/ui';
 import type { ApiInspeksiP3k } from '@/services/api/klien';
 import {
   MONTH_KEYS,

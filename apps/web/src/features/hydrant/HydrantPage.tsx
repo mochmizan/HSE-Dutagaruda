@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ArrowLeft,
   Flame,
@@ -7,11 +7,7 @@ import {
   AlertCircle,
   Plus,
   Search,
-  Filter,
   MapPin,
-  Calendar,
-  User,
-  ShieldCheck,
   ChevronRight,
   ChevronLeft,
   ChevronDown,
@@ -21,17 +17,11 @@ import {
   LayoutGrid,
   Check,
   X,
-  XCircle,
-  HelpCircle,
   Camera,
 } from 'lucide-react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import {
-  HydrantUnitItem,
-  InspectionReport,
-  HydrantInspectionStatus,
-} from '../../types/hse';
+import { HydrantUnitItem, InspectionReport } from '../../types/hse';
 import { HydrantInspectionModal } from './HydrantInspectionModal';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';

@@ -4,7 +4,6 @@ import {
   Flame,
   Camera,
   Trash2,
-  Upload,
   Lock,
 } from 'lucide-react';
 import {

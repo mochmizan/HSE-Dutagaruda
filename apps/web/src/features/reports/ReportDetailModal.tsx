@@ -4,11 +4,6 @@ import {
   Calendar,
   MapPin,
   User,
-  Download,
-  Printer,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
   FileCheck,
   Edit3,
 } from 'lucide-react';
