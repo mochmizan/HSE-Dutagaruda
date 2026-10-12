@@ -10,8 +10,8 @@ import {
   useHapusTemuanPatroli,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { ApprovalBar, WORKFLOW_ORDER, PhotoCard, EmptyState, type ApprovalRole } from '@/components/ui';
-import type { ReportWorkflowStatus } from '@/types/hse';
+import { ApprovalBar, PhotoCard, EmptyState } from '@/components/ui';
+import type { ApiLaporanPatroli } from '@/services/api/klien';
 
 interface PatrolPageProps {
   onBack: () => void;
@@ -45,14 +45,12 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
     [laporanQuery.data],
   );
 
-  // Alur persetujuan laporan (sama di semua halaman inspeksi; terkunci saat Disetujui)
-  const [workflow, setWorkflow] = useState<ReportWorkflowStatus>('Draft');
-  const [role, setRole] = useState<ApprovalRole>('Danru');
-  const locked = workflow === 'Approved';
-  const advanceWorkflow = (next: ReportWorkflowStatus) => {
-    const idx = WORKFLOW_ORDER.indexOf(workflow);
-    if (WORKFLOW_ORDER[idx + 1] === next) setWorkflow(next);
-  };
+  // Alur persetujuan laporan terbaru (laporan = rekam patroli tersimpan).
+  const laporanTerbaru: ApiLaporanPatroli | null = useMemo(() => {
+    const daftar = laporanQuery.data ?? [];
+    return [...daftar].sort((a, b) => b.patrolDate.localeCompare(a.patrolDate))[0] ?? null;
+  }, [laporanQuery.data]);
+  const statusLaporan = laporanTerbaru?.approvalStatus ?? 'DRAFT';
 
   const sorted = useMemo(
     () => [...findings].sort((a, b) => b.tanggal.localeCompare(a.tanggal)),
@@ -98,7 +96,6 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            disabled={locked}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#2f80ed] rounded-[4px] hover:brightness-95 pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Camera size={13} strokeWidth={2.2} /> Tambah Foto
@@ -114,13 +111,13 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Alur persetujuan laporan (layar saja; sama di semua halaman inspeksi) */}
+      {/* Alur persetujuan laporan terbaru (layar saja; sama di semua halaman inspeksi) */}
       <ApprovalBar
-        workflow={workflow}
-        role={role}
+        category="patrol"
+        refId={laporanTerbaru?.id ?? null}
+        status={statusLaporan}
+        submittedById={laporanTerbaru?.approvalSubmittedById ?? null}
         accent="#2f80ed"
-        onRoleChange={setRole}
-        onAdvance={advanceWorkflow}
       />
 
       {/* Stats */}
@@ -186,7 +183,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
                   key={finding.id}
                   imageUrl={finding.photoUrl}
                   caption={finding.caption}
-                  onDelete={locked ? undefined : () => handleDelete(finding.id)}
+                  onDelete={() => handleDelete(finding.id)}
                 />
               ))}
             </div>

@@ -13,8 +13,8 @@ import {
   useHapusInspeksiP3k,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { ApprovalBar, WORKFLOW_ORDER, type ApprovalRole } from '@/components/ui';
-import type { ReportWorkflowStatus } from '@/types/hse';
+import { ApprovalBar } from '@/components/ui';
+import type { ApiInspeksiP3k } from '@/services/api/klien';
 import {
   MONTH_KEYS,
   MONTH_NAMES,
@@ -64,13 +64,21 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
     [kotak, inspeksiQuery.data, year],
   );
 
-  // Alur persetujuan laporan (sama di semua halaman inspeksi; terkunci saat Disetujui)
-  const [workflow, setWorkflow] = useState<ReportWorkflowStatus>('Draft');
-  const [role, setRole] = useState<ApprovalRole>('Danru');
-  const locked = workflow === 'Approved';
-  const advanceWorkflow = (next: ReportWorkflowStatus) => {
-    const idx = WORKFLOW_ORDER.indexOf(workflow);
-    if (WORKFLOW_ORDER[idx + 1] === next) setWorkflow(next);
+  // Alur persetujuan: per bulan (satu rekam inspeksi per bulan). Bulan terbuka kini.
+  const inspeksiBulanAktif: ApiInspeksiP3k | null = useMemo(() => {
+    if (!activeMonth || !kotak) return null;
+    return (
+      (inspeksiQuery.data ?? []).find(
+        (i) => i.boxId === kotak.id && i.period.startsWith(`${year}-${activeMonth}`),
+      ) ?? null
+    );
+  }, [activeMonth, kotak, inspeksiQuery.data, year]);
+  const bulanTerkunci = (m: string): boolean => {
+    if (!kotak) return false;
+    const baris = (inspeksiQuery.data ?? []).find(
+      (i) => i.boxId === kotak.id && i.period.startsWith(`${year}-${m}`),
+    );
+    return baris != null && baris.approvalStatus !== 'DRAFT';
   };
 
   const stats = useMemo(() => {
@@ -168,14 +176,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Alur persetujuan laporan (layar saja; sama di semua halaman inspeksi) */}
-      <ApprovalBar
-        workflow={workflow}
-        role={role}
-        accent="#27ae60"
-        onRoleChange={setRole}
-        onAdvance={advanceWorkflow}
-      />
+      {/* Alur persetujuan pindah ke modal isi bulan (satu rekam per bulan) */}
 
       {/* Stats */}
       <div className="no-print grid grid-cols-3 gap-3 mb-4">
@@ -245,10 +246,14 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (locked) return;
+                        if (bulanTerkunci(m)) return;
                         setActiveMonth(m);
                       }}
-                      title={locked ? 'Laporan Disetujui — terkunci' : `Isi ${MONTH_NAMES[i]} ${year}`}
+                      title={
+                        bulanTerkunci(m)
+                          ? 'Laporan terkunci — menunggu persetujuan'
+                          : `Isi ${MONTH_NAMES[i]} ${year}`
+                      }
                       className="no-print inline-flex items-center gap-1 font-bold hover:text-[#27ae60] pressable cursor-pointer tabular-nums"
                     >
                       {MONTH_SHORT[i]}
@@ -345,6 +350,8 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
         isOpen={activeMonth !== null}
         monthLabel={activeIdx >= 0 ? `${MONTH_NAMES[activeIdx]} ${year}` : ''}
         initial={activeData}
+        terkunci={bulanTerkunci(activeMonth ?? '')}
+        inspeksi={inspeksiBulanAktif}
         onClose={() => setActiveMonth(null)}
         onSave={(data) => {
           if (activeMonth && kotak) {

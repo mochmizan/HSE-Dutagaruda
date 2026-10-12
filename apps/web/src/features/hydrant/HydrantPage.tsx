@@ -36,8 +36,9 @@ import { HydrantInspectionModal } from './HydrantInspectionModal';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';
 import { HydrantFindingItem } from './types';
-import { ApprovalBar, PhotoCard, WORKFLOW_ORDER, type ApprovalRole } from '@/components/ui';
-import type { ReportWorkflowStatus } from '../../types/hse';
+import { PhotoCard } from '@/components/ui';
+import { livePhotoUrl } from '@/services/api/liveClient';
+import type { FotoTampil } from '@/services/api/queries';
 import {
   petakanUnitHidran,
   useUnitHidran,
@@ -45,8 +46,11 @@ import {
   useSimpanInspeksiHidran,
   useBuatUnitHidran,
   useUbahUnitHidran,
+  useUnggahFoto,
+  useHapusFoto,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import type { ApiInspeksiHidran } from '@/services/api/klien';
 
 interface HydrantPageProps {
   onBack: () => void;
@@ -71,14 +75,15 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
   const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
   const [isAddFindingModalOpen, setIsAddFindingModalOpen] = useState(false);
 
-  // Alur persetujuan laporan (sama di semua halaman inspeksi; terkunci saat Disetujui)
-  const [workflow, setWorkflow] = useState<ReportWorkflowStatus>('Draft');
-  const [role, setRole] = useState<ApprovalRole>('Danru');
-  const locked = workflow === 'Approved';
-  const advanceWorkflow = (next: ReportWorkflowStatus) => {
-    const idx = WORKFLOW_ORDER.indexOf(workflow);
-    if (WORKFLOW_ORDER[idx + 1] === next) setWorkflow(next);
-  };
+  // Foto bukti per inspeksi (id baris inspeksi → daftar foto sesi; API belum punya daftar foto).
+  const [fotoHidran, setFotoHidran] = useState<Record<string, FotoTampil[]>>({});
+  const unggahFoto = useUnggahFoto();
+  const hapusFoto = useHapusFoto();
+  const inspeksiAktif: ApiInspeksiHidran | null = activeInspectionUnit
+    ? (inspeksiQuery.data ?? []).find(
+        (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
+      ) ?? null
+    : null;
 
   // Month navigation state
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date(2026, 8, 1));
@@ -220,6 +225,36 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
 
   const handleAddZone = (_zoneName: string) => {
     // Zona dibuat bersama unit pada handleAddHydrantUnits (butuh siteId).
+  };
+
+  const handleUnggahFoto = (file: File, caption: string) => {
+    if (!inspeksiAktif) return;
+    const inspectionId = inspeksiAktif.id;
+    unggahFoto.mutate(
+      { kind: 'hydrant', inspectionId, file, caption },
+      {
+        onSuccess: (foto) =>
+          setFotoHidran((prev) => ({
+            ...prev,
+            [inspectionId]: [
+              ...(prev[inspectionId] ?? []),
+              { id: foto.id, url: livePhotoUrl(foto.id), caption },
+            ],
+          })),
+      },
+    );
+  };
+
+  const handleHapusFoto = (fotoId: string) => {
+    if (!inspeksiAktif) return;
+    const inspectionId = inspeksiAktif.id;
+    hapusFoto.mutate(fotoId, {
+      onSuccess: () =>
+        setFotoHidran((prev) => ({
+          ...prev,
+          [inspectionId]: (prev[inspectionId] ?? []).filter((f) => f.id !== fotoId),
+        })),
+    });
   };
 
   const handleAddHydrantUnits = (newItems: HydrantCreationItem[]) => {
@@ -395,7 +430,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
             <button
               type="button"
               onClick={() => setIsAddZoneModalOpen(true)}
-              disabled={locked}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eb5757] hover:bg-[#d94444] text-white text-xs font-semibold rounded-[4px] shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus size={14} strokeWidth={2.5} />
@@ -414,15 +448,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
           </div>
         </div>
       </div>
-
-      {/* Alur persetujuan laporan (layar saja; sama di semua halaman inspeksi) */}
-      <ApprovalBar
-        workflow={workflow}
-        role={role}
-        accent="#eb5757"
-        onRoleChange={setRole}
-        onAdvance={advanceWorkflow}
-      />
 
       {/* 4 Summary Stats Cards (Screen view) */}
       <div className="no-print grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -731,12 +756,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
                     <tr
                       key={unit.id}
                       onClick={() => {
-                        if (locked) {
-                          if (unit.status === 'SELESAI' && unit.completedReport) {
-                            onOpenReportDetail?.(unit.completedReport);
-                          }
-                          return;
-                        }
                         if (unit.status === 'SELESAI' && unit.completedReport) {
                           onOpenReportDetail?.(unit.completedReport);
                         } else {
@@ -999,7 +1018,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
                     ) : (
                       <button
                         type="button"
-                        disabled={locked}
                         onClick={() => setActiveInspectionUnit(unit)}
                         className="px-3 py-1 text-xs font-semibold rounded-[4px] bg-[#eb5757] hover:bg-[#d94444] text-white shadow-xs cursor-pointer flex items-center gap-1 pressable disabled:opacity-40 disabled:cursor-not-allowed"
                       >
@@ -1035,7 +1053,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
           <button
             type="button"
             onClick={() => setIsAddFindingModalOpen(true)}
-            disabled={locked}
             className="no-print px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#eb5757] hover:bg-[#d94444] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Camera size={13} strokeWidth={2.2} />
@@ -1063,7 +1080,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
                   key={finding.id}
                   imageUrl={finding.imageUrl}
                   caption={finding.description}
-                  onDelete={locked ? undefined : () => handleDeleteFinding(finding.id)}
+                  onDelete={() => handleDeleteFinding(finding.id)}
                   deleteTitle="Hapus temuan"
                 />
               ))}
@@ -1112,6 +1129,11 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
       <HydrantInspectionModal
         unit={activeInspectionUnit}
         isOpen={Boolean(activeInspectionUnit)}
+        inspeksi={inspeksiAktif}
+        foto={inspeksiAktif ? (fotoHidran[inspeksiAktif.id] ?? []) : []}
+        mengunggah={unggahFoto.isPending}
+        onUnggahFoto={handleUnggahFoto}
+        onHapusFoto={handleHapusFoto}
         onClose={() => setActiveInspectionUnit(null)}
         onSaveDraft={handleSaveDraft}
         onCompleteInspection={handleCompleteInspection}

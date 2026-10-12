@@ -3,13 +3,10 @@ import { parseISO } from 'date-fns';
 import { formatIndonesianDate } from '../../lib/dates';
 import type { AparUnitItem, AparYearCell, AparYearGrid } from '../../types/hse';
 
-export type AparCardRole = 'Danru' | 'Operational' | 'BuildingManagement';
-
 interface AparYearCardProps {
   unit: AparUnitItem;
   period: string; // YYYY-MM — bulan laporan ditandai sebagai baris berjalan
-  role: AparCardRole;
-  locked: boolean; // true saat alur kerja Approved
+  locked: boolean; // true saat rekam bulan sudah diajukan (bukan Draf)
   year: string;
   onYearChange: (year: string) => void;
   grid: AparYearGrid;
@@ -46,13 +43,11 @@ const fallbackCell = (): AparYearCell => ({
 export const AparYearCard: React.FC<AparYearCardProps> = ({
   unit,
   period,
-  role,
   locked,
   year,
   onYearChange,
   grid,
 }) => {
-  void role;
   const [reportYear, reportMonth] = period.split('-');
   // Baris bulan laporan hanya ditandai; sunting lewat modal inspeksi.
   const highlightMonth: string | null = reportYear === year ? reportMonth : null;

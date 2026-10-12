@@ -12,14 +12,12 @@ import {
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { AparUnitItem, AparYearCell, AparYearGrid, InspectionReport, ReportWorkflowStatus } from '../../types/hse';
+import type { AparUnitItem, AparYearGrid, InspectionReport } from '../../types/hse';
 import type { OverallStatus } from '../../types/domain';
 import { AddZoneAparModal, type AparCreationItem } from './AddZoneAparModal';
 import { AparInspectionModal } from './AparInspectionModal';
 import { ReportDetailModal } from '../reports/ReportDetailModal';
 import {
-  draftToYearCell,
-  emptyYearCell,
   emptyYearGrid,
   resolveReportCell,
   countChecked,
@@ -28,7 +26,8 @@ import {
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
 import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
-import { ApprovalBar, WORKFLOW_ORDER, PrintButton, type ApprovalRole } from '@/components/ui';
+import { ApprovalBar, PrintButton } from '@/components/ui';
+import { livePhotoUrl } from '@/services/api/liveClient';
 import {
   COMPONENT_LABELS,
   ComponentChip,
@@ -43,8 +42,12 @@ import {
   useSimpanInspeksiApar,
   useBuatUnitApar,
   useUbahUnitApar,
+  useUnggahFoto,
+  useHapusFoto,
+  type FotoTampil,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import type { ApiInspeksiApar } from '@/services/api/klien';
 
 // ─────────────────────────────────────────────────────────────
 // DATA — konstanta tampilan khusus halaman APAR (UI-only)
@@ -114,9 +117,16 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
   // Tahun kartu diangkat ke halaman agar sinkronisasi tahu konteks tahun.
   const [cardYear, setCardYear] = useState<string>('2026');
 
-  // Alur kerja laporan + peran (UI-only)
-  const [workflow, setWorkflow] = useState<ReportWorkflowStatus>('Draft');
-  const [role, setRole] = useState<ApprovalRole>('Danru');
+  // Alur kerja laporan: tersimpan per baris inspeksi (bilah di dalam modal inspeksi).
+  // Bulan terkunci bila ada rekam inspeksi bulan ini yang sudah diajukan.
+  const bulanTerkunci = (inspeksiQuery.data ?? []).some(
+    (i) => i.period.startsWith(period) && i.approvalStatus !== 'DRAFT',
+  );
+
+  // Foto dokumentasi per inspeksi (id baris inspeksi → daftar foto sesi).
+  const [fotoApar, setFotoApar] = useState<Record<string, FotoTampil[]>>({});
+  const unggahFoto = useUnggahFoto();
+  const hapusFoto = useHapusFoto();
 
   // Tanda tangan dokumen (UI-only, dapat diketik; default dari APAR_SIGNATURES)
   const [sigNames, setSigNames] = useState<string[]>([
@@ -235,10 +245,9 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
     scrollToCard();
   };
 
-  // Klik baris tabel → pilih kartu (terkunci saat laporan Disetujui: pilih saja).
+  // Klik baris tabel → pilih kartu; modal inspeksi mengatur kunci suntingan sendiri.
   const handleOpenInspection = (unit: AparUnitItem) => {
     setSelectedKode(unit.kode);
-    if (workflow === 'Approved') return;
     setActiveInspectionUnit(unit);
   };
 
@@ -348,6 +357,46 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
     scrollToCard();
   };
 
+  // ── Foto dokumentasi: unggahan nyata per slot (Kartu, Berat, Pengecekan) ──
+
+  const inspeksiAktif: ApiInspeksiApar | null = activeInspectionUnit
+    ? (inspeksiQuery.data ?? []).find(
+        (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
+      ) ?? null
+    : null;
+
+  const handleUnggahFoto = (slot: 'Kartu' | 'Berat' | 'Pengecekan', file: File) => {
+    if (!inspeksiAktif) return;
+    const inspectionId = inspeksiAktif.id;
+    const caption =
+      slot === 'Kartu' ? 'Kartu APAR' : slot === 'Berat' ? 'Penimbangan CO2' : 'Pengecekan fisik';
+    unggahFoto.mutate(
+      { kind: 'apar', inspectionId, file, caption },
+      {
+        onSuccess: (foto) =>
+          setFotoApar((prev) => ({
+            ...prev,
+            [inspectionId]: [
+              ...(prev[inspectionId] ?? []),
+              { id: foto.id, url: livePhotoUrl(foto.id), caption },
+            ],
+          })),
+      },
+    );
+  };
+
+  const handleHapusFoto = (fotoId: string) => {
+    if (!inspeksiAktif) return;
+    const inspectionId = inspeksiAktif.id;
+    hapusFoto.mutate(fotoId, {
+      onSuccess: () =>
+        setFotoApar((prev) => ({
+          ...prev,
+          [inspectionId]: (prev[inspectionId] ?? []).filter((f) => f.id !== fotoId),
+        })),
+    });
+  };
+
   const handlePrintReport = () => {
     document.body.classList.add('printing-report');
     window.print();
@@ -359,10 +408,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
     window.print();
   };
 
-  const advanceWorkflow = (next: ReportWorkflowStatus) => {
-    const idx = WORKFLOW_ORDER.indexOf(workflow);
-    if (WORKFLOW_ORDER[idx + 1] === next) setWorkflow(next);
-  };
+  // Peran bilah persetujuan kini datang dari rekam inspeksi (tanpa pemilih peran lokal).
 
   // ── Modal tambah zona & unit APAR (menyimpan ke API) ──
   const handleAddZone = (_zoneName: string) => {
@@ -507,14 +553,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* b. Alur kerja laporan (layar saja) */}
-      <ApprovalBar
-        workflow={workflow}
-        role={role}
-        accent={APAR_ACCENT}
-        onRoleChange={setRole}
-        onAdvance={advanceWorkflow}
-      />
+      {/* b. Bilah persetujuan berada di dalam modal inspeksi (satu rekam per unit-bulan) */}
 
       {/* c. 4 kartu statistik (layar saja) */}
       <div className="no-print grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -891,7 +930,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
                 onChange={(e) =>
                   setSigNames((prev) => prev.map((v, i) => (i === s.idx ? e.target.value : v)))
                 }
-                readOnly={workflow !== 'Draft'}
+                readOnly={bulanTerkunci}
                 aria-label={`Nama ${s.caption}`}
                 className="no-print w-full bg-transparent text-left font-bold text-[var(--primary)] border-b border-black/70 hover:border-black focus:border-black focus:outline-none read-only:opacity-80 px-0 py-0.5"
               />
@@ -901,7 +940,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
                 onChange={(e) =>
                   setSigRoles((prev) => prev.map((v, i) => (i === s.idx ? e.target.value : v)))
                 }
-                readOnly={workflow !== 'Draft'}
+                readOnly={bulanTerkunci}
                 aria-label={`Jabatan ${s.caption}`}
                 className="no-print mt-0.5 w-full bg-transparent text-left text-[11px] text-[var(--muted)] border-b border-transparent hover:border-[var(--border)] focus:border-[var(--border)] focus:outline-none read-only:opacity-80 px-0 py-0.5"
               />
@@ -981,8 +1020,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
             <AparYearCard
               unit={selectedUnit}
               period={period}
-              role={role}
-              locked={workflow === 'Approved'}
+              locked={bulanTerkunci}
               year={cardYear}
               onYearChange={setCardYear}
               grid={activeGrid}
@@ -998,6 +1036,11 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
       <AparInspectionModal
         unit={activeInspectionUnit}
         isOpen={activeInspectionUnit !== null}
+        inspeksi={inspeksiAktif}
+        foto={inspeksiAktif ? (fotoApar[inspeksiAktif.id] ?? []) : []}
+        mengunggah={unggahFoto.isPending}
+        onUnggahFoto={handleUnggahFoto}
+        onHapusFoto={handleHapusFoto}
         onClose={() => setActiveInspectionUnit(null)}
         onSaveDraft={handleSaveInspectionDraft}
         onCompleteInspection={handleCompleteInspection}

@@ -7,3 +7,4 @@ export * from './Switchers';
 export * from './cards';
 export * from './ConfirmModal';
 export * from './ApprovalBar';
+export * from './FileFotoButton';

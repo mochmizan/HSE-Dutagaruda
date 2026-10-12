@@ -1,14 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, ShieldCheck, Camera, Upload, Trash2 } from 'lucide-react';
+import { X, ShieldCheck, Camera, Trash2, Lock } from 'lucide-react';
 import type { AparUnitItem } from '../../types/hse';
 import type { AparComponentStatus, OverallStatus } from '../../types/domain';
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
+import { ApprovalBar, FileFotoButton } from '@/components/ui';
+import type { ApiInspeksiApar } from '@/services/api/klien';
+import type { FotoTampil } from '@/services/api/queries';
 
 type AparDraft = NonNullable<AparUnitItem['draftDetails']>;
 
 interface AparInspectionModalProps {
   unit: AparUnitItem | null;
   isOpen: boolean;
+  /** Baris inspeksi tersimpan untuk unit+bulan ini; null = belum ada rekam. */
+  inspeksi: ApiInspeksiApar | null;
+  /** Foto dokumentasi sesi per slot (Kartu / Berat / Pengecekan). */
+  foto: FotoTampil[];
+  /** Status unggahan berjalan (tombol menandai proses). */
+  mengunggah: boolean;
+  onUnggahFoto: (slot: 'Kartu' | 'Berat' | 'Pengecekan', file: File) => void;
+  onHapusFoto: (fotoId: string) => void;
   onClose: () => void;
   onSaveDraft: (unitId: string, draft: AparDraft) => void;
   onCompleteInspection: (unit: AparUnitItem, draft: AparDraft, overall: OverallStatus) => void;
@@ -24,11 +35,18 @@ const COMPONENT_FIELDS: { key: keyof AparDraft & string; label: string; hint: st
   { key: 'katupTuas', label: '7. Katup/Tuas', hint: 'Tuas Penekan' },
 ];
 
+const APAR_ACCENT = '#f2994a';
+
 const OPTIONS: AparComponentStatus[] = ['BAIK', 'TIDAK_BAIK', 'NA'];
 
 export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   unit,
   isOpen,
+  inspeksi,
+  foto,
+  mengunggah,
+  onUnggahFoto,
+  onHapusFoto,
   onClose,
   onSaveDraft,
   onCompleteInspection,
@@ -36,14 +54,11 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   const [values, setValues] = useState<Record<string, AparComponentStatus>>({});
   const [notes, setNotes] = useState('');
   const [tindakLanjut, setTindakLanjut] = useState('');
-  const [photoKartuUrl, setPhotoKartuUrl] = useState('');
-  const [photoBeratUrl, setPhotoBeratUrl] = useState('');
-  const [photoPengecekanUrl, setPhotoPengecekanUrl] = useState('');
   const [overallStatus, setOverallStatus] = useState<OverallStatus>('LAYAK');
   const [isOverridden, setIsOverridden] = useState(false);
-  const kartuFileRef = useRef<HTMLInputElement>(null);
-  const beratFileRef = useRef<HTMLInputElement>(null);
-  const cekFileRef = useRef<HTMLInputElement>(null);
+
+  // Terkunci saat laporan sudah masuk proses persetujuan (bukan Draf).
+  const terkunci = inspeksi != null && inspeksi.approvalStatus !== 'DRAFT';
 
   // Init dari draftDetails, fallback ke completedReport.aparDetails (draft menang).
   useEffect(() => {
@@ -59,9 +74,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
     setValues(next);
     setNotes((draft?.notes as string | undefined) ?? unit.completedReport?.summaryNotes ?? '');
     setTindakLanjut((draft?.tindakLanjut as string | undefined) ?? '');
-    setPhotoKartuUrl((draft?.photoKartuUrl as string | undefined) ?? '');
-    setPhotoBeratUrl((draft?.photoBeratUrl as string | undefined) ?? '');
-    setPhotoPengecekanUrl((draft?.photoPengecekanUrl as string | undefined) ?? '');
     const savedOverall =
       (draft?.overallStatus as OverallStatus | undefined) ?? unit.completedReport?.overallStatus;
     if (savedOverall) {
@@ -118,9 +130,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
     katupTuas: values.katupTuas ?? 'BAIK',
     notes,
     tindakLanjut,
-    photoKartuUrl,
-    photoBeratUrl: isPowder ? '' : photoBeratUrl,
-    photoPengecekanUrl,
     overallStatus,
   });
 
@@ -138,15 +147,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   const setValue = (key: string, v: AparComponentStatus) => {
     setValues((prev) => ({ ...prev, [key]: v }));
     setIsOverridden(false);
-  };
-
-  const handlePhotoFile = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    set: (v: string) => void
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) set(URL.createObjectURL(file));
-    e.target.value = '';
   };
 
   return (
@@ -196,6 +196,22 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
 
         {/* Isi formulir */}
         <form onSubmit={handleComplete} className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Bilah persetujuan (laporan tersimpan saja) */}
+          {inspeksi && (
+            <ApprovalBar
+              category="apar"
+              refId={inspeksi.id}
+              status={inspeksi.approvalStatus}
+              submittedById={inspeksi.approvalSubmittedById}
+              accent={APAR_ACCENT}
+            />
+          )}
+          {terkunci && (
+            <div className="no-print flex items-center gap-2 p-2.5 rounded-[5px] border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-medium">
+              <Lock size={13} className="shrink-0" />
+              <span>Laporan terkunci — menunggu persetujuan. Gunakan “Kembalikan” untuk menyunting lagi.</span>
+            </div>
+          )}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
               Daftar 7 Komponen APAR
@@ -212,6 +228,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
                   </div>
                   <select
                     value={values[f.key] ?? 'BAIK'}
+                    disabled={terkunci}
                     onChange={(e) => setValue(f.key, e.target.value as AparComponentStatus)}
                     className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#f2994a]"
                   >
@@ -239,6 +256,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
               </div>
               <select
                 value={overallStatus}
+                disabled={terkunci}
                 onChange={(e) => {
                   setOverallStatus(e.target.value as OverallStatus);
                   setIsOverridden(true);
@@ -271,6 +289,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             <textarea
               rows={2}
               value={notes}
+              disabled={terkunci}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Contoh: Tekanan pada zona hijau, segel utuh, selang lentur siap pakai…"
               className="w-full text-xs p-2.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#f2994a]"
@@ -285,13 +304,14 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             <textarea
               rows={2}
               value={tindakLanjut}
+              disabled={terkunci}
               onChange={(e) => setTindakLanjut(e.target.value)}
               placeholder="Contoh: Isi ulang tabung & ganti segel sebelum akhir bulan…"
               className="w-full text-xs p-2.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#f2994a]"
             />
           </div>
 
-          {/* Dokumentasi foto — tautan + unggah + pratinjau */}
+          {/* Dokumentasi foto — unggahan nyata ke Garage via /api/uploads */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-[var(--primary)] flex items-center gap-1.5">
               <Camera size={13} />
@@ -299,71 +319,53 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             </label>
             {(
               [
-                { label: 'Kartu', value: photoKartuUrl, set: setPhotoKartuUrl, ref: kartuFileRef, disabled: false, hint: 'Foto kartu gantung APAR' },
-                { label: 'Berat', value: photoBeratUrl, set: setPhotoBeratUrl, ref: beratFileRef, disabled: isPowder, hint: isPowder ? 'Nonaktif untuk APAR Powder (khusus CO₂)' : 'Foto hasil penimbangan (CO₂)' },
-                { label: 'Pengecekan', value: photoPengecekanUrl, set: setPhotoPengecekanUrl, ref: cekFileRef, disabled: false, hint: 'Foto proses pengecekan fisik' },
-              ] as const
-            ).map((f) => (
-              <div key={f.label} className="space-y-1.5 rounded-[5px] border border-[var(--border)] bg-[var(--bg-main)] p-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-24 shrink-0 text-[11px] font-medium text-[var(--secondary)]">{f.label}</span>
-                  <input
-                    type="text"
-                    value={f.value}
-                    disabled={f.disabled}
-                    onChange={(e) => f.set(e.target.value)}
-                    placeholder={f.hint}
-                    className="flex-1 text-xs px-2.5 py-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#f2994a] disabled:opacity-40"
-                  />
-                  <input
-                    ref={f.ref}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handlePhotoFile(e, f.set)}
-                  />
-                  <button
-                    type="button"
-                    disabled={f.disabled}
-                    onClick={() => f.ref.current?.click()}
-                    title={f.disabled ? f.hint : `Unggah foto ${f.label.toLowerCase()} dari perangkat`}
-                    className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] font-semibold rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                  >
-                    <Upload size={12} />
-                    <span>Unggah</span>
-                  </button>
-                </div>
-                {f.value.trim() !== '' && (
-                  <div className="flex items-center gap-2 pl-[104px]">
-                    <a
-                      href={f.value}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={`Buka pratinjau foto ${f.label.toLowerCase()} di tab baru`}
-                      className="w-14 h-14 rounded-[4px] border border-[var(--border)] overflow-hidden flex items-center justify-center bg-[var(--bg-hover)] image-outline shrink-0"
-                    >
-                      <img
-                        src={f.value}
-                        alt={`Dokumentasi ${f.label} APAR ${unit.kode}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => f.set('')}
-                      title={`Hapus foto ${f.label.toLowerCase()}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-[4px] text-red-600 dark:text-red-400 hover:bg-red-500/10 cursor-pointer pressable"
-                    >
-                      <Trash2 size={12} />
-                      <span>Hapus</span>
-                    </button>
+                { slot: 'Kartu' as const, keterangan: 'Kartu APAR', disabled: false, hint: 'Foto kartu gantung APAR' },
+                { slot: 'Berat' as const, keterangan: 'Penimbangan CO2', disabled: isPowder, hint: isPowder ? 'Nonaktif untuk APAR Powder (khusus CO₂)' : 'Foto hasil penimbangan (CO₂)' },
+                { slot: 'Pengecekan' as const, keterangan: 'Pengecekan fisik', disabled: false, hint: 'Foto proses pengecekan fisik' },
+              ]
+            ).map((f) => {
+              const slotFoto = foto.filter((g) => g.caption === f.keterangan);
+              return (
+                <div key={f.slot} className="space-y-1.5 rounded-[5px] border border-[var(--border)] bg-[var(--bg-main)] p-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-24 shrink-0 text-[11px] font-medium text-[var(--secondary)]">{f.slot}</span>
+                    <span className="flex-1 text-[10px] text-[var(--muted)]">{f.hint}</span>
+                    <FileFotoButton
+                      terkunci={terkunci || f.disabled}
+                      belumTersimpan={inspeksi == null}
+                      sibuk={mengunggah}
+                      onFile={(file) => onUnggahFoto(f.slot, file)}
+                    />
                   </div>
-                )}
-              </div>
-            ))}
+                  {slotFoto.length > 0 && (
+                    <div className="flex items-center gap-2 pl-[104px]">
+                      {slotFoto.map((g) => (
+                        <div
+                          key={g.id}
+                          className="relative w-14 h-14 rounded-[4px] border border-[var(--border)] overflow-hidden group image-outline shrink-0"
+                        >
+                          <a href={g.url} target="_blank" rel="noreferrer" title={`Buka pratinjau foto ${f.slot.toLowerCase()} di tab baru`}>
+                            <img
+                              src={g.url}
+                              alt={`Dokumentasi ${f.slot} APAR ${unit.kode}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => onHapusFoto(g.id)}
+                            title="Hapus foto"
+                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/65 text-white/90 hover:text-red-400 hidden group-hover:flex items-center justify-center cursor-pointer"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Kaki */}
@@ -371,7 +373,8 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             <button
               type="button"
               onClick={handleSaveDraft}
-              className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable"
+              disabled={terkunci}
+              className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Simpan Draft
             </button>
@@ -385,7 +388,8 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded-[4px] bg-[#f2994a] hover:bg-[#e08830] text-white text-xs font-semibold shadow-xs cursor-pointer pressable"
+                disabled={terkunci}
+                className="px-4 py-1.5 rounded-[4px] bg-[#f2994a] hover:bg-[#e08830] text-white text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Selesaikan &amp; Terbitkan
               </button>

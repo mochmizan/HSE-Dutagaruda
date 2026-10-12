@@ -15,6 +15,8 @@ import {
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { InspectionReport, CATEGORY_CONFIG } from '../../types/hse';
+import { ApprovalBar, LABEL_STATUS } from '@/components/ui';
+import type { ApiStatusPersetujuan } from '@/services/api/klien';
 
 interface ReportDetailModalProps {
   report: InspectionReport | null;
@@ -50,6 +52,8 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
 
   const meta = CATEGORY_CONFIG[report.category];
   const dateFormatted = format(parseISO(report.date), 'EEEE, d MMMM yyyy · HH:mm', { locale: idLocale });
+  const statusPersetujuan: ApiStatusPersetujuan | undefined = report.approvalStatus;
+  const terkunci = statusPersetujuan != null && statusPersetujuan !== 'DRAFT';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -96,6 +100,16 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
 
         {/* Content Body */}
         <div className="p-4 overflow-y-auto space-y-4 text-xs">
+          {/* Bilah persetujuan (laporan API dengan rekam persetujuan) */}
+          {statusPersetujuan && report.approvalCategory && (
+            <ApprovalBar
+              category={report.approvalCategory}
+              refId={report.id}
+              status={statusPersetujuan}
+              submittedById={null}
+              accent={meta.colorHex}
+            />
+          )}
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 gap-2 p-2.5 bg-[var(--bg-sidebar)]/40 rounded-[5px] border border-[var(--border)]">
             <div className="flex items-center gap-1.5 text-[var(--secondary)]">
@@ -245,17 +259,27 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end px-4 py-2.5 border-t border-[var(--border)] bg-[var(--bg-sidebar)]/50">
+        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--bg-sidebar)]/50">
+          {terkunci && (
+            <span className="mr-auto text-[11px] font-medium text-amber-700 dark:text-amber-400">
+              Laporan terkunci — menunggu persetujuan ({statusPersetujuan ? LABEL_STATUS[statusPersetujuan] : ''}).
+            </span>
+          )}
           <button
             type="button"
             onClick={() => {
-              if (onEdit) {
+              if (onEdit && !terkunci) {
                 onEdit(report);
               } else {
                 onClose();
               }
             }}
-            className="flex items-center gap-1.5 px-3.5 py-1 text-xs bg-[#eb5757] hover:bg-[#d94444] text-white font-semibold rounded-[4px] cursor-pointer pressable shadow-2xs"
+            title={terkunci ? 'Laporan terkunci — menunggu persetujuan' : 'Sunting laporan ini'}
+            className={`flex items-center gap-1.5 px-3.5 py-1 text-xs font-semibold rounded-[4px] cursor-pointer pressable shadow-2xs ${
+              terkunci
+                ? 'bg-[var(--bg-hover)] text-[var(--muted)] cursor-not-allowed'
+                : 'bg-[#eb5757] hover:bg-[#d94444] text-white'
+            }`}
           >
             <Edit3 size={12} strokeWidth={2} />
             <span>Edit</span>

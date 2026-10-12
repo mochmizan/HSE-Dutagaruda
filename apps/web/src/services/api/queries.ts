@@ -383,6 +383,13 @@ export function useUbahButirP3k() {
 
 // ── Mutasi foto inspeksi ──
 
+/** Foto terpasang pada satu inspeksi (dilihat via GET /api/photos/:id presigned). */
+export interface FotoTampil {
+  id: string;
+  url: string;
+  caption: string;
+}
+
 export function useUnggahFoto() {
   return useMutation({
     mutationFn: (args: {
@@ -503,6 +510,8 @@ export function petakanUnitHidran(
         inspectorName: namaPetugas,
         overallStatus: insp.overallStatus as OverallStatus,
         summaryNotes: insp.notes ?? 'Pemeriksaan 6 komponen selesai dan diverifikasi.',
+        approvalStatus: insp.approvalStatus,
+        approvalCategory: 'hydrant' as const,
         hydrantDetails: {
           boxHydrant: insp.boxHydrant,
           fireHose: insp.fireHose,
@@ -576,6 +585,8 @@ export function petakanUnitApar(
         inspectorName: namaPetugas,
         overallStatus: insp.overallStatus as OverallStatus,
         summaryNotes: insp.notes ?? 'Pemeriksaan 7 komponen selesai dan diverifikasi.',
+        approvalStatus: insp.approvalStatus,
+        approvalCategory: 'apar' as const,
         aparDetails: {
           jenis: (u.jenis ?? 'POWDER') as 'POWDER' | 'CO2',
           ukuran: u.ukuran ?? '',
@@ -676,6 +687,8 @@ export function petakanUmpanKeLaporan(
       inspectorName: namaPetugas,
       overallStatus: r.overallStatus as OverallStatus,
       summaryNotes: r.notes ?? undefined,
+      approvalStatus: r.approvalStatus,
+      approvalCategory: 'hydrant' as const,
       hydrantDetails: {
         boxHydrant: r.boxHydrant,
         fireHose: r.fireHose,
@@ -700,6 +713,8 @@ export function petakanUmpanKeLaporan(
       inspectorName: namaPetugas,
       overallStatus: r.overallStatus as OverallStatus,
       summaryNotes: r.notes ?? undefined,
+      approvalStatus: r.approvalStatus,
+      approvalCategory: 'apar' as const,
       aparDetails: {
         jenis: (unit?.jenis ?? 'POWDER') as 'POWDER' | 'CO2',
         ukuran: unit?.ukuran ?? '',
@@ -727,6 +742,8 @@ export function petakanUmpanKeLaporan(
       assetCode: box ? box.name : 'Kotak P3K',
       inspectorName: namaPetugas,
       overallStatus: 'LAYAK' as OverallStatus,
+      approvalStatus: r.approvalStatus,
+      approvalCategory: 'p3k' as const,
       p3kDetails: { boxName: box?.name ?? '', itemsTotal: 21, itemsUnderStandard: 0, needsRestock: false },
     };
   });
@@ -741,6 +758,8 @@ export function petakanUmpanKeLaporan(
     assetCode: 'Patroli K3',
     inspectorName: namaPetugas,
     overallStatus: 'LAYAK' as OverallStatus,
+    approvalStatus: r.approvalStatus,
+    approvalCategory: 'patrol' as const,
     patrolDetails: {
       findingsCount: 0,
       criticalCount: 0,

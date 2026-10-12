@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Lock } from 'lucide-react';
 import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
 import { markFor, type P3kMonthData, type P3kMonthItemData } from './types';
+import { ApprovalBar } from '@/components/ui';
+import type { ApiInspeksiP3k } from '@/services/api/klien';
 
 interface P3kInspectionModalProps {
   isOpen: boolean;
   monthLabel: string;
   initial: P3kMonthData;
+  /** Rekam inspeksi bulan ini; null = belum ada rekam (bilah nonaktif). */
+  inspeksi: ApiInspeksiP3k | null;
+  /** Rekam bulan ini sudah diajukan (bukan Draf). */
+  terkunci: boolean;
   onClose: () => void;
   onSave: (data: P3kMonthData) => void;
   onClear: () => void;
@@ -25,6 +31,8 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   isOpen,
   monthLabel,
   initial,
+  inspeksi,
+  terkunci,
   onClose,
   onSave,
   onClear,
@@ -103,6 +111,25 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
           </button>
         </div>
 
+        {/* Bilah persetujuan (rekam tersimpan saja) + kunci suntingan */}
+        {inspeksi && (
+          <div className="px-4 pt-3">
+            <ApprovalBar
+              category="p3k"
+              refId={inspeksi.id}
+              status={inspeksi.approvalStatus}
+              submittedById={inspeksi.approvalSubmittedById}
+              accent="#27ae60"
+            />
+          </div>
+        )}
+        {terkunci && (
+          <div className="mx-4 mt-2 flex items-center gap-2 p-2.5 rounded-[5px] border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-medium">
+            <Lock size={13} className="shrink-0" />
+            <span>Laporan terkunci — menunggu persetujuan. Gunakan “Kembalikan” untuk menyunting lagi.</span>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
           {STANDARD_P3K_ITEMS.map((item) => {
             const row = items[item.id] ?? { actual: '', expired: false };
@@ -167,7 +194,8 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
           <button
             type="button"
             onClick={onClear}
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer"
+            disabled={terkunci}
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
           >
             <Trash2 size={12} /> Hapus Bulan Ini
           </button>
@@ -182,7 +210,8 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
             <button
               type="button"
               onClick={() => onSave(draft)}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-[#27ae60] rounded-[4px] hover:brightness-95 pressable cursor-pointer"
+              disabled={terkunci}
+              className="px-3 py-1.5 text-xs font-semibold text-white bg-[#27ae60] rounded-[4px] hover:brightness-95 pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Simpan
             </button>
