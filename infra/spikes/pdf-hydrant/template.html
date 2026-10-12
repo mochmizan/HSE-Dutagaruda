@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Laporan Pemeriksaan Berkala Hydrant Gedung – September 2026</title>
+<style>
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('inter-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('inter-700.woff2') format('woff2');
+}
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+* {
+  box-sizing: border-box;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 8pt;
+  line-height: 1.45;
+  color: #111827;
+  background: #ffffff;
+}
+.num { font-variant-numeric: tabular-nums; }
+.doc-head {
+  border-bottom: 2px solid #111827;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.doc-head h1 {
+  font-size: 13pt;
+  font-weight: 700;
+  margin: 0 0 2px 0;
+  letter-spacing: 0.01em;
+}
+.doc-head .std {
+  font-size: 7.5pt;
+  color: #4b5563;
+  margin: 0 0 6px 0;
+}
+.meta {
+  display: table;
+  width: 100%;
+  font-size: 8pt;
+}
+.meta > div { display: table-row; }
+.meta dt {
+  display: table-cell;
+  font-weight: 700;
+  white-space: nowrap;
+  padding-right: 8px;
+  width: 110px;
+}
+.meta dd { display: table-cell; margin: 0; }
+h2.sec {
+  font-size: 9.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 14px 0 6px 0;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #111827;
+}
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 7.5pt;
+}
+table.grid th {
+  background: #f3f4f6;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 7pt;
+}
+table.grid th, table.grid td {
+  border: 1px solid #9ca3af;
+  padding: 3px 5px;
+  vertical-align: middle;
+  text-align: center;
+}
+table.grid td.comp { text-align: left; }
+.chip {
+  display: inline-block;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  padding: 0 3px;
+  margin: 1px 1px 1px 0;
+  font-size: 7pt;
+  white-space: nowrap;
+}
+.chip.ok { background: #ecfdf5; border-color: #10b981; color: #047857; font-weight: 700; }
+.chip.bad { background: #fef2f2; border-color: #ef4444; color: #b91c1c; font-weight: 700; }
+.chip.idle { background: #f9fafb; color: #6b7280; }
+.badge {
+  display: inline-block;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 7.5pt;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge.layak { background: #ecfdf5; border-color: #10b981; color: #047857; }
+.badge.tidak { background: #fef2f2; border-color: #ef4444; color: #b91c1c; }
+.badge.jalan { background: #fffbeb; border-color: #f59e0b; color: #b45309; }
+.badge.belum { background: #f9fafb; color: #6b7280; font-weight: 400; }
+td.note { font-style: italic; text-align: left; max-width: 150px; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+.findings {
+  break-before: page;
+  page-break-before: always;
+}
+.fgrid {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fgrid td {
+  width: 50%;
+  vertical-align: top;
+  padding: 6px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.photo {
+  height: 150px;
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 55%, #9ca3af 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #374151;
+  font-size: 7.5pt;
+  font-weight: 700;
+}
+.fcap {
+  margin: 4px 0 0 0;
+  text-align: center;
+  font-size: 8pt;
+}
+.fcap .unit { font-weight: 700; }
+.fcap .date { color: #6b7280; font-size: 7.5pt; }
+.sign {
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #111827;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.sign table { width: 100%; border-collapse: collapse; }
+.sign td {
+  width: 33.33%;
+  text-align: center;
+  vertical-align: top;
+  font-size: 8pt;
+}
+.sign .role { font-weight: 700; }
+.sign .space { height: 52px; }
+.sign .name { font-weight: 700; text-decoration: underline; }
+.sign .title { font-size: 7.5pt; color: #4b5563; }
+.foot {
+  margin-top: 10px;
+  font-size: 7pt;
+  color: #6b7280;
+  text-align: right;
+}
+</style>
+</head>
+<body>
+
+<header class="doc-head">
+  <h1>LEMBAR LAPORAN PEMERIKSAAN BERKALA HYDRANT GEDUNG</h1>
+  <p class="std">Sesuai Standar K3, NFPA 25 &amp; Permenakertrans No. 04/MEN/1980</p>
+  <dl class="meta">
+    <div><dt>Lokasi Fasilitas</dt><dd>Central Warehouse Logistics – Kawasan Industri MM2100, Blok C-4, Cikarang Barat</dd></div>
+    <div><dt>Periode Inspeksi</dt><dd class="num">September 2026 (2026-09)</dd></div>
+    <div><dt>Tanggal Cetak</dt><dd class="num">30 September 2026</dd></div>
+  </dl>
+</header>
+
+<h2 class="sec">A. Hasil Pemeriksaan Fisik Unit Hydrant</h2>
+<table class="grid">
+  <thead>
+    <tr>
+      <th style="width:26px">No.</th>
+      <th style="width:62px">Kode Unit</th>
+      <th style="width:96px">Lokasi &amp; Zona</th>
+      <th>Verifikasi 6 Komponen</th>
+      <th style="width:74px">Status Kelayakan</th>
+      <th style="width:96px">Petugas &amp; Tanggal</th>
+      <th style="width:130px">Catatan / Temuan</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="num">1</td><td><strong>Hydrant 1</strong></td><td>Zona 1 – Loading Dock</td>
+      <td class="comp"><span class="chip ok">Box Hydrant ✓</span><span class="chip ok">Fire Hose ✓</span><span class="chip ok">Hose Coupling ✓</span><span class="chip ok">Hose Rack ✓</span><span class="chip ok">Nozzle ✓</span><span class="chip ok">Valve/Pillar ✓</span></td>
+      <td><span class="badge layak">LAYAK</span></td>
+      <td>Alex Chen (Staff)<br><span class="num">04 Sep 2026</span></td>
+      <td class="note">“Tekanan valve stabil di 8 bar. Selang dan nozzle tersimpan rapi.”</td>
+    </tr>
+    <tr>
+      <td class="num">2</td><td><strong>Hydrant 2</strong></td><td>Zona 2 – Main Storage</td>
+      <td class="comp"><span class="chip ok">Box Hydrant ✓</span><span class="chip ok">Fire Hose ✓</span><span class="chip ok">Hose Coupling ✓</span><span class="chip ok">Hose Rack ✓</span><span class="chip ok">Nozzle ✓</span><span class="chip ok">Valve/Pillar ✓</span></td>
+      <td><span class="badge layak">LAYAK</span></td>
+      <td>Alex Chen (Staff)<br><span class="num">12 Sep 2026</span></td>
+      <td class="note">“Pillar bersih, seal rapat, uji semprot nozzle lancar.”</td>
+    </tr>
+    <tr>
+      <td class="num">3</td><td><strong>Hydrant 3</strong></td><td>Zona 3 – Office &amp; Mezzanine</td>
+      <td class="comp"><span class="chip ok">Box Hydrant ✓</span><span class="chip ok">Fire Hose ✓</span><span class="chip ok">Hose Coupling ✓</span><span class="chip ok">Hose Rack ✓</span><span class="chip ok">Nozzle ✓</span><span class="chip ok">Valve/Pillar ✓</span></td>
+      <td><span class="badge layak">LAYAK</span></td>
+      <td>Budi Santoso (Staff)<br><span class="num">24 Sep 2026</span></td>
+      <td class="note">“Kondisi prima. Box terkunci baik dengan kunci darurat tersedia.”</td>
+    </tr>
+    <tr>
+      <td class="num">4</td><td><strong>Hydrant 4</strong></td><td>Zona 1 – Loading Dock</td>
+      <td class="comp"><span class="chip ok">Box Hydrant ✓</span><span class="chip ok">Fire Hose ✓</span><span class="chip ok">Hose Coupling ✓</span><span class="chip ok">Hose Rack ✓</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge jalan">Berjalan</span></td>
+      <td>Alex Chen (Staff)<br><span class="num">27 Sep 2026</span></td>
+      <td class="note">“Pemeriksaan tertunda karena aktivitas forklift. Nozzle &amp; valve menunggu verifikasi teknisi.”</td>
+    </tr>
+    <tr>
+      <td class="num">5</td><td><strong>Hydrant 5</strong></td><td>Zona 1 – Loading Dock</td>
+      <td class="comp"><span class="chip ok">Box Hydrant ✓</span><span class="chip bad">Fire Hose ✗</span><span class="chip idle">Hose Coupling •</span><span class="chip ok">Hose Rack ✓</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge tidak">TIDAK LAYAK</span></td>
+      <td>Alex Chen (Staff)<br><span class="num">27 Sep 2026</span></td>
+      <td class="note">“Selang (fire hose) retak getas pada lekukan pertama, wajib diganti baru.”</td>
+    </tr>
+    <tr>
+      <td class="num">6</td><td><strong>Hydrant 6</strong></td><td>Zona 1 – Loading Dock</td>
+      <td class="comp"><span class="chip idle">Box Hydrant •</span><span class="chip idle">Fire Hose •</span><span class="chip idle">Hose Coupling •</span><span class="chip idle">Hose Rack •</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge belum">Belum Dimulai</span></td>
+      <td>Siti Rahma (Staff)<br><span class="num">28 Sep 2026</span></td>
+      <td class="note">–</td>
+    </tr>
+    <tr>
+      <td class="num">7</td><td><strong>Hydrant 7</strong></td><td>Zona 2 – Main Storage</td>
+      <td class="comp"><span class="chip ok">Box Hydrant ✓</span><span class="chip ok">Fire Hose ✓</span><span class="chip ok">Hose Coupling ✓</span><span class="chip ok">Hose Rack ✓</span><span class="chip ok">Nozzle ✓</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge jalan">Berjalan</span></td>
+      <td>Budi Santoso (Staff)<br><span class="num">28 Sep 2026</span></td>
+      <td class="note">“Kondisi nozzle dan selang baik. Menunggu pengujian debit tekanan valve utama.”</td>
+    </tr>
+    <tr>
+      <td class="num">8</td><td><strong>Hydrant 8</strong></td><td>Zona 2 – Main Storage</td>
+      <td class="comp"><span class="chip idle">Box Hydrant •</span><span class="chip idle">Fire Hose •</span><span class="chip idle">Hose Coupling •</span><span class="chip idle">Hose Rack •</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge belum">Belum Dimulai</span></td>
+      <td>Budi Santoso (Staff)<br><span class="num">29 Sep 2026</span></td>
+      <td class="note">–</td>
+    </tr>
+    <tr>
+      <td class="num">9</td><td><strong>Hydrant 9</strong></td><td>Zona 2 – Main Storage</td>
+      <td class="comp"><span class="chip idle">Box Hydrant •</span><span class="chip idle">Fire Hose •</span><span class="chip idle">Hose Coupling •</span><span class="chip idle">Hose Rack •</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge belum">Belum Dimulai</span></td>
+      <td>Alex Chen (Staff)<br><span class="num">29 Sep 2026</span></td>
+      <td class="note">–</td>
+    </tr>
+    <tr>
+      <td class="num">10</td><td><strong>Hydrant 10</strong></td><td>Zona 3 – Office &amp; Mezzanine</td>
+      <td class="comp"><span class="chip ok">Box Hydrant ✓</span><span class="chip ok">Fire Hose ✓</span><span class="chip idle">Hose Coupling •</span><span class="chip ok">Hose Rack ✓</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge jalan">Berjalan</span></td>
+      <td>Siti Rahma (Staff)<br><span class="num">30 Sep 2026</span></td>
+      <td class="note">“Selang 1.5 inch dalam kondisi tergulung rapi.”</td>
+    </tr>
+    <tr>
+      <td class="num">11</td><td><strong>Hydrant 11</strong></td><td>Zona 3 – Office &amp; Mezzanine</td>
+      <td class="comp"><span class="chip idle">Box Hydrant •</span><span class="chip idle">Fire Hose •</span><span class="chip idle">Hose Coupling •</span><span class="chip idle">Hose Rack •</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge belum">Belum Dimulai</span></td>
+      <td>Siti Rahma (Staff)<br><span class="num">30 Sep 2026</span></td>
+      <td class="note">–</td>
+    </tr>
+    <tr>
+      <td class="num">12</td><td><strong>Hydrant 12</strong></td><td>Zona 3 – Office &amp; Mezzanine</td>
+      <td class="comp"><span class="chip idle">Box Hydrant •</span><span class="chip idle">Fire Hose •</span><span class="chip idle">Hose Coupling •</span><span class="chip idle">Hose Rack •</span><span class="chip idle">Nozzle •</span><span class="chip idle">Valve/Pillar •</span></td>
+      <td><span class="badge belum">Belum Dimulai</span></td>
+      <td>Alex Chen (Staff)<br><span class="num">30 Sep 2026</span></td>
+      <td class="note">–</td>
+    </tr>
+  </tbody>
+</table>
+
+<section class="findings">
+  <h2 class="sec">B. Catatan Hasil Temuan</h2>
+  <table class="fgrid">
+    <tr>
+      <td>
+        <div class="photo">FOTO TEMUAN<br>HYD-01 · Hose Coupling</div>
+        <p class="fcap"><span class="unit">HYD-01</span> – Hose Coupling tidak ada<br><span class="date num">16 Sep 2026</span></p>
+      </td>
+      <td>
+        <div class="photo">FOTO TEMUAN<br>HYD-03 · Fire Hose</div>
+        <p class="fcap"><span class="unit">HYD-03</span> – Selang Hydrant robek<br><span class="date num">16 Sep 2026</span></p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="photo">FOTO TEMUAN<br>HYD-04 · Outlet Pillar</div>
+        <p class="fcap"><span class="unit">HYD-04</span> – Outlet sambungan karat dan berair<br><span class="date num">16 Sep 2026</span></p>
+      </td>
+      <td>
+        <div class="photo">FOTO TEMUAN<br>HYD-06 · Box Hydrant</div>
+        <p class="fcap"><span class="unit">HYD-06</span> – Tidak ada isi pada box Hydrant<br><span class="date num">16 Sep 2026</span></p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <div class="photo">FOTO TEMUAN<br>HYD-05 · Valve Utama</div>
+        <p class="fcap"><span class="unit">HYD-05</span> – Hydrant tidak bisa menutup rapat<br><span class="date num">16 Sep 2026</span></p>
+      </td>
+      <td></td>
+    </tr>
+  </table>
+</section>
+
+<footer class="sign">
+  <table>
+    <tr>
+      <td><span class="role">Dibuat Oleh (Petugas Pemeriksa)</span><div class="space"></div><span class="name">( Alex Chen )</span><br><span class="title">Staff HSE / Teknisi K3</span></td>
+      <td><span class="role">Diketahui Oleh (Supervisor)</span><div class="space"></div><span class="name">( Budi Santoso )</span><br><span class="title">HSE Officer &amp; Koordinator</span></td>
+      <td><span class="role">Disetujui Oleh (Site Manager)</span><div class="space"></div><span class="name">( Ir. Hendra Wijaya )</span><br><span class="title">Kepala Operasional Logistik</span></td>
+    </tr>
+  </table>
+</footer>
+
+<p class="foot num">Dokumen dihasilkan sistem – September 2026 · Halaman otomatis oleh peramban cetak</p>
+
+<div id="pdf-ready" data-status="ready"></div>
+
+</body>
+</html>

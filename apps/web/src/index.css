@@ -1,0 +1,343 @@
+@import "tailwindcss";
+
+:root {
+  --base: 50 48 44;
+  --blue: rgb(35, 131, 226);
+  --blue-hover: rgb(0, 119, 212);
+  --red: rgb(235, 87, 87);
+  --orange: rgb(218, 163, 64);
+  --green: rgb(15, 123, 108);
+
+  /* Text colors */
+  --default: rgb(var(--base));
+  --primary: rgb(44, 44, 43);
+  --secondary: rgb(142, 139, 134);
+  --muted: rgba(70, 68, 64, 0.45);
+  --icon: rgb(168, 164, 156);
+  --icon-primary: #383836;
+  --icon-secondary: #8e8b86;
+
+  /* Background colors */
+  --bg-main: #ffffff;
+  --bg-sidebar: #f9f8f7;
+  --bg-modal: #ffffff;
+  --bg-popover: #ffffff;
+  --bg-hover: rgba(55, 53, 47, 0.05);
+  --bg-active: rgba(55, 53, 47, 0.08);
+
+  /* Border colors */
+  --border: rgba(50, 48, 44, 0.1);
+  --border-strong: rgba(50, 48, 44, 0.16);
+  --border-cell: rgb(233, 233, 231);
+  --radius: 0.375rem;
+
+  /* Shadows */
+  --shadow-notion: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px;
+  --shadow-popover: 0px 8px 12px 0px rgba(25, 25, 25, 0.04), 0px 2px 6px 0px rgba(25, 25, 25, 0.04), 0px 0px 0px 1px rgba(42, 28, 0, 0.07);
+
+  /* Emil Kowalski & Jakub Krehel Craft Animation & Easing Tokens */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-press: 150ms;
+  --duration-ui: 200ms;
+}
+
+.dark {
+  --base: 255 255 255;
+  --blue: rgb(82, 156, 202);
+  --blue-hover: rgb(110, 175, 218);
+  --red: rgb(255, 115, 105);
+  --orange: rgb(255, 163, 68);
+  --green: rgb(77, 171, 154);
+
+  /* Text colors */
+  --default: rgb(var(--base));
+  --primary: rgb(240, 239, 237);
+  --secondary: rgba(168, 164, 156);
+  --muted: rgba(255, 255, 255, 0.35);
+  --icon: rgba(128, 125, 120);
+  --icon-primary: #e6e5e3;
+  --icon-secondary: #ada9a3;
+
+  /* Background colors */
+  --bg-main: #191919;
+  --bg-sidebar: #202020;
+  --bg-modal: #252525;
+  --bg-popover: #252525;
+  --bg-hover: rgba(255, 255, 255, 0.055);
+  --bg-active: rgba(255, 255, 255, 0.08);
+
+  /* Border colors */
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-cell: rgb(47, 47, 47);
+
+  /* Shadows */
+  --shadow-notion: 0px 0px 0px 1px #383836, 0px 4px 12px -2px rgba(25, 25, 25, 0.4);
+  --shadow-popover: 0px 0px 0px 1px #383836, 0px 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: var(--primary);
+  background-color: var(--bg-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* Custom subtle Notion scrollbar from notion-kit */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(55, 53, 47, 0.15);
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(55, 53, 47, 0.28);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* Jakub Krehel & Emil Kowalski Component Craftsmanship Rules */
+.pressable {
+  transition: transform var(--duration-press) var(--ease-out), background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  transform-origin: center;
+}
+
+.pressable:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.pressable-subtle {
+  transition: transform var(--duration-press) var(--ease-out), background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  transform-origin: center;
+}
+
+.pressable-subtle:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Jakub Krehel Image Outline Recipe */
+.image-outline {
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -1px;
+}
+
+.dark .image-outline {
+  outline: 1px solid rgba(255, 255, 255, 0.1);
+  outline-offset: -1px;
+}
+
+/* Modal scale-up entrance: never scale(0), always start at 0.95 */
+@keyframes emilModalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.emil-modal {
+  animation: emilModalEnter var(--duration-ui) var(--ease-out) forwards;
+  transform-origin: center;
+}
+
+/* Accessibility: respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Full-page View Transitions for Light/Dark Mode Switch */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+/* Formal HSE Inspection Print Media Styles */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm;
+  }
+
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  aside,
+  .no-print,
+  button,
+  input,
+  select,
+  .agentation-toolbar {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  main, div {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 8pt !important;
+  }
+
+  th, td {
+    border: 1px solid #9ca3af !important;
+    padding: 3px 5px !important;
+    color: #111827 !important;
+    background-color: transparent !important;
+    page-break-inside: avoid !important;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    font-weight: 700 !important;
+  }
+
+  .print\:break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print\:break-before-page {
+    break-before: page !important;
+    page-break-before: always !important;
+  }
+
+  /* APAR print scoping: dua grup cetak terpisah — laporan vs kartu tahunan */
+  body.printing-report #apar-card-print {
+    display: none !important;
+  }
+
+  body.printing-card #apar-report-print > .apar-report-part {
+    display: none !important;
+  }
+
+  body.printing-card #apar-card-print {
+    display: block !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+/* APAR responsive <700px: tabel laporan → kartu bertumpuk, cip membungkus, grid kartu geser horizontal */
+@media (max-width: 700px) {
+  .apar-report-table thead {
+    display: none;
+  }
+
+  .apar-report-table,
+  .apar-report-table tbody,
+  .apar-report-table tr,
+  .apar-report-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .apar-report-table tr {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: var(--bg-main);
+  }
+
+  .apar-report-table td {
+    border: none;
+    padding: 4px 0;
+    text-align: left;
+  }
+
+  .apar-chip-wrap {
+    flex-wrap: wrap;
+  }
+
+  .apar-chip-wrap > * {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .apar-card-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 8px;
+  }
+
+  .apar-card-grid > * {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+
+  .apar-toolbar-label {
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+

@@ -1,0 +1,50 @@
+# Domain Feature Modules DOX — `src/features`
+
+## Purpose
+
+Domain-specific, self-contained feature slices for the HSE Inspection Platform: auth, location context, Calendar view, KPI overview squares, Inspection reports list and modals, and Navigation sidebar.
+
+## Ownership
+
+- `auth/`: `LoginScreen.tsx` (email+sandi, Notion-Kit, Indonesian K3 labels), `sesi.ts` (`useSesi`/`useMasuk`/`useKeluar` against Better Auth `/api/auth/*`; sign-in sets active organization). App.tsx guards: session pending → spinner, null → LoginScreen.
+- `konteksLokasi.tsx`: `PenyediaLokasi` + `useKonteksLokasi` — active site (first by createdAt), company name, address, zone lists, zone name↔id lookups. Replaces the deleted `CURRENT_SITE` mock.
+- `calendar/`: `HseCalendar.tsx` (compact month grid, category chips, day selection, Indonesian date formatting).
+- `kpi/`: `KpiGrid.tsx` (4 interactive squares; numbers passed as props from App, computed from live feed + unit queries — no mock data).
+- `reports/`: `MonthlyReportsPanel.tsx`, `ReportDetailModal.tsx` (inspection list with loading state, inspection details). `NewReportModal` deleted (creation happens inside each inspection page).
+- `navigation/`: `HseSidebar.tsx` (Notion-style collapsible sidebar, real site meta + user name from session, real unit badges, logout button in footer).
+- `hydrant/`: `HydrantPage.tsx`, `HydrantInspectionModal.tsx`, `AddZoneHydrantModal.tsx`, `AddFindingModal.tsx` — **UI IS DONE / COMPLETE**. Includes interactive month switcher, print-ready table with view toggle, left-justified 6-component checklist chips, centered table cells, composable zone & non-sequential hydrant unit registration, PRD §2.2 Story C1 & §3.3 auto-status calculation, Section B photo findings, and A4 print layout.
+- `apar/`: `AparPage.tsx`, `AparYearCard.tsx`, `AparInspectionModal.tsx`, `AddZoneAparModal.tsx`, `AparBadges.tsx` — **UI DONE (Epic D)**. Halaman laporan inspeksi APAR: pengalih bulan, kartu statistik, tabel/kartu hasil 7 komponen, kartu tahunan 12 bulan, rekap kedaluwarsa, alur kerja laporan, cetak laporan/kartu, pendaftaran zona & unit komposabel via modal. **Sinkronisasi satu arah (modal → tabel + kartu)**: `aparUnits` + `aparCards` diangkat ke `App.tsx` sebagai satu sumber data; kartu tahunan hanya-tampil (tanpa suntingan sel; baris bulan laporan hanya ditandai, merah + tindak lanjut teks saat `X`, lencana terkunci saat laporan Disetujui); klik baris tabel membuka modal inspeksi 7 komponen yang menulis draf + sel kartu bulan laporan sekaligus (`writeDraftToCard`, tampilan gabungan draf-menang via `resolveReportCell`); “Selesaikan & Terbitkan” membuka `ReportDetailModal` (rekam hasil: badge, metadata, Verifikasi 7 Komponen, Catatan, Bukti Foto, tombol Edit membuka ulang modal inspeksi). Kategori selalu menampilkan satu kartu tahunan (default APAR 01; cip yang sama tidak pernah menutup kartu); urutan tampilan: **tabel Checklist Bulanan APAR (judul layar + cetak) → rekap kedaluwarsa → “Catatan :” (judul saja, diisi tulis tangan) + tanda tangan → cip Pilih APAR → kartu tahunan**; cetak 2 halaman (hal. 1 = tabel bulanan, hal. 2 = kedaluwarsa + Catatan + tanda tangan via `print:break-before-page` pada bagian kedaluwarsa); tabel/badges membaca tampilan gabungan (draf menang atas laporan terbit); dokumentasi foto berada di dalam modal inspeksi; laporan terkunci saat alur kerja Disetujui; rekap kedaluwarsa + tanda tangan gaya dokumen kertas (judul “Kadaluwarsa APAR” rata kiri, sel tengah bingkai hitam saat cetak, No. APAR format “1, 14, dan 15” via `formatNoList`, blok “Catatan :” tanpa isi/teks statis dengan area kosong tulis tangan saat cetak, tanda tangan 3 kolom ketik dengan garis bawah); tombol “Tambah APAR” tanpa plus (`#f2994a` solid + modal); tombol “Cetak Kartu” di samping judul baris “Pilih APAR” (nonaktif bila kartu belum terbuka), “Cetak Laporan” tetap di bilah atas; baris terbit (SELESAI) bertinta hijau + badge kelayakan gaya Hydrant (klik baris membuka modal inspeksi); entri sidebar “Peringatan Kadaluarsa APAR” dihapus — hitungan kedaluwarsa ≤90 hari tampil sebagai badge oranye pada “Inspeksi APAR” (`aparOpenCount` dari `App.tsx`).
+- `p3k/`: `P3kPage.tsx`, `P3kInspectionModal.tsx`, `types.ts` — **UI DONE (Epic E)**. Yearly grid only, like the paper form: 21 standard items × 12 months (one mark column per month: √ / × / KD red flags), TANGGAL INSPEKSI + PARAF rows, Catatan footnote, year switcher, editable Unit/Lokasi Kerja. Box is keyed by site name (one box per site). Empty start; month header click opens the input form (21 actual quantities + KD flags + tanggal/paraf, Esc/backdrop close, clear-month action). Print forces A4 landscape via injected `@page`. Accent `#27ae60`. Registered as `p3k` view in `App.tsx` + sidebar + KPI square.
+- `patrol/`: `PatrolPage.tsx`, `AddPatrolFindingModal.tsx`, `types.ts` — **UI DONE (Epic F)**. Single photo feed, newest first, reuses the Hydrant Section B card grid (2-col, 4/5 photo, caption + date, hover-delete, print-clean). Paper header (LAPORAN KEGIATAN SAFETY PATROL + editable lokasi + latest date). Add form requires photo + caption, date defaults to today. Seeded with 8 captions from the paper form (19 Jun 2026, grey placeholders). Accent `#2f80ed`. Registered as `patrol` view in `App.tsx` + sidebar + KPI square.
+- Inspection records and database models operate on a **per month change** cycle (`period: YYYY-MM`), with month-by-month state transitions.
+
+## Local Contracts
+
+- Indonesian language only for all user-facing labels, table headers, and badges.
+- All date displays must use Indonesian locale (`d MMMM yyyy`).
+- All numeric counters and date numbers must use `tabular-nums` class.
+- Interactive cards and buttons must use `pressable` or `pressable-subtle` classes for Emil Kowalski tactile feedback.
+- Data comes from `@/services/api/queries` hooks; pages hold no mock state. Hydrant/APAR pages map API rows via `petakanUnitHidran`/`petakanUnitApar`/`petakanKartuApar`; P3K grid via `features/p3k/petaApi.ts`; patrol feed via `petakanTemuanPatroli`.
+- Approval workflow bars (Draft/Ajukan/Ketahui/Setujui) remain UI-local state until an approval endpoint lands (owner decision pending).
+- Section B Hydrant findings stay seeded local until photo upload wiring lands (sibling stream); `PhotoCard` takes a URL prop and renders grey placeholders for `''`.
+- Hydrant Table Alignment: "Verifikasi 6 Komponen" must be left-justified (`justify-start`), while all other table cells are centered (`text-center`, `align-middle`).
+- Category chip colors must conform to PRD §2.2 Story G1:
+  - Hydrant: Red (`#eb5757`)
+  - APAR: Orange (`#f2994a`)
+  - P3K: Green (`#27ae60`)
+  - Safety Patrol: Blue (`#2f80ed`)
+
+## Work Guidance
+
+- Keep UI logic decoupled from low-level network calls.
+- Every feature folder must provide a clean `index.ts` barrel.
+- Modals must support keyboard escape (`Esc`) and backdrop dismissal.
+
+## Verification
+
+- `cd apps/web && bun run build` (root: `bun run --filter @viaannn/web build` equivalent; package name is `preview`)
+- Login round-trip: dev server 5173 (Vite proxy → Caddy 8080) with seeded user `pengawas@contoh.id`.
+
+## Child DOX Index
+
+*Leaf boundary. Direct children are component files; no nested DOX required.*

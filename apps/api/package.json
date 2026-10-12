@@ -1,0 +1,38 @@
+{
+  "name": "@viaannn/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:studio": "drizzle-kit studio",
+    "check": "bun run src/check.ts",
+    "auth:schema": "bunx @better-auth/cli generate --config ./src/auth/config.ts --output ./src/db/auth-schema.ts -y"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1149.0",
+    "@aws-sdk/s3-request-presigner": "^3.1149.0",
+    "@hono/node-server": "1.19.9",
+    "@hono/zod-validator": "0.4.2",
+    "@paralleldrive/cuid2": "^3.3.0",
+    "@viaannn/shared": "workspace:*",
+    "better-auth": "1.4.14",
+    "drizzle-orm": "0.44.7",
+    "hono": "4.11.8",
+    "postgres": "3.4.7",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@better-auth/cli": "1.4.14",
+    "@types/node": "24.10.9",
+    "drizzle-kit": "0.31.7",
+    "tsx": "4.21.0",
+    "typescript": "5.6.3"
+  }
+}

@@ -1,0 +1,5 @@
+:80 {
+  reverse_proxy /api/* api:3001
+  root * /srv/web
+  file_server
+}

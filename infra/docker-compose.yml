@@ -1,0 +1,81 @@
+name: viaannn
+
+networks:
+  hse:
+    driver: bridge
+
+volumes:
+  pgdata:
+  garagemeta:
+  garagedata:
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-viaannn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-viaannn}
+      POSTGRES_DB: ${POSTGRES_DB:-viaannn}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - hse
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-viaannn}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ..
+      dockerfile: ./infra/Dockerfile.api.dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-viaannn}:${POSTGRES_PASSWORD:-viaannn}@postgres:5432/${POSTGRES_DB:-viaannn}
+      PORT: "3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hse
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  garage:
+    image: dxflrs/garage:v2.3.0
+    restart: unless-stopped
+    volumes:
+      - ./garage.toml:/etc/garage.toml:ro
+      - garagemeta:/var/lib/garage/meta
+      - garagedata:/var/lib/garage/data
+    command: ["/garage", "server"]
+    networks:
+      - hse
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    command: ["gotenberg", "--api-timeout=60s"]
+    networks:
+      - hse
+
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+    networks:
+      - hse

@@ -1,0 +1,14 @@
+{
+  "name": "viaannn",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter @viaannn/shared build && bun run --filter @viaannn/api build",
+    "typecheck": "bun run --filter @viaannn/shared typecheck && bun run --filter @viaannn/api typecheck"
+  }
+}

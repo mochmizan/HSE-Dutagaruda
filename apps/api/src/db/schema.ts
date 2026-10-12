@@ -1,0 +1,345 @@
+import {
+  boolean,
+  check,
+  date,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  real,
+  text,
+  timestamp,
+  unique,
+} from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const roleEnum = pgEnum("role", ["inspector", "staff", "approver"]);
+
+export const hydrantStatusEnum = pgEnum("hydrant_status", [
+  "LAYAK",
+  "TIDAK_LAYAK",
+  "HILANG",
+]);
+
+export const aparStatusEnum = pgEnum("apar_status", ["BAIK", "TIDAK_BAIK", "NA"]);
+
+export const p3kStatusEnum = pgEnum("p3k_status", [
+  "STANDAR",
+  "DIBAWAH_STANDAR",
+  "KADALUARSA",
+]);
+
+export const overallStatusEnum = pgEnum("overall_status", [
+  "LAYAK",
+  "LAYAK_DENGAN_CATATAN",
+  "TIDAK_LAYAK",
+]);
+
+export const aparJenisEnum = pgEnum("apar_jenis", ["POWDER", "CO2", "FOAM", "OTHER"]);
+
+export const pdfJobStatusEnum = pgEnum("pdf_job_status", ["queued", "done", "failed"]);
+
+export const companies = pgTable("companies", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const sites = pgTable(
+  "sites",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    name: text("name").notNull(),
+    address: text("address"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("sites_company_id_idx").on(t.companyId)],
+);
+
+export const zones = pgTable(
+  "zones",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("zones_company_id_idx").on(t.companyId)],
+);
+
+export const hydrantUnits = pgTable(
+  "hydrant_units",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id),
+    zoneId: text("zone_id")
+      .notNull()
+      .references(() => zones.id),
+    kode: text("kode").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("hydrant_units_company_id_idx").on(t.companyId)],
+);
+
+export const aparUnits = pgTable(
+  "apar_units",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id),
+    zoneId: text("zone_id")
+      .notNull()
+      .references(() => zones.id),
+    kode: text("kode").notNull(),
+    tahun: integer("tahun"),
+    jenis: aparJenisEnum("jenis"),
+    ukuran: text("ukuran"),
+    expiredDate: date("expired_date").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("apar_units_company_id_idx").on(t.companyId)],
+);
+
+export const p3kBoxes = pgTable(
+  "p3k_boxes",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("p3k_boxes_company_id_idx").on(t.companyId)],
+);
+
+export const hydrantInspections = pgTable(
+  "hydrant_inspections",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    unitId: text("unit_id")
+      .notNull()
+      .references(() => hydrantUnits.id),
+    period: date("period").notNull(),
+    boxHydrant: hydrantStatusEnum("box_hydrant").notNull(),
+    fireHose: hydrantStatusEnum("fire_hose").notNull(),
+    hoseCoupling: hydrantStatusEnum("hose_coupling").notNull(),
+    hoseRack: hydrantStatusEnum("hose_rack").notNull(),
+    nozzle: hydrantStatusEnum("nozzle").notNull(),
+    valvePillar: hydrantStatusEnum("valve_pillar").notNull(),
+    overallStatus: overallStatusEnum("overall_status").notNull(),
+    overallOverridden: boolean("overall_overridden").default(false).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("hydrant_inspections_company_id_idx").on(t.companyId),
+    unique("hydrant_inspections_unit_period_unique").on(t.unitId, t.period),
+  ],
+);
+
+export const aparInspections = pgTable(
+  "apar_inspections",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    unitId: text("unit_id")
+      .notNull()
+      .references(() => aparUnits.id),
+    period: date("period").notNull(),
+    safetyPin: aparStatusEnum("safety_pin").notNull(),
+    corong: aparStatusEnum("corong").notNull(),
+    segel: aparStatusEnum("segel").notNull(),
+    tekanan: aparStatusEnum("tekanan").notNull(),
+    tabung: aparStatusEnum("tabung").notNull(),
+    selang: aparStatusEnum("selang").notNull(),
+    katupTuas: aparStatusEnum("katup_tuas").notNull(),
+    beratCo2Kg: real("berat_co2_kg"),
+    overallStatus: overallStatusEnum("overall_status").notNull(),
+    overallOverridden: boolean("overall_overridden").default(false).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("apar_inspections_company_id_idx").on(t.companyId),
+    unique("apar_inspections_unit_period_unique").on(t.unitId, t.period),
+  ],
+);
+
+export const p3kInspections = pgTable(
+  "p3k_inspections",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    boxId: text("box_id")
+      .notNull()
+      .references(() => p3kBoxes.id),
+    period: date("period").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("p3k_inspections_company_id_idx").on(t.companyId),
+    unique("p3k_inspections_box_period_unique").on(t.boxId, t.period),
+  ],
+);
+
+export const p3kInspectionItems = pgTable(
+  "p3k_inspection_items",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    inspectionId: text("inspection_id")
+      .notNull()
+      .references(() => p3kInspections.id, { onDelete: "cascade" }),
+    itemName: text("item_name").notNull(),
+    standardQty: integer("standard_qty").notNull(),
+    actualQty: integer("actual_qty").notNull(),
+    status: p3kStatusEnum("status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("p3k_inspection_items_company_id_idx").on(t.companyId)],
+);
+
+export const safetyPatrolReports = pgTable(
+  "safety_patrol_reports",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => sites.id),
+    patrolDate: date("patrol_date").notNull(),
+    inspectorUserId: text("inspector_user_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("safety_patrol_reports_company_id_idx").on(t.companyId)],
+);
+
+export const safetyPatrolFindings = pgTable(
+  "safety_patrol_findings",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    reportId: text("report_id")
+      .notNull()
+      .references(() => safetyPatrolReports.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    s3Key: text("s3_key").notNull(),
+    mime: text("mime"),
+    bytes: integer("bytes"),
+    sha256: text("sha256"),
+    locationNote: text("location_note"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("safety_patrol_findings_company_id_idx").on(t.companyId)],
+);
+
+export const photos = pgTable(
+  "photos",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    s3Key: text("s3_key").notNull(),
+    mime: text("mime"),
+    bytes: integer("bytes"),
+    sha256: text("sha256"),
+    caption: text("caption"),
+    hydrantInspectionId: text("hydrant_inspection_id").references(
+      () => hydrantInspections.id,
+    ),
+    aparInspectionId: text("apar_inspection_id").references(() => aparInspections.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("photos_company_id_idx").on(t.companyId),
+    check(
+      "photos_single_owner_check",
+      sql`num_nonnulls("hydrant_inspection_id", "apar_inspection_id") = 1`,
+    ),
+  ],
+);
+
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
+
+export const pdfJobs = pgTable(
+  "pdf_jobs",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    category: text("category").notNull(),
+    refId: text("ref_id").notNull(),
+    status: pdfJobStatusEnum("status").notNull().default("queued"),
+    s3Key: text("s3_key"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("pdf_jobs_company_id_idx").on(t.companyId)],
+);
