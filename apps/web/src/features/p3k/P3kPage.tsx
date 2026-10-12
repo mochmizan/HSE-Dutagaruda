@@ -243,14 +243,14 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
 
         {/* Yearly grid */}
         <div className="overflow-x-auto border border-[var(--border)] print:border-black bg-[var(--bg-main)] dark:bg-[var(--bg-main)] print:bg-white shadow-2xs print:shadow-none rounded-[6px] print:rounded-none">
-          <table className="w-full border-collapse text-xs print:text-[8px] min-w-[1024px]">
+          <table className="w-full border-collapse text-xs print:text-[7px] min-w-[1024px] print:min-w-0">
             <thead>
-              <tr className="border-b border-[var(--border)] print:border-black bg-[var(--bg-sidebar)]/80 print:bg-white text-[10px] print:text-[8px] font-bold text-[var(--primary)] print:text-black">
-                <th className="py-1.5 px-2 text-center align-middle">NO.</th>
-                <th className="py-1.5 px-2 text-center align-middle">ITEM</th>
-                <th className="py-1.5 px-2 text-center align-middle">JUMLAH STANDAR</th>
+              <tr className="border-b border-[var(--border)] print:border-black bg-[var(--bg-sidebar)]/80 print:bg-white text-[10px] print:text-[7px] font-bold text-[var(--primary)] print:text-black">
+                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">NO.</th>
+                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">ITEM</th>
+                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">JUMLAH STANDAR</th>
                 {MONTH_KEYS.map((m, i) => (
-                  <th key={m} className="py-1 px-1 text-center align-middle">
+                  <th key={m} className="py-1 px-1 text-center align-middle print:py-0.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -272,7 +272,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
                     <span className="hidden print:inline tabular-nums">{MONTH_SHORT[i]}</span>
                   </th>
                 ))}
-                <th className="py-1.5 px-2 text-center align-middle">KETERANGAN</th>
+                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">KETERANGAN</th>
               </tr>
             </thead>
             <tbody>
@@ -281,13 +281,13 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
                   key={item.id}
                   className="border-b border-[var(--border)]/60 print:border-black last:border-none"
                 >
-                  <td className="py-1 px-2 text-center align-middle tabular-nums text-[var(--secondary)]">
+                  <td className="py-1 px-2 text-center align-middle tabular-nums text-[var(--secondary)] print:py-[1px] print:px-1">
                     {item.id}
                   </td>
-                  <td className="py-1 px-2 text-left align-middle text-[var(--primary)]">
+                  <td className="py-1 px-2 text-left align-middle text-[var(--primary)] print:py-[1px] print:px-1 print:whitespace-nowrap">
                     {item.name}
                   </td>
-                  <td className="py-1 px-2 text-center align-middle tabular-nums text-[var(--secondary)]">
+                  <td className="py-1 px-2 text-center align-middle tabular-nums text-[var(--secondary)] print:py-[1px] print:px-1">
                     {item.standardQty}
                   </td>
                   {MONTH_KEYS.map((m) => {
@@ -295,7 +295,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
                     return (
                       <td
                         key={m}
-                        className={`py-1 px-1 text-center align-middle tabular-nums font-semibold ${
+                        className={`py-1 px-1 text-center align-middle tabular-nums font-semibold print:py-[1px] ${
                           mark === 'kurang' || mark === 'kd' ? 'bg-red-500/[0.07]' : ''
                         }`}
                       >
@@ -311,44 +311,44 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
                       </td>
                     );
                   })}
-                  <td className="py-1 px-2 text-left align-middle text-[10px] print:text-[7px] text-[var(--secondary)]">
+                  <td className="py-1 px-2 text-left align-middle text-[10px] print:text-[6px] text-[var(--secondary)] print:py-[1px] print:px-1 print:leading-tight">
                     {keteranganFor(item.id, item.standardQty)}
                   </td>
                 </tr>
               ))}
               <tr className="border-t border-[var(--border)] print:border-black bg-[var(--bg-sidebar)]/50 print:bg-white">
-                <td colSpan={3} className="py-1.5 px-2 text-center align-middle text-[10px] print:text-[8px] font-bold text-[var(--primary)] print:text-black">
+                <td colSpan={3} className="py-1.5 px-2 text-center align-middle text-[10px] print:text-[7px] font-bold text-[var(--primary)] print:text-black print:py-0.5 print:px-1">
                   TANGGAL INSPEKSI
                 </td>
                 {MONTH_KEYS.map((m) => (
                   <td
                     key={m}
-                    className="py-1.5 px-1 text-center align-middle text-[10px] print:text-[8px] tabular-nums text-[var(--secondary)]"
+                    className="py-1.5 px-1 text-center align-middle text-[10px] print:text-[7px] tabular-nums text-[var(--secondary)] print:py-0.5 print:whitespace-nowrap"
                   >
                     {fmtTanggal(grid[m]?.tanggal ?? '')}
                   </td>
                 ))}
-                <td className="py-1.5 px-2 text-center align-middle text-[var(--muted)]">–</td>
+                <td className="py-1.5 px-2 text-center align-middle text-[var(--muted)] print:py-0.5">–</td>
               </tr>
               <tr className="border-t border-[var(--border)] print:border-black bg-[var(--bg-sidebar)]/50 print:bg-white">
-                <td colSpan={3} className="py-1.5 px-2 text-center align-middle text-[10px] print:text-[8px] font-bold text-[var(--primary)] print:text-black">
+                <td colSpan={3} className="py-1.5 px-2 text-center align-middle text-[10px] print:text-[7px] font-bold text-[var(--primary)] print:text-black print:py-0.5 print:px-1">
                   PARAF &amp; INISIAL
                 </td>
                 {MONTH_KEYS.map((m) => (
                   <td
                     key={m}
-                    className="py-1.5 px-1 text-center align-middle text-[10px] print:text-[8px] text-[var(--secondary)]"
+                    className="py-1.5 px-1 text-center align-middle text-[10px] print:text-[7px] text-[var(--secondary)] print:py-0.5"
                   >
                     {grid[m]?.paraf?.trim() ? grid[m]?.paraf : '–'}
                   </td>
                 ))}
-                <td className="py-1.5 px-2 text-center align-middle text-[var(--muted)]">–</td>
+                <td className="py-1.5 px-2 text-center align-middle text-[var(--muted)] print:py-0.5">–</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <p className="mt-1.5 text-[11px] print:text-[8px] italic text-[var(--secondary)] print:text-black">
+        <p className="mt-1.5 text-[11px] print:text-[7px] italic text-[var(--secondary)] print:text-black print:mt-0.5">
           Catatan: Apabila jumlah di bawah standar, maka harus diisi kembali sesuai dengan jumlah
           standar yang tercantum
         </p>
