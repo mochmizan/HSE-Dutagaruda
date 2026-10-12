@@ -1,5 +1,6 @@
 CREATE TYPE "public"."apar_jenis" AS ENUM('POWDER', 'CO2', 'FOAM', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."apar_status" AS ENUM('BAIK', 'TIDAK_BAIK', 'NA');--> statement-breakpoint
+CREATE TYPE "public"."approval_status" AS ENUM('DRAFT', 'DIAJUKAN', 'DIKETAHUI', 'DISETUJUI');--> statement-breakpoint
 CREATE TYPE "public"."hydrant_status" AS ENUM('LAYAK', 'TIDAK_LAYAK', 'HILANG');--> statement-breakpoint
 CREATE TYPE "public"."overall_status" AS ENUM('LAYAK', 'LAYAK_DENGAN_CATATAN', 'TIDAK_LAYAK');--> statement-breakpoint
 CREATE TYPE "public"."p3k_status" AS ENUM('STANDAR', 'DIBAWAH_STANDAR', 'KADALUARSA');--> statement-breakpoint
@@ -21,6 +22,10 @@ CREATE TABLE "apar_inspections" (
 	"overall_status" "overall_status" NOT NULL,
 	"overall_overridden" boolean DEFAULT false NOT NULL,
 	"notes" text,
+	"approval_status" "approval_status" DEFAULT 'DRAFT' NOT NULL,
+	"approval_submitted_by_id" text,
+	"approval_actor_id" text,
+	"approval_acted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "apar_inspections_unit_period_unique" UNIQUE("unit_id","period")
 );
@@ -58,6 +63,10 @@ CREATE TABLE "hydrant_inspections" (
 	"overall_status" "overall_status" NOT NULL,
 	"overall_overridden" boolean DEFAULT false NOT NULL,
 	"notes" text,
+	"approval_status" "approval_status" DEFAULT 'DRAFT' NOT NULL,
+	"approval_submitted_by_id" text,
+	"approval_actor_id" text,
+	"approval_acted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "hydrant_inspections_unit_period_unique" UNIQUE("unit_id","period")
 );
@@ -96,6 +105,10 @@ CREATE TABLE "p3k_inspections" (
 	"box_id" text NOT NULL,
 	"period" date NOT NULL,
 	"notes" text,
+	"approval_status" "approval_status" DEFAULT 'DRAFT' NOT NULL,
+	"approval_submitted_by_id" text,
+	"approval_actor_id" text,
+	"approval_acted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "p3k_inspections_box_period_unique" UNIQUE("box_id","period")
 );
@@ -143,6 +156,10 @@ CREATE TABLE "safety_patrol_reports" (
 	"site_id" text NOT NULL,
 	"patrol_date" date NOT NULL,
 	"inspector_user_id" text NOT NULL,
+	"approval_status" "approval_status" DEFAULT 'DRAFT' NOT NULL,
+	"approval_submitted_by_id" text,
+	"approval_actor_id" text,
+	"approval_acted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

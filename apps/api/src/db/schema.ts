@@ -39,6 +39,13 @@ export const aparJenisEnum = pgEnum("apar_jenis", ["POWDER", "CO2", "FOAM", "OTH
 
 export const pdfJobStatusEnum = pgEnum("pdf_job_status", ["queued", "done", "failed"]);
 
+export const approvalStatusEnum = pgEnum("approval_status", [
+  "DRAFT",
+  "DIAJUKAN",
+  "DIKETAHUI",
+  "DISETUJUI",
+]);
+
 export const companies = pgTable("companies", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -165,6 +172,10 @@ export const hydrantInspections = pgTable(
     overallStatus: overallStatusEnum("overall_status").notNull(),
     overallOverridden: boolean("overall_overridden").default(false).notNull(),
     notes: text("notes"),
+    approvalStatus: approvalStatusEnum("approval_status").default("DRAFT").notNull(),
+    approvalSubmittedById: text("approval_submitted_by_id"),
+    approvalActorId: text("approval_actor_id"),
+    approvalActedAt: timestamp("approval_acted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -197,6 +208,10 @@ export const aparInspections = pgTable(
     overallStatus: overallStatusEnum("overall_status").notNull(),
     overallOverridden: boolean("overall_overridden").default(false).notNull(),
     notes: text("notes"),
+    approvalStatus: approvalStatusEnum("approval_status").default("DRAFT").notNull(),
+    approvalSubmittedById: text("approval_submitted_by_id"),
+    approvalActorId: text("approval_actor_id"),
+    approvalActedAt: timestamp("approval_acted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -219,6 +234,10 @@ export const p3kInspections = pgTable(
       .references(() => p3kBoxes.id),
     period: date("period").notNull(),
     notes: text("notes"),
+    approvalStatus: approvalStatusEnum("approval_status").default("DRAFT").notNull(),
+    approvalSubmittedById: text("approval_submitted_by_id"),
+    approvalActorId: text("approval_actor_id"),
+    approvalActedAt: timestamp("approval_acted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -262,6 +281,10 @@ export const safetyPatrolReports = pgTable(
       .references(() => sites.id),
     patrolDate: date("patrol_date").notNull(),
     inspectorUserId: text("inspector_user_id").notNull(),
+    approvalStatus: approvalStatusEnum("approval_status").default("DRAFT").notNull(),
+    approvalSubmittedById: text("approval_submitted_by_id"),
+    approvalActorId: text("approval_actor_id"),
+    approvalActedAt: timestamp("approval_acted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

@@ -12,6 +12,17 @@ export type AparJenis = "POWDER" | "CO2" | "FOAM" | "OTHER";
 
 export type PdfJobStatus = "queued" | "done" | "failed";
 
+export type ApprovalStatus = "DRAFT" | "DIAJUKAN" | "DIKETAHUI" | "DISETUJUI";
+
+export type ApprovalAction = "ajukan" | "ketahui" | "setujui" | "kembalikan";
+
+export const APPROVAL_ACTIONS: readonly ApprovalAction[] = [
+  "ajukan",
+  "ketahui",
+  "setujui",
+  "kembalikan",
+] as const;
+
 export interface HydrantComponents {
   boxHydrant: HydrantComponentStatus;
   fireHose: HydrantComponentStatus;

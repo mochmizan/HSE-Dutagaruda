@@ -1,5 +1,5 @@
 {
-  "id": "91e2f5b0-d175-4fc9-8f9a-3252ddf199a2",
+  "id": "eb89fa80-66a0-4894-aa47-6076b39c2d1f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -104,6 +104,32 @@
         "notes": {
           "name": "notes",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_status": {
+          "name": "approval_status",
+          "type": "approval_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "approval_submitted_by_id": {
+          "name": "approval_submitted_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_actor_id": {
+          "name": "approval_actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_acted_at": {
+          "name": "approval_acted_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -425,6 +451,32 @@
         "notes": {
           "name": "notes",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_status": {
+          "name": "approval_status",
+          "type": "approval_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "approval_submitted_by_id": {
+          "name": "approval_submitted_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_actor_id": {
+          "name": "approval_actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_acted_at": {
+          "name": "approval_acted_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -826,6 +878,32 @@
         "notes": {
           "name": "notes",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_status": {
+          "name": "approval_status",
+          "type": "approval_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "approval_submitted_by_id": {
+          "name": "approval_submitted_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_actor_id": {
+          "name": "approval_actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_acted_at": {
+          "name": "approval_acted_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -1270,6 +1348,32 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "approval_status": {
+          "name": "approval_status",
+          "type": "approval_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'DRAFT'"
+        },
+        "approval_submitted_by_id": {
+          "name": "approval_submitted_by_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_actor_id": {
+          "name": "approval_actor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_acted_at": {
+          "name": "approval_acted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2192,6 +2296,16 @@
         "BAIK",
         "TIDAK_BAIK",
         "NA"
+      ]
+    },
+    "public.approval_status": {
+      "name": "approval_status",
+      "schema": "public",
+      "values": [
+        "DRAFT",
+        "DIAJUKAN",
+        "DIKETAHUI",
+        "DISETUJUI"
       ]
     },
     "public.hydrant_status": {
