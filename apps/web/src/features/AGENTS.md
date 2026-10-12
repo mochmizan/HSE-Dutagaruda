@@ -25,8 +25,24 @@ Domain-specific, self-contained feature slices for the HSE Inspection Platform: 
 - All numeric counters and date numbers must use `tabular-nums` class.
 - Interactive cards and buttons must use `pressable` or `pressable-subtle` classes for Emil Kowalski tactile feedback.
 - Data comes from `@/services/api/queries` hooks; pages hold no mock state. Hydrant/APAR pages map API rows via `petakanUnitHidran`/`petakanUnitApar`/`petakanKartuApar`; P3K grid via `features/p3k/petaApi.ts`; patrol feed via `petakanTemuanPatroli`.
-- Approval workflow bars (Draft/Ajukan/Ketahui/Setujui) remain UI-local state until an approval endpoint lands (owner decision pending).
-- Section B Hydrant findings stay seeded local until photo upload wiring lands (sibling stream); `PhotoCard` takes a URL prop and renders grey placeholders for `''`.
+- Approval workflow bars are live: `ApprovalBar` (components/ui) calls
+  `POST /api/approvals/:category/:refId/approval` with
+  `useAksiPersetujuan`; the bar lives inside the Hydrant/APAR inspection
+  modals and the P3K month modal (per record), and on PatrolPage for the
+  newest report. Submitter cannot setujui; status beyond DRAFT disables
+  saving in the modals with the “Laporan terkunci — menunggu persetujuan”
+  notice. `ReportDetailModal` shows the bar for API reports carrying
+  `approvalStatus` + `approvalCategory` and locks its Edit button.
+- Photo uploads in inspection modals are real: `useUnggahFoto`/
+  `useHapusFoto` against `/api/uploads` + `/api/photos/:id` (Hydrant: one
+  “Bukti inspeksi” slot; APAR: Kartu/Penimbangan CO2/Pengecekan slots keyed
+  by caption). Session photo lists live in page state (`fotoHidran`,
+  `fotoApar`) because the API has no list-photos endpoint. Patrol findings
+  stay placeholders (bare `s3Key`, no photo rows).
+- “Unduh PDF” (`UnduhPdfButton`) on Hydrant/APAR/P3K/Patrol calls
+  `POST /api/export/:category/:refId` → `GET /api/pdf-jobs/:id` and opens
+  the presigned download URL. Browser “Cetak” stays as the draft path.
+  Presigned URLs only resolve inside the Docker network (see services DOX).
 - Hydrant Table Alignment: "Verifikasi 6 Komponen" must be left-justified (`justify-start`), while all other table cells are centered (`text-center`, `align-middle`).
 - Category chip colors must conform to PRD §2.2 Story G1:
   - Hydrant: Red (`#eb5757`)
@@ -44,6 +60,9 @@ Domain-specific, self-contained feature slices for the HSE Inspection Platform: 
 
 - `cd apps/web && bun run build` (root: `bun run --filter @viaannn/web build` equivalent; package name is `preview`)
 - Login round-trip: dev server 5173 (Vite proxy → Caddy 8080) with seeded user `pengawas@contoh.id`.
+- Approval lifecycle + photo upload + PDF export proven via the klien.ts
+  request paths (worker I, Oct 13); no desktop browser is attached to the
+  runner, so UI-click evidence is the request sequence the components issue.
 
 ## Child DOX Index
 
