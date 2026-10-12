@@ -15,10 +15,10 @@ const userBodySchema = z.object({
   role: z.enum(["inspector", "staff", "approver"]).default("staff"),
 });
 
-export const usersApp = new Hono();
-usersApp.use("*", requireSession);
+export const usersApp = new Hono()
+  .use("*", requireSession)
 
-usersApp.post("/", zValidator("json", userBodySchema), async (c) => {
+  .post("/", zValidator("json", userBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   const existing = await db.select().from(user).where(eq(user.email, body.email)).limit(1);

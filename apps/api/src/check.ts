@@ -471,9 +471,16 @@ async function main(): Promise<void> {
   const delSite = await req(authed, "DELETE", `/api/sites/${ids.site}`);
   record("hapus-lokasi", delSite.status === 200, `(${delSite.status})`);
 
-  const rpcCheck: AppType | null = null;
-  void rpcCheck;
-  void hc;
+  const typedLeaf = hc<AppType>(BASE).api.sites.$get;
+  const leafProbe = await typedLeaf(
+    { query: {} },
+    { headers: { Origin: ORIGIN, cookie: authed.header } },
+  );
+  record(
+    "klien-tertipikasi",
+    leafProbe.status === 200,
+    `(${leafProbe.status}, daftarSitus=${typeof hc<AppType>(BASE).api.sites.$get === "function" ? "ada" : "tidak-ada"})`,
+  );
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\nRingkasan: ${results.length - failed.length}/${results.length} lulus.`);

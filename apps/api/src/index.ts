@@ -13,46 +13,42 @@ import { photosApp, uploadsApp } from "./routes/uploads.js";
 import { exportsApp, pdfJobsApp } from "./routes/exports.js";
 import { approvalsApp } from "./routes/approvals.js";
 
-export const app = new Hono();
-
-app.onError((err, c) => {
-  if (err instanceof HTTPException) {
+export const app = new Hono()
+  .onError((err, c) => {
+    if (err instanceof HTTPException) {
+      return c.json(
+        { title: "Permintaan gagal.", detail: err.message, status: err.status },
+        err.status,
+      );
+    }
+    console.error(err);
     return c.json(
-      { title: "Permintaan gagal.", detail: err.message, status: err.status },
-      err.status,
+      { title: "Kesalahan server.", detail: "Terjadi kesalahan tak terduga.", status: 500 },
+      500,
     );
-  }
-  console.error(err);
-  return c.json(
-    { title: "Kesalahan server.", detail: "Terjadi kesalahan tak terduga.", status: 500 },
-    500,
-  );
-});
-
-app.get("/api/health", (c) => c.json({ status: "ok", service: "viaannn-api" }));
-
-app.on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw));
-
-app.route("/api/clients", clientsApp);
-app.route("/api/companies", companiesApp);
-app.route("/api/sites", sitesApp);
-app.route("/api/zones", zonesApp);
-app.route("/api/hydrant-units", hydrantUnitsApp);
-app.route("/api/apar-units", aparUnitsApp);
-app.route("/api/p3k-boxes", p3kBoxesApp);
-app.route("/api/hydrant-inspections", hydrantInspectionsApp);
-app.route("/api/apar-inspections", aparInspectionsApp);
-app.route("/api/p3k-inspections", p3kInspectionsApp);
-app.route("/api/safety-patrol-reports", patrolApp);
-app.route("/api/inspections", feedApp);
-app.route("/api/dashboard", dashboardApp);
-app.route("/api/settings", settingsApp);
-app.route("/api/users", usersApp);
-app.route("/api/uploads", uploadsApp);
-app.route("/api/photos", photosApp);
-app.route("/api/export", exportsApp);
-app.route("/api/pdf-jobs", pdfJobsApp);
-app.route("/api/approvals", approvalsApp);
+  })
+  .get("/api/health", (c) => c.json({ status: "ok", service: "viaannn-api" }))
+  .on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
+  .route("/api/clients", clientsApp)
+  .route("/api/companies", companiesApp)
+  .route("/api/sites", sitesApp)
+  .route("/api/zones", zonesApp)
+  .route("/api/hydrant-units", hydrantUnitsApp)
+  .route("/api/apar-units", aparUnitsApp)
+  .route("/api/p3k-boxes", p3kBoxesApp)
+  .route("/api/hydrant-inspections", hydrantInspectionsApp)
+  .route("/api/apar-inspections", aparInspectionsApp)
+  .route("/api/p3k-inspections", p3kInspectionsApp)
+  .route("/api/safety-patrol-reports", patrolApp)
+  .route("/api/inspections", feedApp)
+  .route("/api/dashboard", dashboardApp)
+  .route("/api/settings", settingsApp)
+  .route("/api/users", usersApp)
+  .route("/api/uploads", uploadsApp)
+  .route("/api/photos", photosApp)
+  .route("/api/export", exportsApp)
+  .route("/api/pdf-jobs", pdfJobsApp)
+  .route("/api/approvals", approvalsApp);
 
 export type AppType = typeof app;
 

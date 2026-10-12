@@ -141,10 +141,9 @@ async function applyDecision(
   }
 }
 
-export const approvalsApp = new Hono<{ Variables: { user: SessionUser } }>();
-approvalsApp.use("*", requireSession);
-
-approvalsApp.post(
+export const approvalsApp = new Hono<{ Variables: { user: SessionUser } }>()
+  .use("*", requireSession)
+  .post(
   "/:category/:refId/approval",
   zValidator("param", categoryParamSchema),
   zValidator("json", approvalBodySchema),

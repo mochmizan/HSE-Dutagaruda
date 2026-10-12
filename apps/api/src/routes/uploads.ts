@@ -20,10 +20,10 @@ const uploadFormSchema = z.object({
   caption: z.string().max(500).optional(),
 });
 
-export const uploadsApp = new Hono();
-uploadsApp.use("*", requireSession);
+export const uploadsApp = new Hono()
+  .use("*", requireSession)
 
-uploadsApp.post("/", zValidator("form", uploadFormSchema), async (c) => {
+  .post("/", zValidator("form", uploadFormSchema), async (c) => {
   const { inspectionKind, inspectionId, caption } = c.req.valid("form");
   const owned = companyId(c);
   const table = inspectionKind === "hydrant" ? hydrantInspections : aparInspections;
@@ -68,10 +68,10 @@ uploadsApp.post("/", zValidator("form", uploadFormSchema), async (c) => {
   return c.json({ id: row.id, key: row.s3Key }, 201);
 });
 
-export const photosApp = new Hono();
-photosApp.use("*", requireSession);
+export const photosApp = new Hono()
+  .use("*", requireSession)
 
-photosApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -82,9 +82,9 @@ photosApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
   if (rows.length === 0) throw notFound("Foto");
   const url = await presignedGet(rows[0].s3Key, 60);
   return c.redirect(url, 302);
-});
+  })
 
-photosApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db

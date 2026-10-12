@@ -19,10 +19,10 @@ import {
   zoneBodySchema,
 } from "./schemas.js";
 
-export const companiesApp = new Hono();
-companiesApp.use("*", requireSession);
+export const companiesApp = new Hono()
+  .use("*", requireSession)
 
-companiesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit } = c.req.valid("query");
   const page = await listPage({
     limit,
@@ -35,25 +35,25 @@ companiesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-companiesApp.post("/", zValidator("json", companyBodySchema), async (c) => {
+  .post("/", zValidator("json", companyBodySchema), async (c) => {
   const body = c.req.valid("json");
   const [row] = await db
     .insert(companies)
     .values({ id: newId(), name: body.name })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-companiesApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const rows = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
   if (rows.length === 0) throw notFound("Perusahaan");
   return c.json(rows[0]);
-});
+  })
 
-companiesApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", companyBodySchema.partial()),
@@ -65,9 +65,9 @@ companiesApp.patch(
     const [row] = await db.update(companies).set(body).where(eq(companies.id, id)).returning();
     return c.json(row);
   },
-);
+  )
 
-companiesApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const rows = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
   if (rows.length === 0) throw notFound("Perusahaan");
@@ -81,14 +81,14 @@ companiesApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
   return c.json({ ok: true });
 });
 
-export const clientsApp = new Hono();
-clientsApp.use("*", requireSession);
-clientsApp.route("/", companiesApp);
+export const clientsApp = new Hono()
+  .use("*", requireSession)
+  .route("/", companiesApp);
 
-export const sitesApp = new Hono();
-sitesApp.use("*", requireSession);
+export const sitesApp = new Hono()
+  .use("*", requireSession)
 
-sitesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit, clientId } = c.req.valid("query");
   const owned = companyId(c);
   const scope = clientId ?? owned;
@@ -104,9 +104,9 @@ sitesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-sitesApp.post("/", zValidator("json", siteBodySchema), async (c) => {
+  .post("/", zValidator("json", siteBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   const target = body.companyId ?? owned;
@@ -116,9 +116,9 @@ sitesApp.post("/", zValidator("json", siteBodySchema), async (c) => {
     .values({ id: newId(), companyId: target, name: body.name, address: body.address ?? null })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-sitesApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -128,9 +128,9 @@ sitesApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
     .limit(1);
   if (rows.length === 0) throw notFound("Lokasi");
   return c.json(rows[0]);
-});
+  })
 
-sitesApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", siteBodySchema.partial()),
@@ -152,9 +152,9 @@ sitesApp.patch(
       .returning();
     return c.json(row);
   },
-);
+  )
 
-sitesApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -169,10 +169,10 @@ sitesApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
   return c.json({ ok: true });
 });
 
-export const zonesApp = new Hono();
-zonesApp.use("*", requireSession);
+export const zonesApp = new Hono()
+  .use("*", requireSession)
 
-zonesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit, siteId } = c.req.valid("query");
   const owned = companyId(c);
   const page = await listPage({
@@ -192,9 +192,9 @@ zonesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-zonesApp.post("/", zValidator("json", zoneBodySchema), async (c) => {
+  .post("/", zValidator("json", zoneBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   const site = await db
@@ -208,9 +208,9 @@ zonesApp.post("/", zValidator("json", zoneBodySchema), async (c) => {
     .values({ id: newId(), companyId: owned, siteId: body.siteId, name: body.name })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-zonesApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -220,9 +220,9 @@ zonesApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
     .limit(1);
   if (rows.length === 0) throw notFound("Zona");
   return c.json(rows[0]);
-});
+  })
 
-zonesApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", zoneBodySchema.partial()),
@@ -251,9 +251,9 @@ zonesApp.patch(
       .returning();
     return c.json(row);
   },
-);
+  )
 
-zonesApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db

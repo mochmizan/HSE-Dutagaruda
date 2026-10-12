@@ -20,10 +20,10 @@ const daysQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).optional(),
 });
 
-export const feedApp = new Hono();
-feedApp.use("*", requireSession);
+export const feedApp = new Hono()
+  .use("*", requireSession)
 
-feedApp.get("/", zValidator("query", monthQuery), async (c) => {
+  .get("/", zValidator("query", monthQuery), async (c) => {
   const { month } = c.req.valid("query");
   const owned = companyId(c);
   const periodStart = toPeriodKey(firstOfMonth(month));
@@ -44,10 +44,10 @@ feedApp.get("/", zValidator("query", monthQuery), async (c) => {
   });
 });
 
-export const dashboardApp = new Hono();
-dashboardApp.use("*", requireSession);
+export const dashboardApp = new Hono()
+  .use("*", requireSession)
 
-dashboardApp.get("/expiring-apar", zValidator("query", daysQuerySchema), async (c) => {
+  .get("/expiring-apar", zValidator("query", daysQuerySchema), async (c) => {
   const { days } = c.req.valid("query");
   const owned = companyId(c);
   let window = days;
@@ -70,10 +70,10 @@ dashboardApp.get("/expiring-apar", zValidator("query", daysQuerySchema), async (
   return c.json({ days: window, items: rows });
 });
 
-export const settingsApp = new Hono();
-settingsApp.use("*", requireSession);
+export const settingsApp = new Hono()
+  .use("*", requireSession)
 
-settingsApp.get("/apar-expiry-alert-days", async (c) => {
+  .get("/apar-expiry-alert-days", async (c) => {
   const rows = await db
     .select()
     .from(settings)
@@ -81,9 +81,9 @@ settingsApp.get("/apar-expiry-alert-days", async (c) => {
     .limit(1);
   if (rows.length === 0) throw notFound("Pengaturan");
   return c.json(rows[0]);
-});
+  })
 
-settingsApp.patch("/apar-expiry-alert-days", zValidator("json", settingsPatchSchema), async (c) => {
+  .patch("/apar-expiry-alert-days", zValidator("json", settingsPatchSchema), async (c) => {
   const body = c.req.valid("json");
   const rows = await db
     .select()

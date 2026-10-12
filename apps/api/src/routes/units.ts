@@ -43,10 +43,10 @@ async function ownSiteZone(
   }
 }
 
-export const hydrantUnitsApp = new Hono();
-hydrantUnitsApp.use("*", requireSession);
+export const hydrantUnitsApp = new Hono()
+  .use("*", requireSession)
 
-hydrantUnitsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit, siteId } = c.req.valid("query");
   const owned = companyId(c);
   const page = await listPage({
@@ -66,9 +66,9 @@ hydrantUnitsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-hydrantUnitsApp.post("/", zValidator("json", hydrantUnitBodySchema), async (c) => {
+  .post("/", zValidator("json", hydrantUnitBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   await ownSiteZone(owned, body.siteId, body.zoneId);
@@ -77,9 +77,9 @@ hydrantUnitsApp.post("/", zValidator("json", hydrantUnitBodySchema), async (c) =
     .values({ id: newId(), companyId: owned, ...body })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-hydrantUnitsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -89,9 +89,9 @@ hydrantUnitsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
     .limit(1);
   if (rows.length === 0) throw notFound("Unit hidran");
   return c.json(rows[0]);
-});
+  })
 
-hydrantUnitsApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", hydrantUnitBodySchema.partial()),
@@ -110,9 +110,9 @@ hydrantUnitsApp.patch(
     const [row] = await db.update(hydrantUnits).set(body).where(eq(hydrantUnits.id, id)).returning();
     return c.json(row);
   },
-);
+  )
 
-hydrantUnitsApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -131,10 +131,10 @@ hydrantUnitsApp.delete("/:id", zValidator("param", idParamSchema), async (c) => 
   return c.json({ ok: true });
 });
 
-export const aparUnitsApp = new Hono();
-aparUnitsApp.use("*", requireSession);
+export const aparUnitsApp = new Hono()
+  .use("*", requireSession)
 
-aparUnitsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit, siteId } = c.req.valid("query");
   const owned = companyId(c);
   const page = await listPage({
@@ -154,9 +154,9 @@ aparUnitsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-aparUnitsApp.post("/", zValidator("json", aparUnitBodySchema), async (c) => {
+  .post("/", zValidator("json", aparUnitBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   await ownSiteZone(owned, body.siteId, body.zoneId);
@@ -165,9 +165,9 @@ aparUnitsApp.post("/", zValidator("json", aparUnitBodySchema), async (c) => {
     .values({ id: newId(), companyId: owned, ...body })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-aparUnitsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -177,9 +177,9 @@ aparUnitsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
     .limit(1);
   if (rows.length === 0) throw notFound("Unit APAR");
   return c.json(rows[0]);
-});
+  })
 
-aparUnitsApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", aparUnitBodySchema.partial()),
@@ -198,9 +198,9 @@ aparUnitsApp.patch(
     const [row] = await db.update(aparUnits).set(body).where(eq(aparUnits.id, id)).returning();
     return c.json(row);
   },
-);
+  )
 
-aparUnitsApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -219,10 +219,10 @@ aparUnitsApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
   return c.json({ ok: true });
 });
 
-export const p3kBoxesApp = new Hono();
-p3kBoxesApp.use("*", requireSession);
+export const p3kBoxesApp = new Hono()
+  .use("*", requireSession)
 
-p3kBoxesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit, siteId } = c.req.valid("query");
   const owned = companyId(c);
   const page = await listPage({
@@ -242,9 +242,9 @@ p3kBoxesApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-p3kBoxesApp.post("/", zValidator("json", p3kBoxBodySchema), async (c) => {
+  .post("/", zValidator("json", p3kBoxBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   await ownSiteZone(owned, body.siteId);
@@ -253,9 +253,9 @@ p3kBoxesApp.post("/", zValidator("json", p3kBoxBodySchema), async (c) => {
     .values({ id: newId(), companyId: owned, ...body })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-p3kBoxesApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -265,9 +265,9 @@ p3kBoxesApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
     .limit(1);
   if (rows.length === 0) throw notFound("Kotak P3K");
   return c.json(rows[0]);
-});
+  })
 
-p3kBoxesApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", p3kBoxBodySchema.partial()),
@@ -285,9 +285,9 @@ p3kBoxesApp.patch(
     const [row] = await db.update(p3kBoxes).set(body).where(eq(p3kBoxes.id, id)).returning();
     return c.json(row);
   },
-);
+  )
 
-p3kBoxesApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db

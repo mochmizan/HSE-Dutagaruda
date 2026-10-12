@@ -34,10 +34,10 @@ import {
 
 const itemParamSchema = idParamSchema.extend({ itemId: z.string().min(1) });
 
-export const hydrantInspectionsApp = new Hono();
-hydrantInspectionsApp.use("*", requireSession);
+export const hydrantInspectionsApp = new Hono()
+  .use("*", requireSession)
 
-hydrantInspectionsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit } = c.req.valid("query");
   const owned = companyId(c);
   const page = await listPage({
@@ -51,9 +51,9 @@ hydrantInspectionsApp.get("/", zValidator("query", listQuerySchema), async (c) =
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-hydrantInspectionsApp.get("/by-asset", zValidator("query", inspectionQuerySchema), async (c) => {
+  .get("/by-asset", zValidator("query", inspectionQuerySchema), async (c) => {
   const { month, unitId } = c.req.valid("query");
   if (!unitId) return c.json({ items: [] });
   const owned = companyId(c);
@@ -64,9 +64,9 @@ hydrantInspectionsApp.get("/by-asset", zValidator("query", inspectionQuerySchema
     .orderBy(asc(hydrantInspections.period));
   const wanted = rows.filter((r) => toPeriodKey(r.period) === month);
   return c.json({ items: wanted });
-});
+  })
 
-hydrantInspectionsApp.post("/", zValidator("json", hydrantInspectionBodySchema), async (c) => {
+  .post("/", zValidator("json", hydrantInspectionBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   const unit = await db
@@ -105,9 +105,9 @@ hydrantInspectionsApp.post("/", zValidator("json", hydrantInspectionBodySchema),
     })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-hydrantInspectionsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -117,9 +117,9 @@ hydrantInspectionsApp.get("/:id", zValidator("param", idParamSchema), async (c) 
     .limit(1);
   if (rows.length === 0) throw notFound("Inspeksi hidran");
   return c.json(rows[0]);
-});
+  })
 
-hydrantInspectionsApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", hydrantInspectionBodySchema.partial().omit({ unitId: true, month: true })),
@@ -153,9 +153,9 @@ hydrantInspectionsApp.patch(
       .returning();
     return c.json(row);
   },
-);
+  )
 
-hydrantInspectionsApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -174,10 +174,10 @@ hydrantInspectionsApp.delete("/:id", zValidator("param", idParamSchema), async (
   return c.json({ ok: true });
 });
 
-export const aparInspectionsApp = new Hono();
-aparInspectionsApp.use("*", requireSession);
+export const aparInspectionsApp = new Hono()
+  .use("*", requireSession)
 
-aparInspectionsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit } = c.req.valid("query");
   const owned = companyId(c);
   const page = await listPage({
@@ -191,9 +191,9 @@ aparInspectionsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-aparInspectionsApp.get("/by-asset", zValidator("query", inspectionQuerySchema), async (c) => {
+  .get("/by-asset", zValidator("query", inspectionQuerySchema), async (c) => {
   const { month, unitId } = c.req.valid("query");
   if (!unitId) return c.json({ items: [] });
   const owned = companyId(c);
@@ -203,9 +203,9 @@ aparInspectionsApp.get("/by-asset", zValidator("query", inspectionQuerySchema), 
     .where(and(eq(aparInspections.companyId, owned), eq(aparInspections.unitId, unitId)))
     .orderBy(asc(aparInspections.period));
   return c.json({ items: rows.filter((r) => toPeriodKey(r.period) === month) });
-});
+  })
 
-aparInspectionsApp.post("/", zValidator("json", aparInspectionBodySchema), async (c) => {
+  .post("/", zValidator("json", aparInspectionBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   const unit = await db
@@ -246,9 +246,9 @@ aparInspectionsApp.post("/", zValidator("json", aparInspectionBodySchema), async
     })
     .returning();
   return c.json(row, 201);
-});
+  })
 
-aparInspectionsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -258,9 +258,9 @@ aparInspectionsApp.get("/:id", zValidator("param", idParamSchema), async (c) => 
     .limit(1);
   if (rows.length === 0) throw notFound("Inspeksi APAR");
   return c.json(rows[0]);
-});
+  })
 
-aparInspectionsApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", aparInspectionBodySchema.partial().omit({ unitId: true, month: true })),
@@ -295,9 +295,9 @@ aparInspectionsApp.patch(
       .returning();
     return c.json(row);
   },
-);
+  )
 
-aparInspectionsApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -316,10 +316,10 @@ aparInspectionsApp.delete("/:id", zValidator("param", idParamSchema), async (c) 
   return c.json({ ok: true });
 });
 
-export const p3kInspectionsApp = new Hono();
-p3kInspectionsApp.use("*", requireSession);
+export const p3kInspectionsApp = new Hono()
+  .use("*", requireSession)
 
-p3kInspectionsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
+  .get("/", zValidator("query", listQuerySchema), async (c) => {
   const { cursor, limit } = c.req.valid("query");
   const owned = companyId(c);
   const page = await listPage({
@@ -333,9 +333,9 @@ p3kInspectionsApp.get("/", zValidator("query", listQuerySchema), async (c) => {
         .limit(n),
   });
   return c.json(page);
-});
+  })
 
-p3kInspectionsApp.get("/by-asset", zValidator("query", inspectionQuerySchema), async (c) => {
+  .get("/by-asset", zValidator("query", inspectionQuerySchema), async (c) => {
   const { month, boxId } = c.req.valid("query");
   if (!boxId) return c.json({ items: [] });
   const owned = companyId(c);
@@ -345,9 +345,9 @@ p3kInspectionsApp.get("/by-asset", zValidator("query", inspectionQuerySchema), a
     .where(and(eq(p3kInspections.companyId, owned), eq(p3kInspections.boxId, boxId)))
     .orderBy(asc(p3kInspections.period));
   return c.json({ items: rows.filter((r) => toPeriodKey(r.period) === month) });
-});
+  })
 
-p3kInspectionsApp.post("/", zValidator("json", p3kInspectionBodySchema), async (c) => {
+  .post("/", zValidator("json", p3kInspectionBodySchema), async (c) => {
   const body = c.req.valid("json");
   const owned = companyId(c);
   const box = await db
@@ -383,9 +383,9 @@ p3kInspectionsApp.post("/", zValidator("json", p3kInspectionBodySchema), async (
     .from(p3kInspectionItems)
     .where(eq(p3kInspectionItems.inspectionId, row.id));
   return c.json({ ...row, items }, 201);
-});
+  })
 
-p3kInspectionsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
+  .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -399,9 +399,9 @@ p3kInspectionsApp.get("/:id", zValidator("param", idParamSchema), async (c) => {
     .from(p3kInspectionItems)
     .where(eq(p3kInspectionItems.inspectionId, id));
   return c.json({ ...rows[0], items });
-});
+  })
 
-p3kInspectionsApp.patch(
+  .patch(
   "/:id",
   zValidator("param", idParamSchema),
   zValidator("json", p3kInspectionBodySchema.partial().omit({ boxId: true, month: true })),
@@ -419,9 +419,9 @@ p3kInspectionsApp.patch(
     const [row] = await db.update(p3kInspections).set(body).where(eq(p3kInspections.id, id)).returning();
     return c.json(row);
   },
-);
+  )
 
-p3kInspectionsApp.delete("/:id", zValidator("param", idParamSchema), async (c) => {
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
@@ -433,9 +433,9 @@ p3kInspectionsApp.delete("/:id", zValidator("param", idParamSchema), async (c) =
   await db.delete(p3kInspectionItems).where(eq(p3kInspectionItems.inspectionId, id));
   await db.delete(p3kInspections).where(eq(p3kInspections.id, id));
   return c.json({ ok: true });
-});
+  })
 
-p3kInspectionsApp.patch(
+  .patch(
   "/:id/items/:itemId",
   zValidator("param", itemParamSchema),
   zValidator("json", p3kItemPatchSchema),

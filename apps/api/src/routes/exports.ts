@@ -340,10 +340,10 @@ const CATEGORY_DEFS: Record<
   },
 };
 
-export const exportsApp = new Hono();
-exportsApp.use("*", requireSession);
+export const exportsApp = new Hono()
+  .use("*", requireSession)
 
-exportsApp.post("/:category/:refId", zValidator("param", exportParamSchema), async (c) => {
+  .post("/:category/:refId", zValidator("param", exportParamSchema), async (c) => {
   const { category, refId } = c.req.valid("param");
   const owned = companyId(c);
   const jobId = newId();
@@ -361,10 +361,10 @@ exportsApp.post("/:category/:refId", zValidator("param", exportParamSchema), asy
   }
 });
 
-export const pdfJobsApp = new Hono();
-pdfJobsApp.use("*", requireSession);
+export const pdfJobsApp = new Hono()
+  .use("*", requireSession)
 
-pdfJobsApp.get("/:id", zValidator("param", z.object({ id: z.string().min(1) })), async (c) => {
+  .get("/:id", zValidator("param", z.object({ id: z.string().min(1) })), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);
   const rows = await db
