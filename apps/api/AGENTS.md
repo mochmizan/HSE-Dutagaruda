@@ -8,7 +8,7 @@ PDF storage, and Gotenberg PDF rendering.
 
 ## Ownership
 
-- `src/routes/*` — CRUD, feed, settings, uploads, exports, pdf-jobs.
+- `src/routes/*` — CRUD, approvals, feed, settings, uploads, exports, pdf-jobs.
 - `src/storage.ts` — Garage S3 client: `putBytes`, `presignedGet` (60s default),
   `getBytes`, `objectExists`, `deleteObject`.
 - `src/pdf/render.ts` — Gotenberg 8 client (`waitForSelector=#pdf-ready`,
@@ -38,6 +38,17 @@ PDF storage, and Gotenberg PDF rendering.
 - `GET /api/pdf-jobs/:id` returns status plus `downloadUrl` (presigned 60s) when
   done. Garage is network-private: presigned URLs only resolve inside the
   compose network (`garage:3900`, no host port).
+- Approval workflow: `POST /api/approvals/:category/:refId/approval` with body
+  `{ action: "ajukan" | "ketahui" | "setujui" | "kembalikan" }`. Categories:
+  `hydrant | apar | p3k | patrol`. Transitions `ajukan: DRAFT → DIAJUKAN`,
+  `ketahui: DIAJUKAN → DIKETAHUI`, `setujui: DIKETAHUI → DISETUJUI`,
+  `kembalikan: any non-DRAFT → DRAFT`. Illegal transition or unknown action is
+  400; `setujui` by the submitter (`approvalSubmittedById`) is 403. All four
+  inspection/report tables carry `approval_status` (default `DRAFT`),
+  `approval_submitted_by_id`, `approval_actor_id`, `approval_acted_at`.
+  Content-edit routes (inspection PATCH, p3k item PATCH, patrol PATCH,
+  findings POST/DELETE) reject with 409 via `editLocked()` when the row is
+  beyond `DRAFT`.
 
 ## Work Guidance
 
@@ -48,15 +59,25 @@ PDF storage, and Gotenberg PDF rendering.
   The api container runs a baked COPY of `apps/api`, not a bind mount.
 - New photo-bearing features must respect the single-owner CHECK constraint on
   `photos` (`num_nonnulls = 1`).
+- Register Hono routes ONLY by chaining (`.get(...).post(...).route(...)`).
+  Statement-style registration loses route types and makes `AppType` blank,
+  which silently kills `hc<AppType>` typing (root-caused Oct 13). Sub-apps
+  included: build each as `new Hono().use(...).get(...)`.
+- Drizzle migrations are squashed pre-prod by intent. After regenerating the
+  squashed file, drop `pgdata` volume, re-migrate, re-seed; the old journal
+  never replays over a squashed one.
 
 ## Verification
 
 - Full gate (runs inside the network so presigned fetches work):
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  — expect 55/55 (CRUD + upload round-trip + 5 exports + pdf-job flow).
+  — expect 88/88 (CRUD + upload round-trip + 5 exports + pdf-job flow +
+  approval workflow per category + typed-client probe `klien-tertipikasi`).
 - Host variant `bun run --filter @viaannn/api check` passes everything except
   the two byte-fetch records, which report LEWAT (garage unreachable from host).
-- Build: `bun run build` (tsc, zero errors).
+- Build: `bun run build` (tsc, zero errors). The build itself proves
+  `hc<AppType>` typing: check.ts calls `hc<AppType>(BASE).api.sites.$get`,
+  which fails tsc if any sub-app loses its chained registration.
 - PDF orientation proof: portrait MediaBox ≈ 595×842 pt, landscape ≈ 842×595 pt.
 
 ## Child DOX Index
