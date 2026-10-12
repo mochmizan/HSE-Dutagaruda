@@ -127,6 +127,27 @@ Fix (web deviations). Wave 1 complete.
   Bundle 512 kB — code-split later.
 - Web dev proxy `/api` → `http://localhost:8080` (Caddy).
 
+## Wave 3 debrief gotchas (GLM worker I, Oct 13)
+
+- Browser MCP tool exists but returns `browser.disconnected` (no desktop
+  browser attached). Plan HTTP-level proofs from the start: write proof scripts
+  BEFORE UI code — they double as contract docs.
+- PowerShell here-string splices into source risk encoding damage. Read UTF8,
+  write with `New-Object System.Text.UTF8Encoding($false)` (utf8NoBOM enum is
+  invalid on PS5), verify non-ASCII (√ · – curly quotes) survive. After any
+  scripted splice, re-read the region before using edit (oldString breaks).
+- Approval endpoint: transition validation (400) fires BEFORE submitter rule
+  (403). Test 403 only at DIKETAHUI. Lock-message mapping in `gagal()` matches
+  the API substring "proses persetujuan" — rewording editLocked() degrades it.
+- `bunx tsc -b` is the web typecheck (no `bun run typecheck` script).
+  `docker compose exec -e VAR=…` needs the flag BEFORE the service name.
+- Photo session state: uploaded photos persist in Garage but lists live in page
+  state (refresh loses visuals). `GET /photos?inspectionId=` would fix it and
+  delete ~40 lines of page state — top API follow-up.
+- Patrol approval bar binds to the newest report only (per-report bar exists in
+  the feed modal). APAR synthetic post-save report omits approvalStatus so its
+  Edit still just closes the modal (pre-existing).
+
 ## Wave 3 landed (Oct 13, both GLM): approvals + real uploads + PDF downloads
 
 - API (H): approval lifecycle on 4 categories (`POST /api/approvals/:category/:refId/approval`,
