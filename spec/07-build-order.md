@@ -1,5 +1,11 @@
 # 07 — Build order (workers start AFTER owner approval)
 
+## Wave 3 (owner-approved Oct 13) — git initialized, baseline committed
+
+- Worker H (apps/api + shared): approval persistence + AppType fix.
+- Worker I (apps/web): approval UI wiring + print fidelity + photo wiring.
+- Both GLM high, debrief owed, gates below.
+
 Wave 1 runs THREE workers in parallel on disjoint paths (no shared files).
 Model for all: `kenari/muse-spark-1-3-contributor#high`.
 Brief for each: `agents/poteto-worker.md` + the spec files named + allowed paths.

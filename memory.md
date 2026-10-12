@@ -127,6 +127,25 @@ Fix (web deviations). Wave 1 complete.
   Bundle 512 kB — code-split later.
 - Web dev proxy `/api` → `http://localhost:8080` (Caddy).
 
+## Wave 3 landed (Oct 13, both GLM): approvals + real uploads + PDF downloads
+
+- API (H): approval lifecycle on 4 categories (`POST /api/approvals/:category/:refId/approval`,
+  ajukan/ketahui/setujui/kembalikan; submitter 403 on setujui; edits 409 beyond
+  DRAFT), `AppType` fixed via chained registrations (klien.ts still valid),
+  gate now **88/88** in-container. 4 commits.
+- Web (I): ApprovalBar on real endpoint (per-record bars in modals), edit locks
+  surface 409 as Indonesian notice, photo upload/preview/delete in Hydrant+APAR
+  modals (3 captioned slots APAR), Unduh PDF buttons on all 5 categories
+  (post+poll+download), P3K draft print fits one landscape page. 6 commits.
+  Build 2839 modules green.
+- Follow-ups owed: presigned URLs are `garage:3900` (unreachable from host
+  browser — needs Caddy `/storage/*` route or presign host override); no
+  list-photos-per-inspection endpoint (photo lists live in page state);
+  approvals not role-gated (identity-only: any second user can approve);
+  patrol findings still placeholders; dev-DB residue (HYD-W3, approver user,
+  pdfJobs rows) — reset before demo; stray `gotenberg-spike-hydrant` container
+  still up.
+
 ## Stream 3 debrief gotchas (GLM worker, Oct 13)
 
 - **No git repo.** Deleted files are unrecoverable (mockHse deletion cost a
@@ -169,6 +188,8 @@ Fix (web deviations). Wave 1 complete.
 - Apar-card near-miss: `eq(period, period)` tautology passed typecheck; only
   reading loader against template data contract caught it.
 - Reset dev DB + Garage fixtures before any demo (smoke-test rows remain).
+- After `docker compose up -d api` (rebuild/restart), a check run within ~15s
+  can return 0/88 (caddy→stale api container). Wait and re-run; not a regression.
 
 ## Wave 1 journeys (compressed)
 
