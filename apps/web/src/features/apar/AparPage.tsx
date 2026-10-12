@@ -26,7 +26,7 @@ import {
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
 import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
-import { ApprovalBar, PrintButton } from '@/components/ui';
+import { ApprovalBar, PrintButton, UnduhPdfButton } from '@/components/ui';
 import { livePhotoUrl } from '@/services/api/liveClient';
 import {
   COMPONENT_LABELS,
@@ -408,6 +408,17 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
     window.print();
   };
 
+  // Jangkar ekspor PDF: laporan bulanan (rekam pertama bulan ini) + kartu tahunan
+  // (rekam unit terpilih pada tahun kartu; jangkar menentukan unit+tahun ekspor).
+  const jangkarBulanan =
+    (inspeksiQuery.data ?? []).find((i) => i.period.startsWith(period))?.id ?? null;
+  const jangkarKartu =
+    selectedUnit
+      ? ((inspeksiQuery.data ?? []).find(
+          (i) => i.unitId === selectedUnit.id && i.period.startsWith(cardYear),
+        )?.id ?? null)
+      : null;
+
   // Peran bilah persetujuan kini datang dari rekam inspeksi (tanpa pemilih peran lokal).
 
   // ── Modal tambah zona & unit APAR (menyimpan ke API) ──
@@ -548,6 +559,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
             >
               <span>Tambah APAR</span>
             </button>
+            <UnduhPdfButton category="apar-monthly" refId={jangkarBulanan} namaBerkas={period} />
             <PrintButton onClick={handlePrintReport} label="Cetak Laporan" />
           </div>
         </div>
@@ -961,6 +973,12 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
             <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">
               Pilih APAR — klik untuk membuka kartu tahunan
             </p>
+            <UnduhPdfButton
+              category="apar-card"
+              refId={jangkarKartu}
+              label="Unduh PDF Kartu"
+              namaBerkas={`${activeKode}-${cardYear}`}
+            />
             <PrintButton
               onClick={handlePrintCard}
               label="Cetak Kartu"

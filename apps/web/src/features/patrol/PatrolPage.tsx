@@ -10,7 +10,7 @@ import {
   useHapusTemuanPatroli,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { ApprovalBar, PhotoCard, EmptyState } from '@/components/ui';
+import { ApprovalBar, PhotoCard, EmptyState, UnduhPdfButton } from '@/components/ui';
 import type { ApiLaporanPatroli } from '@/services/api/klien';
 
 interface PatrolPageProps {
@@ -100,6 +100,11 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
           >
             <Camera size={13} strokeWidth={2.2} /> Tambah Foto
           </button>
+          <UnduhPdfButton
+            category="patrol-report"
+            refId={laporanTerbaru?.id ?? null}
+            namaBerkas={laporanTerbaru?.patrolDate.slice(0, 10)}
+          />
           <button
             type="button"
             onClick={() => window.print()}

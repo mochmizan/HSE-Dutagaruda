@@ -13,7 +13,7 @@ import {
   useHapusInspeksiP3k,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { ApprovalBar } from '@/components/ui';
+import { ApprovalBar, UnduhPdfButton } from '@/components/ui';
 import type { ApiInspeksiP3k } from '@/services/api/klien';
 import {
   MONTH_KEYS,
@@ -80,6 +80,13 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
     );
     return baris != null && baris.approvalStatus !== 'DRAFT';
   };
+
+  // Jangkar ekspor PDF tahunan: rekam inspeksi kotak aktif pada tahun terpilih.
+  const jangkarEkspor = kotak
+    ? ((inspeksiQuery.data ?? []).find(
+        (i) => i.boxId === kotak.id && i.period.startsWith(`${year}-`),
+      )?.id ?? null)
+    : null;
 
   const stats = useMemo(() => {
     let filled = 0;
@@ -165,6 +172,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
               <ChevronRight size={15} />
             </button>
           </div>
+          <UnduhPdfButton category="p3k-yearly" refId={jangkarEkspor} label="Unduh PDF" namaBerkas={year} />
           <button
             type="button"
             onClick={handlePrint}

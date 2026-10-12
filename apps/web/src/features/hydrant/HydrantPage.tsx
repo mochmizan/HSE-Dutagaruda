@@ -36,7 +36,7 @@ import { HydrantInspectionModal } from './HydrantInspectionModal';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';
 import { HydrantFindingItem } from './types';
-import { PhotoCard } from '@/components/ui';
+import { PhotoCard, UnduhPdfButton } from '@/components/ui';
 import { livePhotoUrl } from '@/services/api/liveClient';
 import type { FotoTampil } from '@/services/api/queries';
 import {
@@ -302,6 +302,10 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
     window.print();
   };
 
+  // Jangkar ekspor PDF: rekam inspeksi pertama bulan terpilih (lalu berisi).
+  const jangkarEkspor =
+    (inspeksiQuery.data ?? []).find((i) => i.period.startsWith(period))?.id ?? null;
+
   return (
     <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[var(--bg-main)] text-[var(--primary)] px-6 py-4 select-none font-sans">
       {/* Formal Printable Document Header (Visible only when printed) */}
@@ -435,6 +439,12 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
               <Plus size={14} strokeWidth={2.5} />
               <span>Tambah Zona & Unit</span>
             </button>
+
+            <UnduhPdfButton
+              category="hydrant-monthly"
+              refId={jangkarEkspor}
+              namaBerkas={period}
+            />
 
             <button
               type="button"
