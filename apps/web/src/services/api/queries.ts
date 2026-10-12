@@ -149,9 +149,75 @@ export function useUmpan(month: Period) {
 function gagal(err: unknown): string {
   if (err instanceof ApiError) {
     const pesan = (err.data as { pesan?: string } | undefined)?.pesan;
-    return pesan || err.message;
+    const teks = pesan || err.message;
+    // 409 sunting pada laporan yang sudah masuk proses persetujuan → pesan kunci.
+    if (err.status === 409 && teks.includes('proses persetujuan')) {
+      return 'Laporan terkunci — menunggu persetujuan.';
+    }
+    return teks;
   }
   return 'Terjadi kesalahan tak terduga.';
+}
+
+// ── Persetujuan ──
+
+export interface AksiPersetujuanArgs {
+  category: k.KategoriPersetujuan;
+  refId: string;
+  action: k.AksiPersetujuan;
+}
+
+/** Satu mutasi untuk seluruh kategori; settle → invalidate baris + umpan. */
+export function useAksiPersetujuan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: AksiPersetujuanArgs) => k.kirimPersetujuan(args.category, args.refId, args.action),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiHidran });
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiP3k });
+      void qc.invalidateQueries({ queryKey: kunci.laporanPatroli });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+// ── Ekspor PDF ──
+
+export const KATEGORI_EKSPOR_LABEL: Record<k.KategoriEkspor, string> = {
+  'hydrant-monthly': 'Laporan Bulanan Hydrant',
+  'apar-monthly': 'Laporan Bulanan APAR',
+  'apar-card': 'Kartu Tahunan APAR',
+  'p3k-yearly': 'Laporan Tahunan P3K',
+  'patrol-report': 'Laporan Patroli K3',
+};
+
+/**
+ * POST /export lalu ambil pdfJobs (v1 sinkron). Mengulang pembacaan singkat
+ * untuk status queued, memuntahkan URL unduh saat done.
+ */
+export async function jalankanEkspor(category: k.KategoriEkspor, refId: string): Promise<string> {
+  const mulai = await k.eksporPdf(category, refId);
+  let job = await k.ambilPdfJob(mulai.id);
+  for (let i = 0; job.status === 'queued' && i < 10; i += 1) {
+    await new Promise((r) => setTimeout(r, 800));
+    job = await k.ambilPdfJob(mulai.id);
+  }
+  if (job.status !== 'done' || !job.downloadUrl) {
+    throw new ApiError(0, 'Ekspor gagal', { pesan: 'Pembuatan PDF gagal. Coba lagi.' });
+  }
+  return job.downloadUrl;
+}
+
+/** Unduh PDF via jangkar sementara; nama berkas dari label kategori + refId. */
+export function unduhBerkas(url: string, nama: string): void {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nama;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // ── Mutasi hidran ──
@@ -307,11 +373,32 @@ export function useUbahButirP3k() {
       );
       return { sebelumnya };
     },
-    onError: (_err, _args, ctx) => {
+    onError: (err, _args, ctx) => {
       if (ctx?.sebelumnya) qc.setQueryData(kunci.inspeksiP3k, ctx.sebelumnya);
-      window.alert('Perubahan butir P3K gagal disimpan.');
+      window.alert(gagal(err));
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: kunci.inspeksiP3k }),
+  });
+}
+
+// ── Mutasi foto inspeksi ──
+
+export function useUnggahFoto() {
+  return useMutation({
+    mutationFn: (args: {
+      kind: 'hydrant' | 'apar';
+      inspectionId: string;
+      file: File;
+      caption?: string;
+    }) => k.unggahFoto(args.kind, args.inspectionId, args.file, args.caption),
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+export function useHapusFoto() {
+  return useMutation({
+    mutationFn: (id: string) => k.hapusFoto(id),
+    onError: (err) => window.alert(gagal(err)),
   });
 }
 
@@ -348,7 +435,7 @@ export function useHapusTemuanPatroli() {
     },
     onError: (_err, _fid, ctx) => {
       if (ctx?.sebelumnya) qc.setQueryData(kunci.laporanPatroli, ctx.sebelumnya);
-      window.alert('Penghapusan temuan gagal.');
+      window.alert(gagal(_err));
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: kunci.laporanPatroli }),
   });

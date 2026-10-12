@@ -7,7 +7,7 @@
  * pemanggilan memakai fetch + deklarasi tipe di berkas ini.
  */
 
-import { liveGet, livePost, livePatch, liveDelete } from './liveClient';
+import { liveGet, livePost, livePatch, liveDelete, livePostForm } from './liveClient';
 
 export interface Halaman<T> {
   items: T[];
@@ -67,6 +67,26 @@ export type ApiStatusApar = 'BAIK' | 'TIDAK_BAIK' | 'NA';
 export type ApiStatusP3k = 'STANDAR' | 'DIBAWAH_STANDAR' | 'KADALUARSA';
 export type ApiStatusAkhir = 'LAYAK' | 'LAYAK_DENGAN_CATATAN' | 'TIDAK_LAYAK';
 
+// ── Persetujuan (alur kerja laporan) ──
+
+export type ApiStatusPersetujuan = 'DRAFT' | 'DIAJUKAN' | 'DIKETAHUI' | 'DISETUJUI';
+export type AksiPersetujuan = 'ajukan' | 'ketahui' | 'setujui' | 'kembalikan';
+export type KategoriPersetujuan = 'hydrant' | 'apar' | 'p3k' | 'patrol';
+
+export interface ApiHasilPersetujuan {
+  id: string;
+  approvalStatus: ApiStatusPersetujuan;
+  approvalSubmittedById: string | null;
+  approvalActorId: string;
+  approvalActedAt: string;
+}
+
+export const kirimPersetujuan = (
+  category: KategoriPersetujuan,
+  refId: string,
+  action: AksiPersetujuan,
+) => livePost<ApiHasilPersetujuan>(`/approvals/${category}/${refId}/approval`, { action });
+
 export interface ApiInspeksiHidran {
   id: string;
   companyId: string;
@@ -82,6 +102,10 @@ export interface ApiInspeksiHidran {
   overallStatus: ApiStatusAkhir;
   overallOverridden: boolean;
   notes: string | null;
+  approvalStatus: ApiStatusPersetujuan;
+  approvalSubmittedById: string | null;
+  approvalActorId: string | null;
+  approvalActedAt: string | null;
   createdAt: string;
 }
 
@@ -101,6 +125,10 @@ export interface ApiInspeksiApar {
   overallStatus: ApiStatusAkhir;
   overallOverridden: boolean;
   notes: string | null;
+  approvalStatus: ApiStatusPersetujuan;
+  approvalSubmittedById: string | null;
+  approvalActorId: string | null;
+  approvalActedAt: string | null;
   createdAt: string;
 }
 
@@ -110,6 +138,10 @@ export interface ApiInspeksiP3k {
   boxId: string;
   period: string;
   notes: string | null;
+  approvalStatus: ApiStatusPersetujuan;
+  approvalSubmittedById: string | null;
+  approvalActorId: string | null;
+  approvalActedAt: string | null;
   createdAt: string;
   items?: ApiButirP3k[];
 }
@@ -131,6 +163,10 @@ export interface ApiLaporanPatroli {
   siteId: string;
   patrolDate: string;
   inspectorUserId: string;
+  approvalStatus: ApiStatusPersetujuan;
+  approvalSubmittedById: string | null;
+  approvalActorId: string | null;
+  approvalActedAt: string | null;
   createdAt: string;
   findings?: ApiTemuanPatroli[];
 }
@@ -303,3 +339,54 @@ export const ambilPerusahaan = () => liveGet<Halaman<ApiPerusahaan>>('/companies
 
 export const buatKotakP3k = (body: { siteId: string; name: string }) =>
   livePost<ApiP3kBox>('/p3k-boxes', body);
+
+// ── Foto (Garage via /api/uploads + /api/photos) ──
+
+export interface ApiFoto {
+  id: string;
+  caption: string | null;
+  mime: string | null;
+  bytes: number | null;
+}
+
+/** Unggah foto inspeksi (multipart). Hanya untuk inspeksi hidran dan APAR. */
+export const unggahFoto = (
+  inspectionKind: 'hydrant' | 'apar',
+  inspectionId: string,
+  file: File,
+  caption?: string,
+) => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('inspectionKind', inspectionKind);
+  form.append('inspectionId', inspectionId);
+  if (caption) form.append('caption', caption);
+  return livePostForm<ApiFoto & { key: string }>('/uploads', form);
+};
+
+export const hapusFoto = (id: string) => liveDelete<{ ok: boolean }>(`/photos/${id}`);
+
+// ── Ekspor PDF (pdfJobs, v1 sinkron) ──
+
+export type KategoriEkspor =
+  | 'hydrant-monthly'
+  | 'apar-monthly'
+  | 'apar-card'
+  | 'p3k-yearly'
+  | 'patrol-report';
+
+export interface ApiPdfJob {
+  id: string;
+  category: string;
+  refId: string;
+  status: 'queued' | 'done' | 'failed';
+  createdAt: string;
+  /** URL unduh presigned (60 dtk; hanya dapat dijangkau di dalam jaringan Docker). */
+  downloadUrl: string | null;
+}
+
+/** Mulai ekspor PDF; v1 render sinkron, biasanya langsung berstatus done. */
+export const eksporPdf = (category: KategoriEkspor, refId: string) =>
+  livePost<{ id: string; category: string; status: string }>(`/export/${category}/${refId}`);
+
+export const ambilPdfJob = (id: string) => liveGet<ApiPdfJob>(`/pdf-jobs/${id}`);

@@ -52,6 +52,10 @@ export const livePost = <T>(path: string, body?: unknown) =>
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
+/** POST multipart/form-data (unggahan berkas); Content-Type disetel peramban. */
+export const livePostForm = <T>(path: string, form: FormData) =>
+  apiFetch<T>(path, { method: 'POST', body: form });
+
 export const livePatch = <T>(path: string, body?: unknown) =>
   apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
 
