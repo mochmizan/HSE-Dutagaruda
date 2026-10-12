@@ -297,9 +297,10 @@ async function main(): Promise<void> {
 
   await req(authed, "PATCH", "/api/settings/apar-expiry-alert-days", { value: "30" });
 
+  const staffEmail = `staf-uji-${Date.now()}@contoh.id`;
   const userCreate = await req(authed, "POST", "/api/users", {
     name: "Staf Uji",
-    email: `staf-uji-${Date.now()}@contoh.id`,
+    email: staffEmail,
     password: "KataSandi123",
     role: "staff",
   });
@@ -388,6 +389,66 @@ async function main(): Promise<void> {
 
   const photoDel = await req(authed, "DELETE", `/api/photos/${photoId}`);
   record("hapus-foto", photoDel.status === 200, `(${photoDel.status})`);
+
+  const staffJar = new Jar();
+  const staffSignin = await req(staffJar, "POST", "/api/auth/sign-in/email", {
+    email: staffEmail,
+    password: "KataSandi123",
+  });
+  record("masuk-staf", staffSignin.status === 200, `(${staffSignin.status})`);
+  const staffActive = await req(staffJar, "POST", "/api/auth/organization/set-active", {
+    organizationId: COMPANY,
+  });
+  record("organisasi-aktif-staf", staffActive.status === 200, `(${staffActive.status})`);
+
+  const editPaths: Record<string, string> = {
+    hidran: `/api/hydrant-inspections/${ids.hydrantInspection}`,
+    apar: `/api/apar-inspections/${ids.aparInspection}`,
+    p3k: `/api/p3k-inspections/${ids.p3kInspection}`,
+    patroli: `/api/safety-patrol-reports/${ids.patrol}`,
+  };
+  const approvalTargets: { cat: string; path: string; patch: Record<string, unknown> }[] = [
+    { cat: "hidran", path: `/api/approvals/hydrant/${ids.hydrantInspection}/approval`, patch: { notes: "revisi" } },
+    { cat: "apar", path: `/api/approvals/apar/${ids.aparInspection}/approval`, patch: { notes: "revisi" } },
+    { cat: "p3k", path: `/api/approvals/p3k/${ids.p3kInspection}/approval`, patch: { notes: "revisi" } },
+    { cat: "patroli", path: `/api/approvals/patrol/${ids.patrol}/approval`, patch: { patrolDate: "2026-09-21" } },
+  ];
+  for (const t of approvalTargets) {
+    const a = await req(authed, "POST", t.path, { action: "ajukan" });
+    const st = (a.json as { approvalStatus?: string } | null)?.approvalStatus;
+    record(`ajukan-${t.cat}`, a.status === 200 && st === "DIAJUKAN", `(${a.status}, ${st ?? "null"})`);
+
+    const locked = await req(authed, "PATCH", editPaths[t.cat], t.patch);
+    record(`kunci-ubah-${t.cat}-409`, locked.status === 409, `(${locked.status})`);
+
+    const k = await req(staffJar, "POST", t.path, { action: "ketahui" });
+    const ks = (k.json as { approvalStatus?: string } | null)?.approvalStatus;
+    record(`ketahui-${t.cat}`, k.status === 200 && ks === "DIKETAHUI", `(${k.status}, ${ks ?? "null"})`);
+
+    const self = await req(authed, "POST", t.path, { action: "setujui" });
+    record(`setujui-oleh-pengirim-${t.cat}-403`, self.status === 403, `(${self.status})`);
+
+    const s = await req(staffJar, "POST", t.path, { action: "setujui" });
+    const ss = (s.json as { approvalStatus?: string } | null)?.approvalStatus;
+    record(`setujui-${t.cat}`, s.status === 200 && ss === "DISETUJUI", `(${s.status}, ${ss ?? "null"})`);
+
+    const b = await req(staffJar, "POST", t.path, { action: "kembalikan" });
+    const bs = (b.json as { approvalStatus?: string } | null)?.approvalStatus;
+    record(`kembalikan-${t.cat}`, b.status === 200 && bs === "DRAFT", `(${b.status}, ${bs ?? "null"})`);
+
+    const editOk = await req(authed, "PATCH", editPaths[t.cat], t.patch);
+    record(`ubah-setelah-kembalikan-${t.cat}`, editOk.status === 200, `(${editOk.status})`);
+  }
+
+  const badTransition = await req(authed, "POST", `/api/approvals/hydrant/${ids.hydrantInspection}/approval`, {
+    action: "ketahui",
+  });
+  record("ketahui-dari-draf-400", badTransition.status === 400, `(${badTransition.status})`);
+
+  const unknownAction = await req(authed, "POST", `/api/approvals/hydrant/${ids.hydrantInspection}/approval`, {
+    action: "tidak-ada",
+  });
+  record("aksi-tak-dikenal-400", unknownAction.status === 400, `(${unknownAction.status})`);
 
   const cross = await req(authed, "GET", "/api/sites/tidak-ada-antar-perusahaan");
   record("lintas-perusahaan-404", cross.status === 404, `(${cross.status})`);

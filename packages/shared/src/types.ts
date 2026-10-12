@@ -16,13 +16,6 @@ export type ApprovalStatus = "DRAFT" | "DIAJUKAN" | "DIKETAHUI" | "DISETUJUI";
 
 export type ApprovalAction = "ajukan" | "ketahui" | "setujui" | "kembalikan";
 
-export const APPROVAL_ACTIONS: readonly ApprovalAction[] = [
-  "ajukan",
-  "ketahui",
-  "setujui",
-  "kembalikan",
-] as const;
-
 export interface HydrantComponents {
   boxHydrant: HydrantComponentStatus;
   fireHose: HydrantComponentStatus;

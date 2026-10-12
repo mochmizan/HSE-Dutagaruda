@@ -9,7 +9,7 @@ import {
   sites,
 } from "../db/schema.js";
 import { companyId, requireSession, type SessionUser } from "../auth/middleware.js";
-import { listPage, newId, notFound } from "./helpers.js";
+import { editLocked, listPage, newId, notFound } from "./helpers.js";
 import {
   idParamSchema,
   listQuerySchema,
@@ -96,6 +96,7 @@ patrolApp.patch(
       .where(and(eq(safetyPatrolReports.id, id), eq(safetyPatrolReports.companyId, owned)))
       .limit(1);
     if (rows.length === 0) throw notFound("Laporan patroli");
+    if (rows[0].approvalStatus !== "DRAFT") throw editLocked();
     const body = c.req.valid("json");
     if (body.siteId) {
       const site = await db
@@ -157,6 +158,7 @@ patrolApp.post(
       .where(and(eq(safetyPatrolReports.id, id), eq(safetyPatrolReports.companyId, owned)))
       .limit(1);
     if (head.length === 0) throw notFound("Laporan patroli");
+    if (head[0].approvalStatus !== "DRAFT") throw editLocked();
     const body = c.req.valid("json");
     const [row] = await db
       .insert(safetyPatrolFindings)
@@ -175,6 +177,12 @@ patrolApp.delete("/findings/:fid", zValidator("param", findingParamSchema.pick({
     .where(and(eq(safetyPatrolFindings.id, fid), eq(safetyPatrolFindings.companyId, owned)))
     .limit(1);
   if (rows.length === 0) throw notFound("Temuan patroli");
+  const head = await db
+    .select({ approvalStatus: safetyPatrolReports.approvalStatus })
+    .from(safetyPatrolReports)
+    .where(eq(safetyPatrolReports.id, rows[0].reportId))
+    .limit(1);
+  if (head[0]?.approvalStatus !== "DRAFT") throw editLocked();
   await db.delete(safetyPatrolFindings).where(eq(safetyPatrolFindings.id, fid));
   return c.json({ ok: true });
 });
