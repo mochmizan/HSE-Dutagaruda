@@ -199,13 +199,6 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
             <span className="flex-1 text-left truncate">Patroli K3</span>
           </button>
 
-          <button
-            type="button"
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs rounded-[4px] text-[var(--secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)] transition-colors cursor-pointer"
-          >
-            <ShieldCheck size={15} />
-            <span className="flex-1 text-left truncate">Registri Aset</span>
-          </button>
         </div>
 
         {/* Filter Kategori */}

@@ -11,9 +11,11 @@ import {
   useInspeksiP3k,
   useSimpanInspeksiP3k,
   useUbahButirP3k,
+  useUbahInspeksiP3k,
   useHapusInspeksiP3k,
 } from '@/services/api/queries';
 import type { ApiInspeksiP3k } from '@/services/api/klien';
+import { ambilButirP3k } from '@/services/api/klien';
 import {
   MONTH_KEYS,
   MONTH_NAMES,
@@ -46,6 +48,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
   const kotakQuery = useKotakP3k();
   const inspeksiQuery = useInspeksiP3k();
   const buatInspeksi = useSimpanInspeksiP3k();
+  const ubahInspeksi = useUbahInspeksiP3k();
   const ubahButir = useUbahButirP3k();
   const hapusInspeksi = useHapusInspeksiP3k();
 
@@ -361,28 +364,43 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
         onClose={() => setActiveMonth(null)}
         onSave={(data) => {
           if (activeMonth && kotak) {
-            // Inspeksi bulan dibuat bila belum ada; lalu setiap butir disimpan.
-            buatInspeksi.mutate(
-              { boxId: kotak.id, month: `${year}-${activeMonth}` },
-              {
-                onSuccess: (insp) => {
-                  for (const std of STANDARD_P3K_ITEMS) {
-                    const target = (insp.items ?? []).find((it) => it.itemName === std.name);
-                    const nilai = data.items[std.id];
-                    if (!target || nilai === undefined) continue;
-                    const actual = typeof nilai.actual === 'number' ? nilai.actual : 0;
-                    ubahButir.mutate({
-                      inspectionId: insp.id,
-                      itemId: target.id,
-                      body: {
-                        actualQty: actual,
-                        status: nilai.expired ? 'KADALUARSA' : actual >= std.standardQty ? 'STANDAR' : 'DIBAWAH_STANDAR',
-                      },
-                    });
-                  }
-                },
-              },
+            const bulan = `${year}-${activeMonth}`;
+            const kepala = {
+              inspectionDate: data.tanggal.trim() ? data.tanggal.trim() : undefined,
+              paraf: data.paraf.trim() ? data.paraf.trim() : undefined,
+            };
+            const simpanButir = (insp: { id: string; items?: Array<{ id: string; itemName: string }> }) => {
+              for (const std of STANDARD_P3K_ITEMS) {
+                const target = (insp.items ?? []).find((it) => it.itemName === std.name);
+                const nilai = data.items[std.id];
+                if (!target || nilai === undefined) continue;
+                const actual = typeof nilai.actual === 'number' ? nilai.actual : 0;
+                ubahButir.mutate({
+                  inspectionId: insp.id,
+                  itemId: target.id,
+                  body: {
+                    actualQty: actual,
+                    status: nilai.expired ? 'KADALUARSA' : actual >= std.standardQty ? 'STANDAR' : 'DIBAWAH_STANDAR',
+                  },
+                });
+              }
+            };
+            // Rekam bulan sudah ada → perbarui kepala + butir (tanpa 409).
+            const ada = (inspeksiQuery.data ?? []).find(
+              (i) => i.boxId === kotak.id && i.period.startsWith(bulan),
             );
+            if (ada) {
+              if (kepala.inspectionDate !== undefined || kepala.paraf !== undefined) {
+                ubahInspeksi.mutate({ id: ada.id, body: kepala });
+              }
+              ambilButirP3k(ada.id).then(simpanButir);
+            } else {
+              // Inspeksi bulan dibuat bila belum ada; lalu setiap butir disimpan.
+              buatInspeksi.mutate(
+                { boxId: kotak.id, month: bulan, ...kepala },
+                { onSuccess: (insp) => simpanButir(insp) },
+              );
+            }
           }
           setActiveMonth(null);
         }}

@@ -241,13 +241,23 @@ export function useSimpanInspeksiHidran() {
   });
 }
 
+/** Cari id zona berdasarkan nama; buat bila belum ada (hindari zona ganda). */
+async function idZonaAtauBuat(siteId: string, zoneName: string): Promise<string> {
+  const nama = zoneName.trim();
+  const daftar = await k.ambilZona();
+  const ada = (daftar.items ?? []).find((z) => z.siteId === siteId && z.name === nama);
+  if (ada) return ada.id;
+  const baru = await k.buatZona({ siteId, name: nama });
+  return baru.id;
+}
+
 export function useBuatUnitHidran() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { unit: k.MasukanUnitHidran; zonaBaru?: string; siteId: string }) =>
+    mutationFn: (args: { siteId: string; zoneName: string; kode: string }) =>
       (async () => {
-        if (args.zonaBaru) await k.buatZona({ siteId: args.siteId, name: args.zonaBaru });
-        return k.buatUnitHidran(args.unit);
+        const zoneId = await idZonaAtauBuat(args.siteId, args.zoneName);
+        return k.buatUnitHidran({ siteId: args.siteId, zoneId, kode: args.kode });
       })(),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: kunci.unitHidran });
@@ -289,10 +299,14 @@ export function useSimpanInspeksiApar() {
 export function useBuatUnitApar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { unit: k.MasukanUnitApar; zonaBaru?: string; siteId: string }) =>
+    mutationFn: (args: {
+      siteId: string;
+      zoneName: string;
+      unit: Omit<k.MasukanUnitApar, 'siteId' | 'zoneId'>;
+    }) =>
       (async () => {
-        if (args.zonaBaru) await k.buatZona({ siteId: args.siteId, name: args.zonaBaru });
-        return k.buatUnitApar(args.unit);
+        const zoneId = await idZonaAtauBuat(args.siteId, args.zoneName);
+        return k.buatUnitApar({ ...args.unit, siteId: args.siteId, zoneId });
       })(),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: kunci.unitApar });
@@ -317,7 +331,22 @@ export function useUbahUnitApar() {
 export function useSimpanInspeksiP3k() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { boxId: string; month: string }) => k.buatInspeksiP3k(args),
+    mutationFn: (args: { boxId: string; month: string; inspectionDate?: string; paraf?: string }) =>
+      k.buatInspeksiP3k(args),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiP3k });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+/** Perbarui kepala inspeksi P3K (tanggal/paraf) tanpa membuat rekam baru. */
+export function useUbahInspeksiP3k() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; body: { inspectionDate?: string; paraf?: string } }) =>
+      k.ubahInspeksiP3k(args.id, args.body),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: kunci.inspeksiP3k });
       void qc.invalidateQueries({ queryKey: ['umpan'] });
@@ -764,7 +793,7 @@ export function petakanUmpanKeLaporan(
     return {
       id: r.id,
       category: 'P3K' as const,
-      date: r.createdAt,
+      date: r.inspectionDate ?? r.createdAt,
       period: periodeBaris(r.period),
       siteId: r.companyId,
       siteName: '',

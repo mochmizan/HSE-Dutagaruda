@@ -234,6 +234,8 @@ export const p3kInspections = pgTable(
       .references(() => p3kBoxes.id),
     period: date("period").notNull(),
     notes: text("notes"),
+    inspectionDate: date("inspection_date"),
+    paraf: text("paraf"),
     approvalStatus: approvalStatusEnum("approval_status").default("DRAFT").notNull(),
     approvalSubmittedById: text("approval_submitted_by_id"),
     approvalActorId: text("approval_actor_id"),

@@ -138,6 +138,8 @@ export interface ApiInspeksiP3k {
   boxId: string;
   period: string;
   notes: string | null;
+  inspectionDate: string | null;
+  paraf: string | null;
   approvalStatus: ApiStatusPersetujuan;
   approvalSubmittedById: string | null;
   approvalActorId: string | null;
@@ -270,8 +272,18 @@ export const ubahInspeksiApar = (
   body: Partial<Omit<MasukanInspeksiApar, 'unitId' | 'month'>>,
 ) => livePatch<ApiInspeksiApar>(`/apar-inspections/${id}`, body);
 
-export const buatInspeksiP3k = (body: { boxId: string; month: string; notes?: string }) =>
-  livePost<ApiInspeksiP3k>('/p3k-inspections', body);
+export const buatInspeksiP3k = (body: {
+  boxId: string;
+  month: string;
+  notes?: string;
+  inspectionDate?: string;
+  paraf?: string;
+}) => livePost<ApiInspeksiP3k>('/p3k-inspections', body);
+
+export const ubahInspeksiP3k = (
+  id: string,
+  body: { notes?: string; inspectionDate?: string; paraf?: string },
+) => livePatch<ApiInspeksiP3k>(`/p3k-inspections/${id}`, body);
 
 export const ubahButirP3k = (
   inspectionId: string,

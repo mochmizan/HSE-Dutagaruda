@@ -447,15 +447,11 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
 
   const handleAddAparUnits = (items: AparCreationItem[]) => {
     if (!lokasi.siteId) return;
-    const zonaDibuat = new Set<string>();
     items.forEach((item) => {
       buatUnit.mutate({
         siteId: lokasi.siteId,
-        zonaBaru: zonaDibuat.has(item.zoneName) ? undefined : item.zoneName,
+        zoneName: item.zoneName,
         unit: {
-          siteId: lokasi.siteId,
-          // Nama zona dikirim sebagai penanda; id zona nyata mengikuti setelah invalidate.
-          zoneId: item.zoneName,
           kode: item.kode,
           tahun: item.tahunPembuatan,
           jenis: item.jenis,
@@ -463,7 +459,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
           expiredDate: item.expiredDate,
         },
       });
-      zonaDibuat.add(item.zoneName);
     });
   };
 

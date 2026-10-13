@@ -30,7 +30,11 @@ export function petakanGridP3k(
           expired: it.status === 'KADALUARSA',
         };
       }
-      grid[bulan] = { items, tanggal: insp.createdAt.slice(0, 10), paraf: '' };
+      grid[bulan] = {
+        items,
+        tanggal: insp.inspectionDate ?? insp.createdAt.slice(0, 10),
+        paraf: insp.paraf ?? '',
+      };
     }
     hasil[box.id] = grid;
   }

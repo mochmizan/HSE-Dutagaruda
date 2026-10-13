@@ -19,7 +19,7 @@ import {
   X,
   Camera,
 } from 'lucide-react';
-import { format, addMonths, subMonths } from 'date-fns';
+import { format, addMonths, subMonths, parseISO, isValid } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { HydrantUnitItem, InspectionReport } from '../../types/hse';
 import { HydrantInspectionModal } from './HydrantInspectionModal';
@@ -78,13 +78,23 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const [fotoHidran, setFotoHidran] = useState<Record<string, FotoTampil[]>>({});
   const unggahFoto = useUnggahFoto();
   const hapusFoto = useHapusFoto();
-  // Month navigation state (di atas: inspeksiAktif memakai period)
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date(2026, 8, 1));
+  // Month navigation state (di atas: inspeksiAktif memakai period).
+  // Bawaan = bulan kalender nyata agar data bulan berjalan langsung tampil.
+  const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
+    const kini = new Date();
+    return new Date(kini.getFullYear(), kini.getMonth(), 1);
+  });
   const handlePrevMonth = () => setSelectedMonth((prev) => subMonths(prev, 1));
   const handleNextMonth = () => setSelectedMonth((prev) => addMonths(prev, 1));
-  const handleResetToCurrentMonth = () => setSelectedMonth(new Date(2026, 8, 1));
+  const handleResetToCurrentMonth = () => {
+    const kini = new Date();
+    setSelectedMonth(new Date(kini.getFullYear(), kini.getMonth(), 1));
+  };
   const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: idLocale });
-  const isCurrentMonth = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 8;
+  const isCurrentMonth = (() => {
+    const kini = new Date();
+    return selectedMonth.getFullYear() === kini.getFullYear() && selectedMonth.getMonth() === kini.getMonth();
+  })();
   const period = format(selectedMonth, 'yyyy-MM');
 
   const inspeksiAktif: ApiInspeksiHidran | null = activeInspectionUnit
@@ -260,19 +270,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
 
   const handleAddHydrantUnits = (newItems: HydrantCreationItem[]) => {
     if (!lokasi.siteId) return;
-    const zonaDibuat = new Set<string>();
     newItems.forEach((item) => {
-      buatUnit.mutate({
-        siteId: lokasi.siteId,
-        zonaBaru: zonaDibuat.has(item.zoneName) ? undefined : item.zoneName,
-        unit: {
-          siteId: lokasi.siteId,
-          // Nama zona dikirim sebagai penanda; id zona nyata mengikuti setelah invalidate.
-          zoneId: item.zoneName,
-          kode: item.kode,
-        },
-      });
-      zonaDibuat.add(item.zoneName);
+      buatUnit.mutate({ siteId: lokasi.siteId, zoneName: item.zoneName, kode: item.kode });
     });
     if (filterTab === 'COMPLETED') {
       setFilterTab('ON_PROGRESS');
@@ -772,9 +771,11 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                     <tr
                       key={unit.id}
                       onClick={() => {
-                        if (unit.status === 'SELESAI' && unit.completedReport) {
-                          onOpenReportDetail?.(unit.completedReport);
+                        if (unit.status === 'SELESAI' && unit.completedReport && onOpenReportDetail) {
+                          onOpenReportDetail(unit.completedReport);
                         } else {
+                          // Tanpa pengait detail (halaman mandiri): modal inspeksi
+                          // menampilkan hasil tersimpan + bilah persetujuan.
                           setActiveInspectionUnit(unit);
                         }
                       }}
@@ -875,7 +876,11 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                             {unit.inspectorName || 'Alex Chen (Staff)'}
                           </p>
                           <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 text-center">
-                            {isCompleted ? '04 Sep 2026' : unit.scheduledDate || 'Bulan Ini'}
+                            {(() => {
+                        if (!isCompleted || !unit.completedReport) return unit.scheduledDate || 'Bulan Ini';
+                        const t = parseISO(unit.completedReport.date);
+                        return isValid(t) ? format(t, 'dd MMM yyyy', { locale: idLocale }) : unit.scheduledDate || 'Bulan Ini';
+                      })()}
                           </p>
                         </div>
                       </td>
@@ -1015,15 +1020,21 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                   {/* Footer & Action */}
                   <div className="mt-3 pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-xs">
                     <span className="text-[10px] text-[var(--muted)] font-mono">
-                      {isCompleted ? '04 Sep 2026' : unit.scheduledDate || 'Bulan Ini'}
+                      {(() => {
+                        if (!isCompleted || !unit.completedReport) return unit.scheduledDate || 'Bulan Ini';
+                        const t = parseISO(unit.completedReport.date);
+                        return isValid(t) ? format(t, 'dd MMM yyyy', { locale: idLocale }) : unit.scheduledDate || 'Bulan Ini';
+                      })()}
                     </span>
 
                     {isCompleted ? (
                       <button
                         type="button"
                         onClick={() => {
-                          if (unit.completedReport) {
-                            onOpenReportDetail?.(unit.completedReport);
+                          if (unit.completedReport && onOpenReportDetail) {
+                            onOpenReportDetail(unit.completedReport);
+                          } else {
+                            setActiveInspectionUnit(unit);
                           }
                         }}
                         className="px-2.5 py-1 text-xs font-semibold rounded-[4px] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer flex items-center gap-1 pressable"

@@ -78,6 +78,8 @@ export const p3kInspectionBodySchema = z.object({
   boxId: z.string().min(1),
   month: periodKeySchema,
   notes: z.string().optional(),
+  inspectionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal inspeksi harus format YYYY-MM-DD.").optional(),
+  paraf: z.string().max(24).optional(),
 });
 
 export const p3kItemPatchSchema = z.object({

@@ -365,7 +365,15 @@ export const p3kInspectionsApp = new Hono()
   if (dup.length > 0) throw duplicateMonth();
   const [row] = await db
     .insert(p3kInspections)
-    .values({ id: newId(), companyId: owned, boxId: body.boxId, period, notes: body.notes ?? null })
+    .values({
+      id: newId(),
+      companyId: owned,
+      boxId: body.boxId,
+      period,
+      notes: body.notes ?? null,
+      inspectionDate: body.inspectionDate ?? null,
+      paraf: body.paraf?.trim() ? body.paraf.trim() : null,
+    })
     .returning();
   await db.insert(p3kInspectionItems).values(
     STANDARD_P3K_ITEMS.map((item) => ({

@@ -116,9 +116,11 @@ anything (takeover lesson: L/K items were already on disk).
 - `bun run doctor` (scripts/doctor.mjs): pre-flight green/red — daemon,
   5 services, 5173 occupancy, postgres, api health, digest pin, env keys,
   git clean. Run before every wave.
-- `infra/docker-compose.override.yml`: bind-mounts api+shared src (ro) so Bun
-  hot mode reloads WITHOUT image rebuild. Biggest loop-cost item, dead.
-  Base compose unchanged (CI/prod still bakes).
+- `infra/docker-compose.override.yml`: bind-mounts api+shared src (ro) so a
+  container RESTART picks up edits with NO image rebuild. Nota: api CMD has
+  no --hot — bind mount alone does nothing until `restart api`. `up -d` alone
+  also skips restart when config is unchanged; `up -d` IS needed after .env
+  edits (interpolation), `restart` is enough after src edits.
 - API fails fast on missing env (Indonesian message, lists keys) instead of
   cryptic runtime 500s.
 - Feed gate now asserts contract key names (`hydrant/apar/p3k/patrol` arrays),
@@ -129,8 +131,21 @@ anything (takeover lesson: L/K items were already on disk).
   `https://desktop-6srl494.tail2e9cdf.ts.net` (no admin/firewall rule needed;
   tailscaled terminates TLS). API trustedOrigins holds tailnet https + IP
   plus TRUSTED_ORIGINS env override; vite bound 0.0.0.0, allowedHosts .ts.net.
-  Gotcha: api container does NOT hot-reload src despite bind mount —
-  `docker compose restart api` needed after auth/config edits.
+  Gotcha: api CMD has no --hot, so bind mount alone does nothing until
+  `docker compose restart api` (src edits). After .env edits use `up -d`
+  (compose interpolation), `restart` keeps old env.
+- Sweep Oct 13 (browser, semua halaman): hydrant completed-row + card
+  "Lihat Laporan" dead without onOpenReportDetail → fallback to modal;
+  hardcoded '04 Sep 2026' → real date (guarded isValid); hydrant default
+  month Sep → real current month (APAR year-locked by design, untouched);
+  unit-create sent zone NAME as zoneId + duplicate zones → find-or-create in
+  mutation (both pages); dead "Registri Aset" nav removed; P3K tanggal/paraf
+  silently dropped → real columns (0001 migration) + upsert save (no more 409
+  on re-save); patrol add works, photo intentionally draft-key (owner scope).
+  Detectors: assert on body-text, not [role=dialog] (P3K modal has none).
+  Synthetic clicks must find+click in ONE evaluate (re-render detaches nodes).
+- Owed: unique(site,zone) constraint (API allows dup names); patrol real
+  photo upload; PUBLIC_STORAGE_BASE back to localhost after demo.
 - Row-click blank page (Oct 13, found in browser): TDZ `period` used above its
   `const` in HydrantPage — silent until row click set state. Fix: declare
   month/period before `inspeksiAktif`. APAR/P3K/Patrol audited clean.
