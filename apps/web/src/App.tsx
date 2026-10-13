@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { addMonths, subMonths, format } from 'date-fns';
 import { MapPin, Loader2 } from 'lucide-react';
@@ -8,16 +8,28 @@ import { PenyediaLokasi, useKonteksLokasi } from '@/features/konteksLokasi';
 import { HseCalendar } from '@/features/calendar';
 import { KpiGrid } from '@/features/kpi';
 import { MonthlyReportsPanel, ReportDetailModal } from '@/features/reports';
-import { HydrantPage } from '@/features/hydrant';
-import { AparPage } from '@/features/apar';
-import { P3kPage } from '@/features/p3k';
-import { PatrolPage } from '@/features/patrol';import { useUmpan, petakanUmpanKeLaporan, useUnitHidran, useUnitApar, useKotakP3k } from '@/services/api/queries';
+import { useUmpan, petakanUmpanKeLaporan, useUnitHidran, useUnitApar, useKotakP3k } from '@/services/api/queries';
 import { InspectionCategory, InspectionReport } from '@/types';
 import { Agentation } from 'agentation';
 
 type AppView = 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol';
 
 const hariIni = () => new Date();
+
+function HalamanMemuat() {
+  return (
+    <div className="flex-1 flex items-center justify-center gap-2 text-xs text-[var(--muted)]">
+      <Loader2 size={14} className="animate-spin" />
+      <span>Memuat halaman…</span>
+    </div>
+  );
+}
+
+// Halaman fitur dipecah per chunk agar bundel utama tetap di bawah batas.
+const HydrantPage = lazy(() => import('@/features/hydrant').then((m) => ({ default: m.HydrantPage })));
+const AparPage = lazy(() => import('@/features/apar').then((m) => ({ default: m.AparPage })));
+const P3kPage = lazy(() => import('@/features/p3k').then((m) => ({ default: m.P3kPage })));
+const PatrolPage = lazy(() => import('@/features/patrol').then((m) => ({ default: m.PatrolPage })));
 
 function AppIsi() {
   const sesi = useSesi();
@@ -269,13 +281,21 @@ function AppIsi() {
           />
         </>
       ) : currentView === 'hydrant' ? (
-        <HydrantPage onBack={() => setCurrentView('dashboard')} />
+        <Suspense fallback={<HalamanMemuat />}>
+          <HydrantPage onBack={() => setCurrentView('dashboard')} />
+        </Suspense>
       ) : currentView === 'apar' ? (
-        <AparPage onBack={() => setCurrentView('dashboard')} />
+        <Suspense fallback={<HalamanMemuat />}>
+          <AparPage onBack={() => setCurrentView('dashboard')} />
+        </Suspense>
       ) : currentView === 'p3k' ? (
-        <P3kPage onBack={() => setCurrentView('dashboard')} />
+        <Suspense fallback={<HalamanMemuat />}>
+          <P3kPage onBack={() => setCurrentView('dashboard')} />
+        </Suspense>
       ) : (
-        <PatrolPage onBack={() => setCurrentView('dashboard')} />
+        <Suspense fallback={<HalamanMemuat />}>
+          <PatrolPage onBack={() => setCurrentView('dashboard')} />
+        </Suspense>
       )}
 
       {/* 4. Inspection Record Detail Modal */}
