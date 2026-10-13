@@ -17,7 +17,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    allowedHosts: ['.ts.net'],
+    allowedHosts: ['.ts.net', '100.116.194.92'],
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
