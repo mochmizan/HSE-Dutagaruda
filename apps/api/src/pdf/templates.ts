@@ -65,6 +65,18 @@ td.note { font-style:italic; text-align:left; }
 .sign .role { font-weight:700; }
 .sign .space { height:52px; }
 .sign .name { font-weight:700; text-decoration:underline; }
+.p3k .doc-head { padding-bottom:4px; margin-bottom:6px; }
+.p3k .doc-head h1 { font-size:11pt; }
+.p3k .doc-head .std { font-size:6.8pt; margin-bottom:4px; }
+.p3k .meta { font-size:7pt; }
+.p3k table.grid { table-layout:fixed; font-size:6.8pt; }
+.p3k table.grid th { font-size:6.5pt; padding:2px 2px; line-height:1.2; }
+.p3k table.grid td { padding:1.5px 2px; line-height:1.25; }
+.p3k .chip { font-size:6.5pt; padding:0 2px; margin:0; }
+.p3k .sign { margin-top:8px; padding-top:5px; }
+.p3k .sign td { font-size:7pt; }
+.p3k .sign .space { height:36px; }
+.p3k .foot { margin-top:5px; font-size:6.5pt; }
 .foot { margin-top:10px; font-size:7pt; color:#6b7280; text-align:right; }
 .empty { margin:10px 0; font-size:8pt; color:#6b7280; font-style:italic; }
 </style>
@@ -335,7 +347,7 @@ export function p3kYearly(data: P3kYearlyData): string {
   return shell({
     title: `Kartu P3K ${data.boxName} ${data.tahun}`,
     landscape: true,
-    body: `${head(
+    body: `<div class="p3k">${head(
       "KARTU TAHUNAN PEMERIKSAAN KOTAK P3K",
       "Sesuai Permenkes No. 48 Tahun 2016 tentang Standar Keselamatan Kesehatan Kerja",
       [
@@ -349,7 +361,7 @@ export function p3kYearly(data: P3kYearlyData): string {
   <tbody>${rows}</tbody>
 </table>
 ${signatures()}
-<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · Tanda: ✓ standar · ✗ di bawah standar · K kedaluwarsa</p>`,
+<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · Tanda: ✓ standar · ✗ di bawah standar · K kedaluwarsa</p></div>`,
   });
 }
 
