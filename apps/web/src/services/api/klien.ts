@@ -366,6 +366,19 @@ export const unggahFoto = (
 
 export const hapusFoto = (id: string) => liveDelete<{ ok: boolean }>(`/photos/${id}`);
 
+/**
+ * TODO(pekerja J): kontrak `GET /api/photos?inspectionKind=&inspectionId=`
+ * (daftar foto satu inspeksi). Deklarasi tunggal di sini — bila bentuk
+ * respons J berbeda (mis. penyertaan URL presigned), ubah hanya fungsi ini.
+ */
+export const ambilFotoInspeksi = (
+  inspectionKind: 'hydrant' | 'apar',
+  inspectionId: string,
+) =>
+  liveGet<{ items: ApiFoto[] }>(
+    `/photos?inspectionKind=${inspectionKind}&inspectionId=${encodeURIComponent(inspectionId)}`,
+  );
+
 // ── Ekspor PDF (pdfJobs, v1 sinkron) ──
 
 export type KategoriEkspor =

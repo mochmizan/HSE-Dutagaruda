@@ -390,7 +390,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
   const handleHapusFoto = (fotoId: string) => {
     if (!inspeksiAktif) return;
     const inspectionId = inspeksiAktif.id;
-    hapusFoto.mutate(fotoId, {
+    hapusFoto.mutate({ id: fotoId, inspectionId }, {
       onSuccess: () =>
         setFotoApar((prev) => ({
           ...prev,

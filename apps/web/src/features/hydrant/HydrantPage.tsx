@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Flame,
@@ -38,6 +38,7 @@ import {
   useUbahUnitHidran,
   useUnggahFoto,
   useHapusFoto,
+  useFotoInspeksi,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
 import type { ApiInspeksiHidran } from '@/services/api/klien';
@@ -94,43 +95,19 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
   const zones = lokasi.zonaNamaList;
 
   // Catatan Hasil Temuan (Findings documentation photos & descriptions)
-  const [findings, setFindings] = useState<HydrantFindingItem[]>([
-    {
-      id: 'f-1',
-      imageUrl: '/findings/finding-1.png',
-      description: 'Hose Coupling tidak ada',
-      unitCode: 'HYD-01',
-      createdAt: '16 Sep 2026',
-    },
-    {
-      id: 'f-2',
-      imageUrl: '/findings/finding-2.png',
-      description: 'Selang Hydrant robek',
-      unitCode: 'HYD-03',
-      createdAt: '16 Sep 2026',
-    },
-    {
-      id: 'f-3',
-      imageUrl: '/findings/finding-3.png',
-      description: 'Outlet sambungan karat dan berair',
-      unitCode: 'HYD-04',
-      createdAt: '16 Sep 2026',
-    },
-    {
-      id: 'f-4',
-      imageUrl: '/findings/finding-4.png',
-      description: 'Tidak ada isi pada box Hydrant',
-      unitCode: 'HYD-06',
-      createdAt: '16 Sep 2026',
-    },
-    {
-      id: 'f-5',
-      imageUrl: '/findings/finding-5.png',
-      description: 'Hydrant tidak bisa menutup rapat',
-      unitCode: 'HYD-05',
-      createdAt: '16 Sep 2026',
-    },
-  ]);
+  // B. Catatan hasil temuan = foto inspeksi nyata bulan terpilih (GET /api/photos via useFotoInspeksi).
+  const jangkarTemuan =
+    (inspeksiQuery.data ?? []).find((i) => i.period.startsWith(period))?.id ?? null;
+  const fotoTemuan = useFotoInspeksi(jangkarTemuan);
+  const findings: HydrantFindingItem[] = useMemo(
+    () =>
+      (fotoTemuan.data ?? []).map((f) => ({
+        id: f.id,
+        imageUrl: f.url,
+        description: f.caption || 'Temuan dokumentasi',
+      })),
+    [fotoTemuan.data],
+  );
 
   // Derived counts
   const totalUnits = units.length;
@@ -238,7 +215,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
   const handleHapusFoto = (fotoId: string) => {
     if (!inspeksiAktif) return;
     const inspectionId = inspeksiAktif.id;
-    hapusFoto.mutate(fotoId, {
+    hapusFoto.mutate({ id: fotoId, inspectionId }, {
       onSuccess: () =>
         setFotoHidran((prev) => ({
           ...prev,
@@ -275,17 +252,22 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
     });
   };
 
-  const handleAddFinding = (item: Omit<HydrantFindingItem, 'id' | 'createdAt'>) => {
-    const newFinding: HydrantFindingItem = {
-      ...item,
-      id: `finding-${Date.now()}`,
-      createdAt: '16 Sep 2026',
-    };
-    setFindings((prev) => [...prev, newFinding]);
+  // Tambah temuan = unggah foto nyata ke rekam inspeksi jangkar bulan terpilih.
+  const handleAddFinding = (item: { file: File; description: string; unitCode?: string }) => {
+    if (!jangkarTemuan) {
+      window.alert('Belum ada inspeksi bulan ini — simpan inspeksi satu unit dahulu.');
+      return;
+    }
+    unggahFoto.mutate(
+      { kind: 'hydrant', inspectionId: jangkarTemuan, file: item.file, caption: item.description },
+      {
+        onError: () => {},
+      },
+    );
   };
 
   const handleDeleteFinding = (id: string) => {
-    setFindings((prev) => prev.filter((f) => f.id !== id));
+    hapusFoto.mutate({ id });
   };
 
   const handlePrint = () => {

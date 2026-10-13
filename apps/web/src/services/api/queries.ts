@@ -391,6 +391,7 @@ export interface FotoTampil {
 }
 
 export function useUnggahFoto() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: {
       kind: 'hydrant' | 'apar';
@@ -398,14 +399,29 @@ export function useUnggahFoto() {
       file: File;
       caption?: string;
     }) => k.unggahFoto(args.kind, args.inspectionId, args.file, args.caption),
+    onSuccess: (_foto, args) => invalidateFoto(qc, args.inspectionId),
     onError: (err) => window.alert(gagal(err)),
   });
 }
 
 export function useHapusFoto() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => k.hapusFoto(id),
+    mutationFn: (args: { id: string; inspectionId?: string }) => k.hapusFoto(args.id),
+    onSuccess: (_res, args) => invalidateFoto(qc, args.inspectionId),
     onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+/** Daftar foto satu inspeksi (kontrak menunggu endpoint GET /api/photos dari pekerja J). */
+export function useFotoInspeksi(inspectionId: string | null) {
+  return useQuery({
+    queryKey: ['foto-inspeksi', inspectionId],
+    enabled: inspectionId != null,
+    queryFn: async () => {
+      const res = await k.ambilFotoInspeksi('hydrant', inspectionId as string);
+      return res.items.map((f) => ({ id: f.id, url: livePhotoUrl(f.id), caption: f.caption ?? '' }));
+    },
   });
 }
 
@@ -429,8 +445,7 @@ export function useHapusTemuanPatroli() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (fid: string) => k.hapusTemuanPatroli(fid),
-    onMutate: async (fid) => {
-      await qc.cancelQueries({ queryKey: kunci.laporanPatroli });
+    onMutate: async (fid) => {      await qc.cancelQueries({ queryKey: kunci.laporanPatroli });
       const sebelumnya = qc.getQueryData<k.ApiLaporanPatroli[]>(kunci.laporanPatroli);
       qc.setQueryData<k.ApiLaporanPatroli[]>(kunci.laporanPatroli, (lama) =>
         (lama ?? []).map((laporan) => ({
@@ -446,6 +461,13 @@ export function useHapusTemuanPatroli() {
     },
     onSettled: () => void qc.invalidateQueries({ queryKey: kunci.laporanPatroli }),
   });
+}
+
+// ── Mutasi foto inspeksi ──
+
+/** Mutasi foto (unggah/hapus) juga membarui daftar foto per inspeksi. */
+function invalidateFoto(qc: ReturnType<typeof useQueryClient>, inspectionId?: string) {
+  if (inspectionId) void qc.invalidateQueries({ queryKey: ['foto-inspeksi', inspectionId] });
 }
 
 // ── Pemetaan baris API → model UI ──

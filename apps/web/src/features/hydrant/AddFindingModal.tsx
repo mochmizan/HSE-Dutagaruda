@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Camera, AlertCircle, Check, Image as ImageIcon } from 'lucide-react';
-import type { HydrantFindingItem } from './types';
 
 export interface AddFindingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddFinding: (finding: Omit<HydrantFindingItem, 'id' | 'createdAt'>) => void;
+  /** Terima berkas foto mentah + deskripsi; unggahan nyata ditangani halaman. */
+  onAddFinding: (finding: { file: File; description: string; unitCode?: string }) => void;
   existingUnits?: string[];
 }
 
@@ -15,6 +15,7 @@ export const AddFindingModal: React.FC<AddFindingModalProps> = ({
   onAddFinding,
   existingUnits = [],
 }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [unitCode, setUnitCode] = useState<string>('');
@@ -24,6 +25,7 @@ export const AddFindingModal: React.FC<AddFindingModalProps> = ({
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
+      setSelectedFile(null);
       setImagePreview('');
       setDescription('');
       setUnitCode(existingUnits[0] || '');
@@ -52,6 +54,7 @@ export const AddFindingModal: React.FC<AddFindingModalProps> = ({
         setErrorMessage('File yang dipilih harus berupa gambar (JPG, PNG, WebP).');
         return;
       }
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         setImagePreview(event.target?.result as string);
@@ -65,7 +68,7 @@ export const AddFindingModal: React.FC<AddFindingModalProps> = ({
     e.preventDefault();
     setErrorMessage('');
 
-    if (!imagePreview) {
+    if (!selectedFile) {
       setErrorMessage('Unggah atau pilih foto temuan terlebih dahulu.');
       return;
     }
@@ -76,7 +79,7 @@ export const AddFindingModal: React.FC<AddFindingModalProps> = ({
     }
 
     onAddFinding({
-      imageUrl: imagePreview,
+      file: selectedFile,
       description: description.trim(),
       unitCode: unitCode || undefined,
     });
