@@ -10,7 +10,7 @@ import {
   useHapusTemuanPatroli,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { ApprovalBar, PhotoCard, EmptyState, UnduhPdfButton } from '@/components/ui';
+import { ApprovalBar, LABEL_STATUS, PhotoCard, EmptyState, UnduhPdfButton } from '@/components/ui';
 import type { ApiLaporanPatroli } from '@/services/api/klien';
 
 interface PatrolPageProps {
@@ -186,12 +186,26 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
               style={{ columnGap: 'clamp(3.5rem, 7vw, 6.5rem)' }}
             >
               {sorted.map((finding) => (
-                <PhotoCard
-                  key={finding.id}
-                  imageUrl={finding.photoUrl}
-                  caption={finding.caption}
-                  onDelete={() => handleDelete(finding.id)}
-                />
+                <div key={finding.id} className="flex flex-col items-center">
+                  <span
+                    className={`no-print mb-2 px-2 py-0.5 rounded-[3px] text-[10px] font-semibold border tabular-nums ${
+                      finding.approvalStatus === 'DISETUJUI'
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                        : finding.approvalStatus === 'DIAJUKAN'
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                          : finding.approvalStatus === 'DIKETAHUI'
+                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                            : 'bg-[var(--bg-hover)] text-[var(--muted)] border-[var(--border)]'
+                    }`}
+                  >
+                    {LABEL_STATUS[finding.approvalStatus]}
+                  </span>
+                  <PhotoCard
+                    imageUrl={finding.photoUrl}
+                    caption={finding.caption}
+                    onDelete={() => handleDelete(finding.id)}
+                  />
+                </div>
               ))}
             </div>
           </div>

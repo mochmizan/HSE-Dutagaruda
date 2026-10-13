@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { InspectionReport, AparUnitItem, HydrantUnitItem } from '@/types/hse';
 import type { AparYearGrid } from '@/types/hse';
 import type { AparCardsState } from '@/lib/aparSync';
+import type { ApiStatusPersetujuan } from './klien';
 import { emptyYearGrid, DRAFT_TO_YEAR } from '@/lib/aparSync';
 import type { OverallStatus } from '@/types/domain';
 import * as k from './klien';
@@ -661,11 +662,16 @@ export function petakanKartuApar(
   return kartu;
 }
 
-export interface TemuanPatroliTampil {  id: string;
+export interface TemuanPatroliTampil {
+  id: string;
   /** URL foto via GET /api/photos/:id (redirect 302, kuki). '' = placeholder. */
   photoUrl: string;
   caption: string;
   tanggal: string;
+  /** Status persetujuan laporan induk temuan (chip per kartu umpan). */
+  approvalStatus: ApiStatusPersetujuan;
+  /** ID laporan induk untuk bilah persetujuan per laporan di modal. */
+  laporanId: string;
 }
 
 export function petakanTemuanPatroli(
@@ -679,6 +685,8 @@ export function petakanTemuanPatroli(
       photoUrl: f.s3Key.startsWith('draft/') ? '' : livePhotoUrl(f.s3Key),
       caption: f.description,
       tanggal: l.patrolDate,
+      approvalStatus: l.approvalStatus,
+      laporanId: l.id,
     })),
   );
 }
