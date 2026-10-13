@@ -146,6 +146,8 @@ anything (takeover lesson: L/K items were already on disk).
   Synthetic clicks must find+click in ONE evaluate (re-render detaches nodes).
 - Owed: unique(site,zone) constraint (API allows dup names); patrol real
   photo upload; PUBLIC_STORAGE_BASE back to localhost after demo.
+- Company is PT DUTAGARUDA PIRANTI PRIMA (seed + live DB renamed Oct 13).
+  Demo logins keep @contoh.id emails.
 - Row-click blank page (Oct 13, found in browser): TDZ `period` used above its
   `const` in HydrantPage — silent until row click set state. Fix: declare
   month/period before `inspeksiAktif`. APAR/P3K/Patrol audited clean.
