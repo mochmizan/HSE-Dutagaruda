@@ -125,6 +125,12 @@ anything (takeover lesson: L/K items were already on disk).
   not just 200. The `hidran` crash class is covered.
 - Doctor caught its own bugs on first run (Bun.connect unusable here →
   exec/powershell probes; static detail strings). Eat your own output.
+- Tailnet share (Oct 13): `tailscale serve --bg http://localhost:5173` →
+  `https://desktop-6srl494.tail2e9cdf.ts.net` (no admin/firewall rule needed;
+  tailscaled terminates TLS). API trustedOrigins holds tailnet https + IP
+  plus TRUSTED_ORIGINS env override; vite bound 0.0.0.0, allowedHosts .ts.net.
+  Gotcha: api container does NOT hot-reload src despite bind mount —
+  `docker compose restart api` needed after auth/config edits.
 - Row-click blank page (Oct 13, found in browser): TDZ `period` used above its
   `const` in HydrantPage — silent until row click set state. Fix: declare
   month/period before `inspeksiAktif`. APAR/P3K/Patrol audited clean.
