@@ -78,13 +78,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const [fotoHidran, setFotoHidran] = useState<Record<string, FotoTampil[]>>({});
   const unggahFoto = useUnggahFoto();
   const hapusFoto = useHapusFoto();
-  const inspeksiAktif: ApiInspeksiHidran | null = activeInspectionUnit
-    ? (inspeksiQuery.data ?? []).find(
-        (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
-      ) ?? null
-    : null;
-
-  // Month navigation state
+  // Month navigation state (di atas: inspeksiAktif memakai period)
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date(2026, 8, 1));
   const handlePrevMonth = () => setSelectedMonth((prev) => subMonths(prev, 1));
   const handleNextMonth = () => setSelectedMonth((prev) => addMonths(prev, 1));
@@ -92,6 +86,12 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: idLocale });
   const isCurrentMonth = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 8;
   const period = format(selectedMonth, 'yyyy-MM');
+
+  const inspeksiAktif: ApiInspeksiHidran | null = activeInspectionUnit
+    ? (inspeksiQuery.data ?? []).find(
+        (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
+      ) ?? null
+    : null;
 
   // Sunting dari dasbor: bila rekamnya bulan terpilih, buka modal inspeksinya.
   useEffect(() => {

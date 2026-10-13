@@ -113,7 +113,6 @@ anything (takeover lesson: L/K items were already on disk).
   (`pg_dump` owed), no async PDF queue, no rate limits.
 
 ## Harness improvements (coordinator, Oct 13 — from gotcha archaeology)
-
 - `bun run doctor` (scripts/doctor.mjs): pre-flight green/red — daemon,
   5 services, 5173 occupancy, postgres, api health, digest pin, env keys,
   git clean. Run before every wave.
@@ -126,6 +125,11 @@ anything (takeover lesson: L/K items were already on disk).
   not just 200. The `hidran` crash class is covered.
 - Doctor caught its own bugs on first run (Bun.connect unusable here →
   exec/powershell probes; static detail strings). Eat your own output.
+- Row-click blank page (Oct 13, found in browser): TDZ `period` used above its
+  `const` in HydrantPage — silent until row click set state. Fix: declare
+  month/period before `inspeksiAktif`. APAR/P3K/Patrol audited clean.
+  Encoded: oxlint `no-use-before-define` (functions:false) + moved
+  `emptyYearCell` above use. tsc cannot see this class.
 
 ## Open decisions (owner)
 

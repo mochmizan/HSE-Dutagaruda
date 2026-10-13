@@ -73,6 +73,14 @@ export const DRAFT_TO_YEAR: Record<AparComponentStatus, AparYearMark> = {
 const asMark = (value: string): AparYearMark =>
   value === '✓' || value === 'X' || value === 'NA' ? value : '';
 
+/** Sel kosong satu bulan (di atas: dipakai draftToYearCell). */
+export const emptyYearCell = (): AparYearCell => ({
+  tanggal: '',
+  kondisi: { safetyPin: '', corong: '', segel: '', tekanan: '', tabung: '', selang: '', katupTuas: '' },
+  nama: '',
+  paraf: '',
+});
+
 /** Sel kartu → draft komponen (hanya nilai terdefinisi ikut terbawa). */
 export const yearCellToDraft = (cell: AparYearCell): AparComponentDraft => {
   const draft: AparComponentDraft = {};
@@ -96,14 +104,6 @@ export const draftToYearCell = (partial: AparComponentDraft): AparYearCell => {
 /** Jumlah komponen yang sudah diperiksa (0–7). */
 export const countChecked = (draft: AparComponentDraft): number =>
   APAR_COMPONENT_KEYS.reduce((total, key) => (draft[key] ? total + 1 : total), 0);
-
-/** Sel kosong satu bulan. */
-export const emptyYearCell = (): AparYearCell => ({
-  tanggal: '',
-  kondisi: { safetyPin: '', corong: '', segel: '', tekanan: '', tabung: '', selang: '', katupTuas: '' },
-  nama: '',
-  paraf: '',
-});
 
 /** Grid 12 bulan kosong. */
 export const emptyYearGrid = (): AparYearGrid => {

@@ -2,6 +2,10 @@
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "rules": {
     "react/only-export-components": "off",
-    "react/set-state-in-effect": "off"
+    "react/set-state-in-effect": "off",
+    // TDZ crash class (HydrantPage period, Oct 13): flag use-before-declare.
+    // functions:false — deklarasi fungsi ter-hoist, aman dipanggil dari callback.
+    // allowNamedExports — sel modul dievaluasi penuh sebelum dipanggil.
+    "no-use-before-define": ["error", { "functions": false, "classes": true, "variables": true, "allowNamedExports": true }]
   }
 }
