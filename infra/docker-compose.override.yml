@@ -1,0 +1,8 @@
+# Dev-only override. Docker Compose merges this automatically with
+# docker-compose.yml. Binds source so Bun hot mode reloads WITHOUT an image
+# rebuild on every edit. Production builds ignore this file (bake instead).
+services:
+  api:
+    volumes:
+      - ../apps/api/src:/app/apps/api/src:ro
+      - ../packages/shared/src:/app/packages/shared/src:ro

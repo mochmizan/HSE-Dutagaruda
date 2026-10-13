@@ -112,6 +112,21 @@ anything (takeover lesson: L/K items were already on disk).
 - No prod hardening: Caddy has no TLS/real domain, no backups cron
   (`pg_dump` owed), no async PDF queue, no rate limits.
 
+## Harness improvements (coordinator, Oct 13 — from gotcha archaeology)
+
+- `bun run doctor` (scripts/doctor.mjs): pre-flight green/red — daemon,
+  5 services, 5173 occupancy, postgres, api health, digest pin, env keys,
+  git clean. Run before every wave.
+- `infra/docker-compose.override.yml`: bind-mounts api+shared src (ro) so Bun
+  hot mode reloads WITHOUT image rebuild. Biggest loop-cost item, dead.
+  Base compose unchanged (CI/prod still bakes).
+- API fails fast on missing env (Indonesian message, lists keys) instead of
+  cryptic runtime 500s.
+- Feed gate now asserts contract key names (`hydrant/apar/p3k/patrol` arrays),
+  not just 200. The `hidran` crash class is covered.
+- Doctor caught its own bugs on first run (Bun.connect unusable here →
+  exec/powershell probes; static detail strings). Eat your own output.
+
 ## Open decisions (owner)
 
 - Patrol findings photo flow: photo rows vs findings-photo endpoint (pending).

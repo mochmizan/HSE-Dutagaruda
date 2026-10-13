@@ -287,7 +287,12 @@ async function main(): Promise<void> {
   record("hapus-temuan-patroli", findingDel.status === 200, `(${findingDel.status})`);
 
   const feed = await req(authed, "GET", "/api/inspections?month=2026-09");
-  record("umpan-bulanan", feed.status === 200, `(${feed.status})`);
+  const feedJson = feed.json as Record<string, unknown> | null;
+  const feedKeysOk =
+    feed.status === 200 &&
+    !!feedJson &&
+    ["hydrant", "apar", "p3k", "patrol"].every((k) => Array.isArray(feedJson[k]));
+  record("umpan-bulanan", feedKeysOk, `(${feed.status}, kunci=${feedKeysOk})`);
 
   const expiring = await req(authed, "GET", "/api/dashboard/expiring-apar?days=60");
   record("apar-kedaluwarsa", expiring.status === 200, `(${expiring.status})`);

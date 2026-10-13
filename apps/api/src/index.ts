@@ -58,6 +58,17 @@ export function createClient(baseUrl: string, init?: RequestInit) {
 
 const port = Number(process.env.PORT ?? "3001");
 
+const WAJIB_ENV = ["DATABASE_URL", "GARAGE_S3_ENDPOINT", "GARAGE_BUCKET"] as const;
+const GARAGE_KUNCI =
+  process.env.GARAGE_ACCESS_KEY_ID ?? process.env.GARAGE_ACCESS_KEY ?? "";
+const GARAGE_RAHASIA = process.env.GARAGE_SECRET_KEY ?? "";
+const kurang = WAJIB_ENV.filter((k) => !process.env[k]);
+if (kurang.length > 0 || !GARAGE_KUNCI || !GARAGE_RAHASIA) {
+  throw new Error(
+    `Konfigurasi kurang: ${[...kurang, ...(!GARAGE_KUNCI || !GARAGE_RAHASIA ? ["GARAGE_SECRET_KEY"] : [])].join(", ")}. Periksa infra/.env.`,
+  );
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   serve({ fetch: app.fetch, port }, (info) => {
     console.log(`API mendengar di http://localhost:${info.port}.`);
