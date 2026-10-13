@@ -36,8 +36,17 @@ PDF storage, and Gotenberg PDF rendering.
   render ALL inspections of that site+period; cards take one inspection and
   render the unit/box year.
 - `GET /api/pdf-jobs/:id` returns status plus `downloadUrl` (presigned 60s) when
-  done. Garage is network-private: presigned URLs only resolve inside the
-  compose network (`garage:3900`, no host port).
+  done. Presigned URLs are signed against the internal endpoint
+  (`garage:3900`) then rewritten to the public base `PUBLIC_STORAGE_BASE`
+  (`http://localhost:8080/storage`) so host browsers resolve them; Caddy's
+  `/storage/*` route strips the prefix, sets `Host: garage:3900`, and proxies to
+  Garage, whose signature check (Host + path + query) still passes. Pass
+  `audience: "internal"` to `presignedGet` for URLs consumed inside the compose
+  network (Gotenberg template `<img src>`).
+- `GET /api/photos?inspectionKind=hydrant|apar&inspectionId=` lists a photo
+  owner inspection's photos, tenant-scoped (unknown or other-company
+  inspection is 404): `{ items: [{ id, caption, createdAt }] }` ordered by
+  createdAt.
 - Approval workflow: `POST /api/approvals/:category/:refId/approval` with body
   `{ action: "ajukan" | "ketahui" | "setujui" | "kembalikan" }`. Categories:
   `hydrant | apar | p3k | patrol`. Transitions `ajukan: DRAFT → DIAJUKAN`,
@@ -71,10 +80,12 @@ PDF storage, and Gotenberg PDF rendering.
 
 - Full gate (runs inside the network so presigned fetches work):
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  — expect 88/88 (CRUD + upload round-trip + 5 exports + pdf-job flow +
-  approval workflow per category + typed-client probe `klien-tertipikasi`).
-- Host variant `bun run --filter @viaannn/api check` passes everything except
-  the two byte-fetch records, which report LEWAT (garage unreachable from host).
+  — expect 93/93 (CRUD + upload round-trip + photo list + 5 exports + pdf-job
+  flow + approval workflow per category + typed-client probe
+  `klien-tertipikasi`). The gate's byte-fetch check maps the public storage
+  origin onto `CHECK_BASE` so it validates the same Caddy `/storage` route.
+- Host variant `bun run --filter @viaannn/api check` now also passes the byte
+  fetch (storage is host-reachable via Caddy).
 - Build: `bun run build` (tsc, zero errors). The build itself proves
   `hc<AppType>` typing: check.ts calls `hc<AppType>(BASE).api.sites.$get`,
   which fails tsc if any sub-app loses its chained registration.
