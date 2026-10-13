@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { zValidator } from "@hono/zod-validator";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
@@ -68,8 +68,32 @@ export const uploadsApp = new Hono()
   return c.json({ id: row.id, key: row.s3Key }, 201);
 });
 
+const photoListQuerySchema = z.object({
+  inspectionKind: z.enum(["hydrant", "apar"]),
+  inspectionId: z.string().min(1),
+});
+
 export const photosApp = new Hono()
   .use("*", requireSession)
+
+  .get("/", zValidator("query", photoListQuerySchema), async (c) => {
+  const { inspectionKind, inspectionId } = c.req.valid("query");
+  const owned = companyId(c);
+  const table = inspectionKind === "hydrant" ? hydrantInspections : aparInspections;
+  const ownerCol = inspectionKind === "hydrant" ? photos.hydrantInspectionId : photos.aparInspectionId;
+  const ownedInspection = await db
+    .select({ id: table.id })
+    .from(table)
+    .where(and(eq(table.id, inspectionId), eq(table.companyId, owned)))
+    .limit(1);
+  if (ownedInspection.length === 0) throw notFound("Inspeksi");
+  const rows = await db
+    .select({ id: photos.id, caption: photos.caption, createdAt: photos.createdAt })
+    .from(photos)
+    .where(and(eq(photos.companyId, owned), eq(ownerCol, inspectionId)))
+    .orderBy(asc(photos.createdAt));
+  return c.json({ items: rows });
+})
 
   .get("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");

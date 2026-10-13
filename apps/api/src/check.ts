@@ -102,7 +102,10 @@ async function reqForm(
 
 async function fetchBytes(url: string): Promise<{ bytes: Uint8Array } | { unreachable: true }> {
   try {
-    const res = await fetch(url);
+    // Public storage URLs name the host origin; inside the compose network the
+    // same Caddy route answers at caddy:80, so swap the origin for the probe.
+    const local = url.replace(/^http:\/\/localhost:8080\//, `${BASE}/`);
+    const res = await fetch(local);
     if (!res.ok) return { bytes: new Uint8Array() };
     return { bytes: new Uint8Array(await res.arrayBuffer()) };
   } catch {
@@ -342,6 +345,48 @@ async function main(): Promise<void> {
   const photoCross = await req(authed, "GET", "/api/photos/tidak-ada-foto-lintas");
   record("foto-lintas-perusahaan-404", photoCross.status === 404, `(${photoCross.status})`);
 
+  const photoUp2 = await reqForm(
+    authed,
+    "/api/uploads",
+    { inspectionKind: "hydrant", inspectionId: hydInspId, caption: "Foto uji kedua" },
+    { name: "uji2.png", type: "image/png", content: fotoUji() },
+  );
+  const photo2Id = (photoUp2.json as { id?: string } | null)?.id ?? "";
+  record("unggah-foto-kedua", photoUp2.status === 201 && photo2Id !== "", `(${photoUp2.status})`);
+
+  const photoList = await req(
+    authed,
+    "GET",
+    `/api/photos?inspectionKind=hydrant&inspectionId=${hydInspId}`,
+  );
+  const photoListJson = photoList.json as
+    | { items?: { id: string; caption: string | null; createdAt: string }[] }
+    | null;
+  const listedIds = (photoListJson?.items ?? []).map((p) => p.id);
+  record(
+    "daftar-foto",
+    photoList.status === 200 &&
+      listedIds.length === 2 &&
+      listedIds[0] === photoId &&
+      listedIds[1] === photo2Id &&
+      photoListJson?.items?.[0]?.createdAt !== undefined,
+    `(${photoList.status}, ${listedIds.length} foto)`,
+  );
+
+  const photoListApar = await req(
+    authed,
+    "GET",
+    `/api/photos?inspectionKind=apar&inspectionId=${hydInspId}`,
+  );
+  record("daftar-foto-jenis-salah-404", photoListApar.status === 404, `(${photoListApar.status})`);
+
+  const photoListMissing = await req(
+    authed,
+    "GET",
+    "/api/photos?inspectionKind=hydrant&inspectionId=tidak-ada-inspeksi",
+  );
+  record("daftar-foto-inspeksi-tidak-ada-404", photoListMissing.status === 404, `(${photoListMissing.status})`);
+
   const exportsToTry: [string, string][] = [
     ["hydrant-monthly", hydInspId],
     ["apar-monthly", aparInspId],
@@ -375,7 +420,7 @@ async function main(): Promise<void> {
   if (jobJson?.downloadUrl) {
     const fetched = await fetchBytes(jobJson.downloadUrl);
     if ("unreachable" in fetched) {
-      record("pekerjaan-pdf-unduh", true, "(LEWAT: garage tidak terjangkau dari host)");
+      record("pekerjaan-pdf-unduh", false, "(tautan unduh tidak terjangkau)");
     } else {
       const magic = Buffer.from(fetched.bytes.slice(0, 5)).toString("latin1");
       record("pekerjaan-pdf-unduh", magic === "%PDF-", `(magic=${magic || "kosong"})`);
@@ -389,6 +434,8 @@ async function main(): Promise<void> {
 
   const photoDel = await req(authed, "DELETE", `/api/photos/${photoId}`);
   record("hapus-foto", photoDel.status === 200, `(${photoDel.status})`);
+  const photoDel2 = await req(authed, "DELETE", `/api/photos/${photo2Id}`);
+  record("hapus-foto-kedua", photoDel2.status === 200, `(${photoDel2.status})`);
 
   const staffJar = new Jar();
   const staffSignin = await req(staffJar, "POST", "/api/auth/sign-in/email", {
