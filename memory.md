@@ -147,6 +147,12 @@ Fix (web deviations). Wave 1 complete.
   Edit loop + patrol chips verified in L's commits. Nothing left open on L.
 - Takeover lesson: check git log first — L had committed 3/5 items, K's
   waitForExpression + p3k tightening were already on disk. Verify before redoing.
+- First browser run (Oct 13) found two runtime bugs no gate caught: (1) Bun
+  monorepo nests duplicate react copies → invalid hook call; fixed with
+  `resolve.dedupe: ['react','react-dom']` in web vite.config. (2) Feed contract
+  mismatch — API sends `hydrant`, web typed/read `hidran` → dashboard crash;
+  fixed + hardened all feed arrays with `?? []`. Gate gap: check script asserts
+  status, not key names — mirror contract keys in a web-side assertion.
 
 ## Wave 3 debrief gotchas (GLM worker I, Oct 13)
 
