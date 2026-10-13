@@ -20,7 +20,11 @@ export async function renderPdf(html: string, opts: RenderOptions): Promise<Uint
   form.append("printBackground", "true");
   form.append("preferCssPageSize", "true");
   form.append("waitForSelector", "#pdf-ready");
-  form.append("waitDelay", "300ms");
+  // Photos load asynchronously after #pdf-ready; wait for every <img> to
+  // finish (complete, incl. failed loads) before printing. Gotenberg caps
+  // the wait itself, so templates without images never stall here.
+  form.append("waitForExpression", "Array.from(document.images).every(i => i.complete)");
+  form.append("waitDelay", "150ms");
   form.append("failOnResourceLoadingFailed", "true");
   let res: Response;
   try {
