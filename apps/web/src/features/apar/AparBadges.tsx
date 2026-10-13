@@ -20,7 +20,7 @@ const getDetails = (unit: AparUnitItem): Record<string, string | undefined> | un
   const rep = unit.completedReport?.aparDetails as Record<string, string | undefined> | undefined;
   const draft = unit.draftDetails as Record<string, string | undefined> | undefined;
   if (!rep && !draft) return undefined;
-  const merged: Record<string, string | undefined> = { ...(rep ?? {}) };
+  const merged: Record<string, string | undefined> = { ...rep };
   for (const [k, v] of Object.entries(draft ?? {})) {
     if (v !== undefined) merged[k] = v;
   }

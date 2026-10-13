@@ -2,8 +2,6 @@ import React from 'react';
 import {
   ChevronLeft,
   ChevronRight,
-  Calendar as CalendarIcon,
-  Circle,
 } from 'lucide-react';
 import {
   format,

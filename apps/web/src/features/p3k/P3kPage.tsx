@@ -13,7 +13,6 @@ import {
   useUbahButirP3k,
   useHapusInspeksiP3k,
 } from '@/services/api/queries';
-import { useKonteksLokasi } from '@/features/konteksLokasi';
 import type { ApiInspeksiP3k } from '@/services/api/klien';
 import {
   MONTH_KEYS,
@@ -44,7 +43,6 @@ function fmtTanggal(iso: string): string {
  * Box is keyed by site name (one box per site). Empty start; month click opens the input form.
  */
 export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
-  const lokasi = useKonteksLokasi();
   const kotakQuery = useKotakP3k();
   const inspeksiQuery = useInspeksiP3k();
   const buatInspeksi = useSimpanInspeksiP3k();

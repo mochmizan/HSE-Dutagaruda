@@ -17,6 +17,8 @@ interface PatrolPageProps {
   onBack: () => void;
 }
 
+const hariIni = () => new Date();
+
 function fmtTanggal(iso: string): string {
   if (!iso) return '–';
   try {
@@ -58,7 +60,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
   );
 
   const monthCount = useMemo(() => {
-    const prefix = new Date().toISOString().slice(0, 7);
+    const prefix = hariIni().toISOString().slice(0, 7);
     return findings.filter((f) => f.tanggal.startsWith(prefix)).length;
   }, [findings]);
 

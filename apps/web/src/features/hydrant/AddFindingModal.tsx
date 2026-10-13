@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Camera, AlertCircle, Check, Image as ImageIcon } from 'lucide-react';
-import { HydrantFindingItem } from './types';
+import type { HydrantFindingItem } from './types';
 
 export interface AddFindingModalProps {
   isOpen: boolean;

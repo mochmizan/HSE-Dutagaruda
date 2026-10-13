@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, ShieldCheck, Camera, Trash2, Lock } from 'lucide-react';
 import type { AparUnitItem } from '../../types/hse';
 import type { AparComponentStatus, OverallStatus } from '../../types/domain';
@@ -120,7 +120,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   const isPowder = unit.jenis === 'POWDER';
 
   const buildDraft = (): AparDraft => ({
-    ...(unit.draftDetails ?? {}),
+    ...unit.draftDetails,
     safetyPin: values.safetyPin ?? 'BAIK',
     corong: values.corong ?? 'BAIK',
     segel: values.segel ?? 'BAIK',

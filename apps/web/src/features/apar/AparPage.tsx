@@ -26,7 +26,7 @@ import {
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
 import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
-import { ApprovalBar, PrintButton, UnduhPdfButton } from '@/components/ui';
+import { PrintButton, UnduhPdfButton } from '@/components/ui';
 import { livePhotoUrl } from '@/services/api/liveClient';
 import {
   COMPONENT_LABELS,
@@ -57,6 +57,8 @@ const APAR_ACCENT = '#f2994a';
 const DEFAULT_PERIOD = '2026-09';
 
 /** Tanda tangan dokumen bawaan (gaya kertas; dapat diketik di layar). */
+const sekarangIso = () => new Date().toISOString();
+
 const APAR_SIGNATURES = {
   dibuat: { nama: 'Alex Chen', jabatan: 'Staff HSE / Teknisi K3' },
   diketahui: { nama: 'Budi Santoso', jabatan: 'HSE Officer & Koordinator' },
@@ -83,7 +85,7 @@ const getEffectiveDetails = (unit: AparUnitItem) => {
   const rep = unit.completedReport?.aparDetails as Record<string, string | undefined> | undefined;
   const draft = unit.draftDetails as Record<string, string | undefined> | undefined;
   if (!rep && !draft) return undefined;
-  const merged: Record<string, string | undefined> = { ...(rep ?? {}) };
+  const merged: Record<string, string | undefined> = { ...rep };
   for (const [k, v] of Object.entries(draft ?? {})) {
     if (v !== undefined) merged[k] = v;
   }
@@ -330,7 +332,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
     const berikut: InspectionReport = {
       id: `rep-apar-${unit.id}`,
       category: 'APAR',
-      date: new Date().toISOString(),
+      date: sekarangIso(),
       period,
       siteId: unit.siteId,
       siteName: lokasi.siteName,

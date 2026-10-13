@@ -42,5 +42,5 @@ export const PrintButton: React.FC<PrintButtonProps> = ({ label = 'Cetak', ...re
 );
 
 /** One input style. Focus ring takes the page accent. */
-export const inputClass = (accent: string) =>
+export const inputClass = () =>
   `w-full text-xs px-2.5 py-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none tabular-nums`;

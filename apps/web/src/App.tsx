@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { addMonths, subMonths, format } from 'date-fns';
 import { MapPin, Loader2 } from 'lucide-react';
@@ -17,6 +17,8 @@ import { Agentation } from 'agentation';
 
 type AppView = 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol';
 
+const hariIni = () => new Date();
+
 function AppIsi() {
   const sesi = useSesi();
   const keluar = useKeluar();
@@ -25,7 +27,7 @@ function AppIsi() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
 
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(() => hariIni());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<InspectionCategory | 'ALL'>('ALL');
 
@@ -82,8 +84,9 @@ function AppIsi() {
   };
 
   // Hitungan badge APAR: unit mendekati kedaluwarsa (≤90 hari, dari unit terdaftar).
+  const sekarang = useMemo(() => Date.now(), []);
   const aparExpiryCount = (unitApar.data ?? []).filter(
-    (u) => Math.ceil((new Date(`${u.expiredDate}T00:00:00`).getTime() - Date.now()) / 86_400_000) <= 90
+    (u) => Math.ceil((new Date(`${u.expiredDate}T00:00:00`).getTime() - sekarang) / 86_400_000) <= 90
   ).length;
 
   // Sync dark class on document element

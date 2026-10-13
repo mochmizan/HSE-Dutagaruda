@@ -8,12 +8,6 @@ import {
   HydrantComponentStatus,
   AparComponentStatus,
   P3kItemStatus,
-  HydrantInspection,
-  AparInspection,
-  P3kInspection,
-  SafetyPatrolReport,
-  Site,
-  AparUnit,
 } from './domain';
 import { InspectionCategory } from './hse';
 
