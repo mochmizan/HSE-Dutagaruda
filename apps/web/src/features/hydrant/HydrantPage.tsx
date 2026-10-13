@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Flame,
@@ -46,9 +46,17 @@ import type { ApiInspeksiHidran } from '@/services/api/klien';
 interface HydrantPageProps {
   onBack: () => void;
   onOpenReportDetail?: (report: InspectionReport) => void;
+  /** Permintaan sunting dari dasbor: buka modal inspeksi rekam dengan id ini. */
+  suntingRefId?: { kategori: string | null; refId: string } | null;
+  onSuntingSelesai?: () => void;
 }
 
-export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDetail }) => {
+export const HydrantPage: React.FC<HydrantPageProps> = ({
+  onBack,
+  onOpenReportDetail,
+  suntingRefId,
+  onSuntingSelesai,
+}) => {
   const lokasi = useKonteksLokasi();
   const unitQuery = useUnitHidran();
   const inspeksiQuery = useInspeksiHidran();
@@ -84,6 +92,32 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({ onBack, onOpenReportDe
   const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: idLocale });
   const isCurrentMonth = selectedMonth.getFullYear() === 2026 && selectedMonth.getMonth() === 8;
   const period = format(selectedMonth, 'yyyy-MM');
+
+  // Sunting dari dasbor: bila rekamnya bulan terpilih, buka modal inspeksinya.
+  useEffect(() => {
+    if (!suntingRefId || suntingRefId.kategori !== 'hydrant') return;
+    const insp = (inspeksiQuery.data ?? []).find((i) => i.id === suntingRefId.refId);
+    if (!insp) return;
+    const unit = (unitQuery.data ?? []).find((u) => u.id === insp.unitId);
+    if (unit) {
+      setSelectedMonth(new Date(Number(insp.period.slice(0, 4)), Number(insp.period.slice(5, 7)) - 1, 1));
+      setActiveInspectionUnit({
+        id: unit.id,
+        kode: unit.kode,
+        siteId: unit.siteId,
+        zoneId: unit.zoneId,
+        zoneName: lokasi.zonaIdKeNama(unit.zoneId),
+        status: 'SELESAI',
+        period,
+        inspectorName: 'Pengawas K3',
+        componentsCheckedCount: 6,
+        componentsTotal: 6,
+        scheduledDate: 'Bulan Ini',
+      });
+      onSuntingSelesai?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- satu kali per permintaan sunting
+  }, [suntingRefId, inspeksiQuery.data, unitQuery.data]);
 
   // Unit + hasil inspeksi bulan terpilih dari API, dipetakan ke model UI.
   const units = petakanUnitHidran(

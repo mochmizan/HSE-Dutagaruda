@@ -44,6 +44,10 @@ function AppIsi() {
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<InspectionCategory | 'ALL'>('ALL');
 
   const [detailReport, setDetailReport] = useState<InspectionReport | null>(null);
+  /** Permintaan sunting dari dasbor: kategori + id rekam inspeksi yang akan dibuka. */
+  const [bukaSunting, setBukaSunting] = useState<{ kategori: string | null; refId: string } | null>(
+    null,
+  );
 
   const lokasi = useKonteksLokasi();  const monthKey = format(currentDate, 'yyyy-MM');
   const umpan = useUmpan(monthKey);
@@ -282,11 +286,19 @@ function AppIsi() {
         </>
       ) : currentView === 'hydrant' ? (
         <Suspense fallback={<HalamanMemuat />}>
-          <HydrantPage onBack={() => setCurrentView('dashboard')} />
+          <HydrantPage
+            onBack={() => setCurrentView('dashboard')}
+            suntingRefId={bukaSunting}
+            onSuntingSelesai={() => setBukaSunting(null)}
+          />
         </Suspense>
       ) : currentView === 'apar' ? (
         <Suspense fallback={<HalamanMemuat />}>
-          <AparPage onBack={() => setCurrentView('dashboard')} />
+          <AparPage
+            onBack={() => setCurrentView('dashboard')}
+            suntingRefId={bukaSunting}
+            onSuntingSelesai={() => setBukaSunting(null)}
+          />
         </Suspense>
       ) : currentView === 'p3k' ? (
         <Suspense fallback={<HalamanMemuat />}>
@@ -302,6 +314,15 @@ function AppIsi() {
       <ReportDetailModal
         report={detailReport}
         onClose={() => setDetailReport(null)}
+        onEdit={(rep) => {
+          // Sunting dari dasbor: pindah ke halaman kategori lalu buka modal inspeksi rekam nyata.
+          setDetailReport(null);
+          setBukaSunting({ kategori: rep.approvalCategory ?? null, refId: rep.id });
+          if (rep.category === 'HYDRANT') setCurrentView('hydrant');
+          else if (rep.category === 'APAR') setCurrentView('apar');
+          else if (rep.category === 'P3K') setCurrentView('p3k');
+          else if (rep.category === 'SAFETY_PATROL') setCurrentView('patrol');
+        }}
       />
 
       {/* 6. Agentation Visual Feedback Toolbar */}

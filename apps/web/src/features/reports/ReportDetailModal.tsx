@@ -260,25 +260,29 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
               Laporan terkunci — menunggu persetujuan ({statusPersetujuan ? LABEL_STATUS[statusPersetujuan] : ''}).
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              if (onEdit && !terkunci) {
-                onEdit(report);
-              } else {
-                onClose();
-              }
-            }}
-            title={terkunci ? 'Laporan terkunci — menunggu persetujuan' : 'Sunting laporan ini'}
-            className={`flex items-center gap-1.5 px-3.5 py-1 text-xs font-semibold rounded-[4px] cursor-pointer pressable shadow-2xs ${
-              terkunci
-                ? 'bg-[var(--bg-hover)] text-[var(--muted)] cursor-not-allowed'
-                : 'bg-[#eb5757] hover:bg-[#d94444] text-white'
-            }`}
-          >
-            <Edit3 size={12} strokeWidth={2} />
-            <span>Edit</span>
-          </button>
+          {/* Sunting hanya untuk laporan dari API (punya kategori persetujuan);
+              laporan sintetis pasca-simpan tidak dapat dibuka ulang sebagai rekam. */}
+          {report.approvalCategory ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (onEdit && !terkunci) {
+                  onEdit(report);
+                } else {
+                  onClose();
+                }
+              }}
+              title={terkunci ? 'Laporan terkunci — menunggu persetujuan' : 'Sunting laporan ini'}
+              className={`flex items-center gap-1.5 px-3.5 py-1 text-xs font-semibold rounded-[4px] cursor-pointer pressable shadow-2xs ${
+                terkunci
+                  ? 'bg-[var(--bg-hover)] text-[var(--muted)] cursor-not-allowed'
+                  : 'bg-[#eb5757] hover:bg-[#d94444] text-white'
+              }`}
+            >
+              <Edit3 size={12} strokeWidth={2} />
+              <span>Edit</span>
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

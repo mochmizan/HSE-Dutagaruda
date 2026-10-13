@@ -96,9 +96,12 @@ export type { AparCardsState } from '../../lib/aparSync';
 
 interface AparPageProps {
   onBack: () => void;
+  /** Permintaan sunting dari dasbor: buka modal inspeksi rekam dengan id ini. */
+  suntingRefId?: { kategori: string | null; refId: string } | null;
+  onSuntingSelesai?: () => void;
 }
 
-export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
+export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSuntingSelesai }) => {
   const lokasi = useKonteksLokasi();
   const unitQuery = useUnitApar();
   const inspeksiQuery = useInspeksiApar();
@@ -175,6 +178,20 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
 
   // ── Turunan: zona, hitungan, filter ──
   const zones = useMemo(() => [...new Set(units.map((u) => u.zoneName))].sort(), [units]);
+
+  // Sunting dari dasbor: buka modal inspeksi rekam dengan id diminta (bulan ikut rekam).
+  useEffect(() => {
+    if (!suntingRefId || suntingRefId.kategori !== 'apar') return;
+    const insp = (inspeksiQuery.data ?? []).find((i) => i.id === suntingRefId.refId);
+    if (!insp) return;
+    const unit = (unitQuery.data ?? []).find((u) => u.id === insp.unitId);
+    if (unit) {
+      setPeriod(insp.period.slice(0, 7));
+      setActiveInspectionUnit(petakanUnitApar([unit], [insp], lokasi.zonaIdKeNama, insp.period.slice(0, 7))[0] ?? null);
+      onSuntingSelesai?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- satu kali per permintaan sunting
+  }, [suntingRefId, inspeksiQuery.data, unitQuery.data]);
   const completedUnits = useMemo(() => units.filter((u) => u.status === 'SELESAI'), [units]);
   const inProgressUnits = useMemo(() => units.filter((u) => u.status === 'SEDANG_BERJALAN'), [units]);
   const expiringUnits = useMemo(() => units.filter((u) => daysToExpiry(u.expiredDate) <= 90), [units]);
@@ -1070,11 +1087,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack }) => {
       <ReportDetailModal
         report={detailReport}
         onClose={() => setDetailReport(null)}
-        onEdit={(rep) => {
-          setDetailReport(null);
-          const u = units.find((x) => x.kode === rep.assetCode);
-          if (u) setActiveInspectionUnit({ ...u });
-        }}
       />
 
       {/* Modal tambah zona & unit APAR */}
