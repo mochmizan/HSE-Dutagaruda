@@ -34,10 +34,26 @@ export async function putBytes(key: string, bytes: Uint8Array, mime: string): Pr
   );
 }
 
-export async function presignedGet(key: string, seconds = 60): Promise<string> {
-  return getSignedUrl(storage(), new GetObjectCommand({ Bucket: bucketName(), Key: key }), {
-    expiresIn: seconds,
-  });
+// Signatures are computed against the internal Garage endpoint; presignedGet
+// rewrites the host to the public storage base so Caddy can proxy it. Garage
+// only validates Host + path + query, so this split is signature-safe.
+export function publicStorageBase(): string {
+  return process.env.PUBLIC_STORAGE_BASE ?? "";
+}
+
+export async function presignedGet(
+  key: string,
+  seconds = 60,
+  audience: "public" | "internal" = "public",
+): Promise<string> {
+  const url = new URL(
+    await getSignedUrl(storage(), new GetObjectCommand({ Bucket: bucketName(), Key: key }), {
+      expiresIn: seconds,
+    }),
+  );
+  const pub = publicStorageBase();
+  if (audience === "public" && pub !== "") url.href = `${pub.replace(/\/$/, "")}${url.pathname}${url.search}`;
+  return url.toString();
 }
 
 export async function objectExists(key: string): Promise<boolean> {

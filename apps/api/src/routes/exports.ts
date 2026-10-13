@@ -45,7 +45,7 @@ export type ExportCategory = z.infer<typeof exportParamSchema>["category"];
 async function presignedPhotoRows(s3Keys: { s3Key: string; caption: string | null }[]) {
   const out: { src: string | null; caption: string }[] = [];
   for (const p of s3Keys) {
-    const src = (await objectExists(p.s3Key)) ? await presignedGet(p.s3Key) : null;
+    const src = (await objectExists(p.s3Key)) ? await presignedGet(p.s3Key, 60, "internal") : null;
     out.push({ src, caption: p.caption ?? "Foto temuan" });
   }
   return out;

@@ -39,6 +39,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-viaannn}:${POSTGRES_PASSWORD:-viaannn}@postgres:5432/${POSTGRES_DB:-viaannn}
       PORT: "3001"
+      PUBLIC_STORAGE_BASE: ${PUBLIC_STORAGE_BASE:-http://localhost:8080/storage}
     depends_on:
       postgres:
         condition: service_healthy
