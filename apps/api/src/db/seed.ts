@@ -22,7 +22,7 @@ if (existing.length > 0) {
 
 await db.insert(companies).values({
   id: COMPANY_ID,
-  name: "PT Contoh Sejahtera",
+  name: "PT DUTAGARUDA PIRANTI PRIMA",
 });
 
 const [site] = await db
@@ -48,8 +48,8 @@ await db.insert(settings).values({
 
 await db.insert(organization).values({
   id: COMPANY_ID,
-  name: "PT Contoh Sejahtera",
-  slug: "contoh-sejahtera",
+  name: "PT DUTAGARUDA PIRANTI PRIMA",
+  slug: "dutagaruda-piranti-prima",
   createdAt: new Date(),
 });
 
