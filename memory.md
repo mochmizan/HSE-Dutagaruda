@@ -127,6 +127,27 @@ Fix (web deviations). Wave 1 complete.
   Bundle 512 kB — code-split later.
 - Web dev proxy `/api` → `http://localhost:8080` (Caddy).
 
+- Wave 4 J landed (Oct 13): storage host-route solved via presign origin
+  rewrite (`PUBLIC_STORAGE_BASE`, default `http://localhost:8080/storage`) +
+  Caddy `/storage/*` handle_path; `audience:"internal"` keeps Gotenberg img
+  presigns on `garage:3900`. `GET /api/photos?inspectionKind=&inspectionId=`
+  live. **Gate is now 93/93** (not 88). LEWAT skip pattern dead — byte fetch
+  uses the same /storage route. Deploy stream must set PUBLIC_STORAGE_BASE.
+
+## Wave 4 finish (coordinator takeover, Oct 13 — provider limit killed K+L)
+
+- **Print:** p3k-yearly already renders 1 landscape page (re-measured, no change
+  needed). `waitForExpression` already in render.ts. Soak rewritten host-side
+  (`infra/soak/soak.mjs` + README): **50/50, p50 ~1.1s** (Chromium floor, API
+  overhead negligible), gotenberg ~307 MiB, 0 restarts. Gotenberg digest pinned
+  in compose. K's in-container soak approach deleted (baked image can't see new
+  files). Soak residue: HYD/AP-SOAK, Kotak Soak, patrol report, 50 pdfJobs.
+- **Web:** lint clean (exit 0), bundle split live (per-page chunks, no 500 kB
+  warning), Section B reads `useFotoInspeksi` → PhotoCard (photo-list wired),
+  Edit loop + patrol chips verified in L's commits. Nothing left open on L.
+- Takeover lesson: check git log first — L had committed 3/5 items, K's
+  waitForExpression + p3k tightening were already on disk. Verify before redoing.
+
 ## Wave 3 debrief gotchas (GLM worker I, Oct 13)
 
 - Browser MCP tool exists but returns `browser.disconnected` (no desktop
