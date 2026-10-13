@@ -70,7 +70,7 @@ function AppIsi() {
       ? 'Semua Layak'
       : 'Perlu Tindak Lanjut';
   };
-  const umpanHidran = umpan.data?.hidran ?? [];
+  const umpanHidran = umpan.data?.hydrant ?? [];
   const umpanApar = umpan.data?.apar ?? [];
   const umpanP3k = umpan.data?.p3k ?? [];
   const umpanPatroli = umpan.data?.patroli ?? [];

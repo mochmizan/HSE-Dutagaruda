@@ -703,7 +703,7 @@ export function petakanUmpanKeLaporan(
   ctx: KonteksUmpan,
 ): InspectionReport[] {
   if (!umpan) return [];
-  const hidran: InspectionReport[] = umpan.hidran.map((r) => {
+  const hidran: InspectionReport[] = (umpan.hydrant ?? []).map((r) => {
     const unit = ctx.unitHidran.get(r.unitId);
     return {
       id: r.id,
@@ -729,7 +729,7 @@ export function petakanUmpanKeLaporan(
       },
     };
   });
-  const apar: InspectionReport[] = umpan.apar.map((r) => {
+  const apar: InspectionReport[] = (umpan.apar ?? []).map((r) => {
     const unit = ctx.unitApar.get(r.unitId);
     return {
       id: r.id,
@@ -759,7 +759,7 @@ export function petakanUmpanKeLaporan(
       },
     };
   });
-  const p3k: InspectionReport[] = umpan.p3k.map((r) => {
+  const p3k: InspectionReport[] = (umpan.p3k ?? []).map((r) => {
     const box = ctx.kotakP3k.get(r.boxId);
     return {
       id: r.id,
@@ -777,7 +777,7 @@ export function petakanUmpanKeLaporan(
       p3kDetails: { boxName: box?.name ?? '', itemsTotal: 21, itemsUnderStandard: 0, needsRestock: false },
     };
   });
-  const patroli: InspectionReport[] = umpan.patroli.map((r) => ({
+  const patroli: InspectionReport[] = (umpan.patroli ?? []).map((r) => ({
     id: r.id,
     category: 'SAFETY_PATROL' as const,
     date: r.createdAt,

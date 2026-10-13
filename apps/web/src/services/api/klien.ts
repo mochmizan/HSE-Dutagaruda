@@ -186,7 +186,7 @@ export interface ApiTemuanPatroli {
 
 export interface ApiUmpan {
   month: string;
-  hidran: Array<ApiInspeksiHidran & { category: 'hidran' }>;
+  hydrant: Array<ApiInspeksiHidran & { category: 'hydrant' }>;
   apar: Array<ApiInspeksiApar & { category: 'apar' }>;
   p3k: Array<ApiInspeksiP3k & { category: 'p3k' }>;
   patroli: Array<ApiLaporanPatroli & { category: 'patroli' }>;

@@ -29,5 +29,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
     },
+    // Bun monorepo nests duplicate react copies; force one instance or hooks break.
+    dedupe: ['react', 'react-dom'],
   },
 })
