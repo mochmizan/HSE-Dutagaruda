@@ -148,6 +148,13 @@ anything (takeover lesson: L/K items were already on disk).
   photo upload; PUBLIC_STORAGE_BASE back to localhost after demo.
 - Company is PT DUTAGARUDA PIRANTI PRIMA (seed + live DB renamed Oct 13).
   Demo logins keep @contoh.id emails.
+- Review-day persistence (Oct 14): prod build served by Caddy
+  (`../apps/web/dist:/srv/web:ro` + SPA fallback in `handle`; all routes in
+  ordered `handle` blocks — bare try_files/file_server swallows /api with 405
+  because `handle` outranks bare `reverse_proxy`). 443 serve → :8080, :8443
+  kept for storage URLs. `infra/startup-review.ps1` + Startup-folder cmd
+  boots Docker Desktop + compose at logon (no admin for schtasks here).
+  Rebuild web + `restart caddy` after web edits (dist is baked at build time).
 - Row-click blank page (Oct 13, found in browser): TDZ `period` used above its
   `const` in HydrantPage — silent until row click set state. Fix: declare
   month/period before `inspeksiAktif`. APAR/P3K/Patrol audited clean.

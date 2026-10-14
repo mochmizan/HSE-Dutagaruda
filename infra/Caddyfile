@@ -1,10 +1,15 @@
 :80 {
-  reverse_proxy /api/* api:3001
+  handle /api/* {
+    reverse_proxy api:3001
+  }
   handle_path /storage/* {
     reverse_proxy garage:3900 {
       header_up Host garage:3900
     }
   }
-  root * /srv/web
-  file_server
+  handle {
+    root * /srv/web
+    try_files {path} /index.html
+    file_server
+  }
 }
