@@ -15,6 +15,8 @@ anything (takeover lesson: L/K items were already on disk).
   sessions sometimes). New spawn only when the session is dead.
 - Coordinator owns browser verification (workers have no browser tool; HTTP
   proofs only). First real browser run is mandatory before calling UI done.
+- Page edits update their `wiki/features/` map file in the same task
+  (labels, entry points, gotchas) and prove via `wiki/SKILL.md`.
 
 ## Gates (green baselines, re-run these — never trust a report alone)
 

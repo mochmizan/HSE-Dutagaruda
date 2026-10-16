@@ -55,6 +55,8 @@ Domain-specific, self-contained feature slices for the HSE Inspection Platform: 
 - Keep UI logic decoupled from low-level network calls.
 - Every feature folder must provide a clean `index.ts` barrel.
 - Modals must support keyboard escape (`Esc`) and backdrop dismissal.
+- Page edits update the matching `wiki/features/*.md` map file in the same
+  task (labels, entry points, gotchas) and prove via `wiki/SKILL.md`.
 
 ## Verification
 

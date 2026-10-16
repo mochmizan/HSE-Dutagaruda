@@ -12,6 +12,8 @@ No code until the owner approves the spec.
 - TypeScript strict, zero-error builds. `bun run build` per package.
 - ctx7 CLI (`npx ctx7@latest docs <id> <query>`) to verify library signatures.
 - Modals: Esc + backdrop close. Dark mode everywhere.
+- Page edits update the matching `wiki/features/*.md` map file in the same
+  task and prove via `wiki/SKILL.md`.
 - Workers: `worker`-type subagents briefed with the poteto playbooks
   (`D:\marketplace\pstack-opencode\poteto-mode\SKILL.md`, `agents\poteto-agent.md`)
   minus Cursor-specific tooling. Spec gates in `spec/07-build-order.md` are law:
