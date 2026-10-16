@@ -160,6 +160,14 @@ anything (takeover lesson: L/K items were already on disk).
   month/period before `inspeksiAktif`. APAR/P3K/Patrol audited clean.
   Encoded: oxlint `no-use-before-define` (functions:false) + moved
   `emptyYearCell` above use. tsc cannot see this class.
+- Verifikasi (Oct 16): `wiki/SKILL.md` (launch/doctor/drive/evidence/
+  cleanup) + `wiki/features/` (README + hydrant/apar/p3k/patroli/
+  persetujuan map files) + `wiki/helpers/verify-doctor.mjs` (read-only,
+  exit 0/1). Proof run 20261016-bukti-awal: HTTP lane hydrant read hijau
+  (feed keys hydrant/apar/p3k/patrol, 4 unit scope-ok, 2 inspeksi); list
+  shape `{items:[...]}` bukan `{data:[...]}`. Browser leg (`Formulir
+  Pemeriksaan` click) TERUTANG — sesi itu tanpa browser tool. Artefak
+  bukti: `wiki/artifacts/` (git-ignored, selamat dari cleanup).
 
 ## Open decisions (owner)
 

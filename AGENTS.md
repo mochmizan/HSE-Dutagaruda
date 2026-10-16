@@ -20,4 +20,6 @@ No code until the owner approves the spec.
 ## Layout
 
 `apps/web` (Vite+React) · `apps/api` (Hono+Drizzle+Better Auth) ·
-`packages/shared` (DTOs, calculators, dates) · `infra/` (compose) · `spec/`.
+`packages/shared` (DTOs, calculators, dates) · `infra/` (compose) · `spec/` ·
+`wiki/` (verification skill `SKILL.md`, feature map `features/`, helpers;
+proof `artifacts/` git-ignored).
