@@ -12,7 +12,6 @@ const userBodySchema = z.object({
   name: z.string().min(1, "Nama wajib diisi."),
   email: z.string().email("Surel tidak valid."),
   password: z.string().min(8, "Kata sandi minimal 8 karakter."),
-  role: z.enum(["inspector", "staff", "approver"]).default("staff"),
 });
 
 export const usersApp = new Hono()
@@ -35,10 +34,9 @@ export const usersApp = new Hono()
     id: newId(),
     organizationId: owned,
     userId: createdUser.id,
-    role: body.role,
     createdAt: new Date(),
   });
   const org = await db.select().from(organization).where(eq(organization.id, owned)).limit(1);
   if (org.length === 0) throw new HTTPException(404, { message: "Perusahaan tidak ditemukan." });
-  return c.json({ id: createdUser.id, email: body.email, name: body.name, role: body.role }, 201);
+  return c.json({ id: createdUser.id, email: body.email, name: body.name }, 201);
 });

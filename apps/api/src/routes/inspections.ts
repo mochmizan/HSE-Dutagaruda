@@ -21,7 +21,7 @@ import {
   photos,
 } from "../db/schema.js";
 import { companyId, requireSession } from "../auth/middleware.js";
-import { blockedByChildren, duplicateMonth, editLocked, listPage, newId, notFound } from "./helpers.js";
+import { blockedByChildren, duplicateMonth, listPage, newId, notFound } from "./helpers.js";
 import {
   aparInspectionBodySchema,
   hydrantInspectionBodySchema,
@@ -132,7 +132,6 @@ export const hydrantInspectionsApp = new Hono()
       .where(and(eq(hydrantInspections.id, id), eq(hydrantInspections.companyId, owned)))
       .limit(1);
     if (rows.length === 0) throw notFound("Inspeksi hidran");
-    if (rows[0].approvalStatus !== "DRAFT") throw editLocked();
     const body = c.req.valid("json");
     const merged = { ...rows[0], ...body };
     const overallStatus =
@@ -273,7 +272,6 @@ export const aparInspectionsApp = new Hono()
       .where(and(eq(aparInspections.id, id), eq(aparInspections.companyId, owned)))
       .limit(1);
     if (rows.length === 0) throw notFound("Inspeksi APAR");
-    if (rows[0].approvalStatus !== "DRAFT") throw editLocked();
     const body = c.req.valid("json");
     const merged = { ...rows[0], ...body };
     const overallStatus =
@@ -422,7 +420,6 @@ export const p3kInspectionsApp = new Hono()
       .where(and(eq(p3kInspections.id, id), eq(p3kInspections.companyId, owned)))
       .limit(1);
     if (rows.length === 0) throw notFound("Inspeksi P3K");
-    if (rows[0].approvalStatus !== "DRAFT") throw editLocked();
     const body = c.req.valid("json");
     const [row] = await db.update(p3kInspections).set(body).where(eq(p3kInspections.id, id)).returning();
     return c.json(row);
@@ -456,7 +453,6 @@ export const p3kInspectionsApp = new Hono()
       .where(and(eq(p3kInspections.id, id), eq(p3kInspections.companyId, owned)))
       .limit(1);
     if (head.length === 0) throw notFound("Inspeksi P3K");
-    if (head[0].approvalStatus !== "DRAFT") throw editLocked();
     const rows = await db
       .select()
       .from(p3kInspectionItems)

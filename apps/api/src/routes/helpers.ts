@@ -36,9 +36,3 @@ export function blockedByChildren(nama: string): HTTPException {
     message: `${nama} tidak dapat dihapus karena masih memiliki data turunan.`,
   });
 }
-
-export function editLocked(): HTTPException {
-  return new HTTPException(409, {
-    message: "Data tidak dapat diubah karena sudah dalam proses persetujuan.",
-  });
-}
