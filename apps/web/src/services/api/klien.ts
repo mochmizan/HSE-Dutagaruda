@@ -7,7 +7,7 @@
  * pemanggilan memakai fetch + deklarasi tipe di berkas ini.
  */
 
-import { liveGet, livePost, livePatch, liveDelete, livePostForm } from './liveClient';
+import { liveGet, livePost, livePatch, liveDelete, livePostForm, liveApiBase } from './liveClient';
 
 export interface Halaman<T> {
   items: T[];
@@ -275,6 +275,30 @@ export const buatTemuanPatroli = (
 ) => livePost<ApiTemuanPatroli>(`/safety-patrol-reports/${reportId}/findings`, body);
 
 export type MasukanTemuan = { description: string; s3Key: string; locationNote?: string };
+
+/**
+ * Unggah foto temuan patroli (multipart: file, description, locationNote?).
+ * Kontrak: POST /api/safety-patrol-reports/:id/findings/photo → 201 temuan.
+ */
+export const unggahFotoTemuanPatroli = (
+  reportId: string,
+  file: File,
+  description: string,
+  locationNote?: string,
+) => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('description', description);
+  if (locationNote) form.append('locationNote', locationNote);
+  return livePostForm<ApiTemuanPatroli>(
+    `/safety-patrol-reports/${reportId}/findings/photo`,
+    form,
+  );
+};
+
+/** URL foto satu temuan via GET /api/safety-patrol-reports/findings/:fid/photo (302 presigned). */
+export const urlFotoTemuanPatroli = (fid: string) =>
+  `${liveApiBase()}/safety-patrol-reports/findings/${encodeURIComponent(fid)}/photo`;
 
 export const hapusTemuanPatroli = (fid: string) =>
   liveDelete(`/safety-patrol-reports/findings/${fid}`);
