@@ -478,6 +478,32 @@ export function useBuatTemuanPatroli() {
   });
 }
 
+/** Unggah foto temuan patroli nyata: buat laporan lalu POST multipart foto. */
+export function useUnggahFotoTemuanPatroli() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      siteId: string;
+      patrolDate: string;
+      file: File;
+      description: string;
+      locationNote?: string;
+    }) =>
+      (async () => {
+        const laporan = await k.buatLaporanPatroli({
+          siteId: args.siteId,
+          patrolDate: args.patrolDate,
+        });
+        return k.unggahFotoTemuanPatroli(laporan.id, args.file, args.description, args.locationNote);
+      })(),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.laporanPatroli });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 /** Optimistic: temuan hilang seketika, rollback saat gagal. */
 export function useHapusTemuanPatroli() {
   const qc = useQueryClient();
@@ -697,7 +723,7 @@ export function petakanKartuApar(
 
 export interface TemuanPatroliTampil {
   id: string;
-  /** URL foto via GET /api/photos/:id (redirect 302, kuki). '' = placeholder. */
+  /** URL foto via GET /api/safety-patrol-reports/findings/:fid/photo (302). '' = placeholder. */
   photoUrl: string;
   caption: string;
   tanggal: string;
@@ -709,9 +735,9 @@ export function petakanTemuanPatroli(
   return laporan.flatMap((l) =>
     (l.findings ?? []).map((f) => ({
       id: f.id,
-      // Unggahan nyata belum terpasang (lingkup pekerja lain): kunci berawalan
-      // draft/ ditampilkan sebagai placeholder abu-abu, sisanya coba URL foto.
-      photoUrl: f.s3Key.startsWith('draft/') ? '' : livePhotoUrl(f.s3Key),
+      // Foto nyata dilayani GET /api/safety-patrol-reports/findings/:fid/photo;
+      // kunci berawalan draft/ (temuan lama) tampil sebagai placeholder abu-abu.
+      photoUrl: f.s3Key.startsWith('draft/') ? '' : k.urlFotoTemuanPatroli(f.id),
       caption: f.description,
       tanggal: l.patrolDate,
     })),
