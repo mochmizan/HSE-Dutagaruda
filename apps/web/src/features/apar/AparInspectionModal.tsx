@@ -26,6 +26,8 @@ interface AparInspectionModalProps {
   onHapusBulan?: () => void;
   /** Status mutasi hapus (tombol menandai proses). */
   menghapusBulan?: boolean;
+  /** Status mutasi simpan draf (tombol menandai proses). */
+  menyimpanDraf?: boolean;
 }
 
 const COMPONENT_FIELDS: { key: keyof AparDraft & string; label: string; hint: string }[] = [
@@ -55,6 +57,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   onCompleteInspection,
   onHapusBulan,
   menghapusBulan = false,
+  menyimpanDraf = false,
 }) => {
   const [values, setValues] = useState<Record<string, AparComponentStatus>>({});
   const [notes, setNotes] = useState('');
@@ -137,8 +140,8 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   });
 
   const handleSaveDraft = () => {
+    // Laman menutup modal saat mutasi berhasil; gagal = tetap terbuka + alarm.
     onSaveDraft(unit.id, buildDraft());
-    onClose();
   };
 
   const handleComplete = (e: React.FormEvent) => {
@@ -357,9 +360,10 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveDraft}
+                disabled={menyimpanDraf}
                 className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Simpan Draft
+                {menyimpanDraf ? 'Menyimpan…' : 'Simpan Draft'}
               </button>
               {inspeksi && onHapusBulan && (
                 <button

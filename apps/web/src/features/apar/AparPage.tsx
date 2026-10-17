@@ -293,25 +293,29 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
     draft: NonNullable<AparUnitItem['draftDetails']>,
     overall: OverallStatus | undefined,
     overridden: boolean,
+    onTersimpan?: () => void,
   ) => {
     const existing = (inspeksiQuery.data ?? []).find(
       (i) => i.unitId === unit.id && i.period.startsWith(period),
     );
-    simpanInspeksi.mutate({
-      id: existing?.id,
-      unitId: unit.id,
-      month: period,
-      safetyPin: draft.safetyPin ?? 'NA',
-      corong: draft.corong ?? 'NA',
-      segel: draft.segel ?? 'NA',
-      tekanan: draft.tekanan ?? 'NA',
-      tabung: draft.tabung ?? 'NA',
-      selang: draft.selang ?? 'NA',
-      katupTuas: draft.katupTuas ?? 'NA',
-      overallStatus: overall,
-      overallOverridden: overridden,
-      notes: draft.notes,
-    });
+    simpanInspeksi.mutate(
+      {
+        id: existing?.id,
+        unitId: unit.id,
+        month: period,
+        safetyPin: draft.safetyPin ?? 'NA',
+        corong: draft.corong ?? 'NA',
+        segel: draft.segel ?? 'NA',
+        tekanan: draft.tekanan ?? 'NA',
+        tabung: draft.tabung ?? 'NA',
+        selang: draft.selang ?? 'NA',
+        katupTuas: draft.katupTuas ?? 'NA',
+        overallStatus: overall,
+        overallOverridden: overridden,
+        notes: draft.notes,
+      },
+      { onSuccess: () => onTersimpan?.() },
+    );
   };
 
   const handleSaveInspectionDraft = (unitId: string, draft: NonNullable<AparUnitItem['draftDetails']>) => {
@@ -331,7 +335,10 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
             katupTuas: draft.katupTuas ?? 'NA',
           })
         : undefined);
-    kirimInspeksi(unit, draft, overall, Boolean(draft.overallStatus));
+    // Tutup saat mutasi berhasil agar buka-ulang selalu membaca daftar pasca-simpan.
+    kirimInspeksi(unit, draft, overall, Boolean(draft.overallStatus), () =>
+      setActiveInspectionUnit(null),
+    );
   };
 
   // ── Selesaikan dari modal → simpan ke API + tampil rekam hasil ──
@@ -1081,6 +1088,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
         onCompleteInspection={handleCompleteInspection}
         onHapusBulan={handleHapusBulan}
         menghapusBulan={hapusInspeksi.isPending}
+        menyimpanDraf={simpanInspeksi.isPending}
       />
 
       {/* Rekam hasil inspeksi — tampil otomatis setelah “Selesaikan & Terbitkan” */}
