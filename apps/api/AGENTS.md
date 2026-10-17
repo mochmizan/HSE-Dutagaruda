@@ -8,7 +8,7 @@ PDF storage, and Gotenberg PDF rendering.
 
 ## Ownership
 
-- `src/routes/*` — CRUD, approvals, feed, settings, uploads, exports, pdf-jobs.
+- `src/routes/*` — CRUD, feed, settings, uploads, exports, pdf-jobs.
 - `src/storage.ts` — Garage S3 client: `putBytes`, `presignedGet` (60s default),
   `getBytes`, `objectExists`, `deleteObject`.
 - `src/pdf/render.ts` — Gotenberg 8 client (`waitForSelector=#pdf-ready`,
@@ -47,17 +47,9 @@ PDF storage, and Gotenberg PDF rendering.
   owner inspection's photos, tenant-scoped (unknown or other-company
   inspection is 404): `{ items: [{ id, caption, createdAt }] }` ordered by
   createdAt.
-- Approval workflow: `POST /api/approvals/:category/:refId/approval` with body
-  `{ action: "ajukan" | "ketahui" | "setujui" | "kembalikan" }`. Categories:
-  `hydrant | apar | p3k | patrol`. Transitions `ajukan: DRAFT → DIAJUKAN`,
-  `ketahui: DIAJUKAN → DIKETAHUI`, `setujui: DIKETAHUI → DISETUJUI`,
-  `kembalikan: any non-DRAFT → DRAFT`. Illegal transition or unknown action is
-  400; `setujui` by the submitter (`approvalSubmittedById`) is 403. All four
-  inspection/report tables carry `approval_status` (default `DRAFT`),
-  `approval_submitted_by_id`, `approval_actor_id`, `approval_acted_at`.
-  Content-edit routes (inspection PATCH, p3k item PATCH, patrol PATCH,
-  findings POST/DELETE) reject with 409 via `editLocked()` when the row is
-  beyond `DRAFT`.
+- Reports are final on save. There is no approval workflow: no
+  `approval_*` columns, no `/api/approvals` route, no edit-lock guards, and
+  no role input on `POST /api/users`. All content routes edit freely.
 
 ## Work Guidance
 
@@ -80,10 +72,10 @@ PDF storage, and Gotenberg PDF rendering.
 
 - Full gate (runs inside the network so presigned fetches work):
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  — expect 93/93 (CRUD + upload round-trip + photo list + 5 exports + pdf-job
-  flow + approval workflow per category + typed-client probe
-  `klien-tertipikasi`). The gate's byte-fetch check maps the public storage
-  origin onto `CHECK_BASE` so it validates the same Caddy `/storage` route.
+  — expect 63/63 (CRUD + upload round-trip + photo list + 5 exports +
+  pdf-job flow + typed-client probe `klien-tertipikasi`). The gate's
+  byte-fetch check maps the public storage origin onto `CHECK_BASE` so it
+  validates the same Caddy `/storage` route.
 - Host variant `bun run --filter @viaannn/api check` now also passes the byte
   fetch (storage is host-reachable via Caddy).
 - Build: `bun run build` (tsc, zero errors). The build itself proves
