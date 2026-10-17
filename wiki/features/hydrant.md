@@ -60,9 +60,10 @@ Preconditions:
 
 ## Gotchas
 
-- Kartu statistik rata (tanpa gradient/background): border + teks berwarna
-  saja. Emoji ikon kartu (🏢 📊) UTF-8 langsung — pernah rusak jadi
-  mojibake `ðŸ¢` (penulis non-UTF-8); sapu `ð` bila muncul lagi.
+- Kartu statistik tinggal 2 (Total + Selesai Diperiksa; kartu Progress dan
+  Kemajuan dihapus total Okt 17): rata tanpa gradient/background, border +
+  teks berwarna saja. Emoji ikon kartu (🏢) UTF-8 langsung — pernah rusak
+  jadi mojibake `ðŸ¢` (penulis non-UTF-8); sapu `ð` bila muncul lagi.
 - Bulan default halaman = bulan berjalan nyata (pernah hardcode September —
   jangan asert nama bulan statis).
 - Klik baris mati pada baris completed tanpa fallback modal = regresi
