@@ -11,7 +11,6 @@ import { dashboardApp, feedApp, settingsApp } from "./routes/feed.js";
 import { usersApp } from "./routes/users.js";
 import { photosApp, uploadsApp } from "./routes/uploads.js";
 import { exportsApp, pdfJobsApp } from "./routes/exports.js";
-import { approvalsApp } from "./routes/approvals.js";
 
 export const app = new Hono()
   .onError((err, c) => {
@@ -47,8 +46,7 @@ export const app = new Hono()
   .route("/api/uploads", uploadsApp)
   .route("/api/photos", photosApp)
   .route("/api/export", exportsApp)
-  .route("/api/pdf-jobs", pdfJobsApp)
-  .route("/api/approvals", approvalsApp);
+  .route("/api/pdf-jobs", pdfJobsApp);
 
 export type AppType = typeof app;
 

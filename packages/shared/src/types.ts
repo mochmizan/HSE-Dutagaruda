@@ -1,5 +1,3 @@
-export type Role = "inspector" | "staff" | "approver";
-
 export type HydrantComponentStatus = "LAYAK" | "TIDAK_LAYAK" | "HILANG";
 
 export type AparComponentStatus = "BAIK" | "TIDAK_BAIK" | "NA";
@@ -11,10 +9,6 @@ export type OverallStatus = "LAYAK" | "LAYAK_DENGAN_CATATAN" | "TIDAK_LAYAK";
 export type AparJenis = "POWDER" | "CO2" | "FOAM" | "OTHER";
 
 export type PdfJobStatus = "queued" | "done" | "failed";
-
-export type ApprovalStatus = "DRAFT" | "DIAJUKAN" | "DIKETAHUI" | "DISETUJUI";
-
-export type ApprovalAction = "ajukan" | "ketahui" | "setujui" | "kembalikan";
 
 export interface HydrantComponents {
   boxHydrant: HydrantComponentStatus;
