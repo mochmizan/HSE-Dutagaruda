@@ -337,6 +337,8 @@ export const hapusUnitHidran = (id: string) => liveDelete(`/hydrant-units/${id}`
 export const buatZona = (body: { siteId: string; name: string }) =>
   livePost<ApiZone>('/zones', body);
 
+export const hapusZona = (id: string) => liveDelete(`/zones/${id}`);
+
 export interface ApiPerusahaan {
   id: string;
   name: string;

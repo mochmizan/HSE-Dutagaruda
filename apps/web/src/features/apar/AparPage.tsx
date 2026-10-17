@@ -680,7 +680,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
               className={`py-1.5 px-3 rounded-[4px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
                 filterTab === tab.key ? 'text-white font-semibold shadow-xs' : 'text-[var(--secondary)] hover:text-[var(--primary)]'
               }`}
-              style={filterTab === tab.key ? { backgroundColor: tab.key === 'COMPLETED' ? '#059669' : APAR_ACCENT } : undefined}
+              style={filterTab === tab.key ? { backgroundColor: tab.key === 'COMPLETED' ? '#059669' : '#eb5757' } : undefined}
             >
               <span>{tab.label}</span>
               <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full tabular-nums ${filterTab === tab.key ? 'bg-black/20 text-white' : 'bg-[var(--bg-hover)] text-[var(--muted)]'}`}>

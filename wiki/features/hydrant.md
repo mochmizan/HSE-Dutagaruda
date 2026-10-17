@@ -1,6 +1,6 @@
 # Inspeksi Hydrant
 
-Halaman pola master (aksen `#eb5757`): pengalih bulan + 4 statistik + tabs +
+Halaman pola master (aksen `#eb5757`): pengalih bulan + 2 statistik + tabs +
 tabel/kartu unit, klik baris membuka modal inspeksi 6 komponen, Section B
 temuan foto di bawah, cetak A4 portrait (tabel + temuan + tanda tangan 3
 kolom).
@@ -17,7 +17,9 @@ kolom).
   tampil untuk setiap rekam tersimpan (draf tersimpan maupun terbit);
   modal draf menutup setelah simpan berhasil agar buka-ulang membaca
   daftar pasca-simpan. Bulan tanpa rekam: `Hapus` menghapus UNIT sebaris
-  seluruh datanya (`hydrant-delete-unit`).
+  seluruh datanya (`hydrant-delete-unit`); zona yang kosong (tak ada unit
+  tersisa) ikut dihapus. Kartu statistik memakai gradien (emerald pada
+  kartu Selesai).
 
 ## How to get to it (user POV)
 

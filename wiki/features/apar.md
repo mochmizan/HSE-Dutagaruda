@@ -21,7 +21,9 @@ Catatan + tanda tangan).
   tampil untuk setiap rekam tersimpan (draf tersimpan maupun terbit);
   modal draf menutup setelah simpan berhasil agar buka-ulang membaca
   daftar pasca-simpan. Bulan tanpa rekam: `Hapus` menghapus UNIT sebaris
-  seluruh datanya (`apar-delete-unit`).
+  seluruh datanya (`apar-delete-unit`); zona yang kosong (tak ada unit
+  tersisa) ikut dihapus. Tab filter aktif `Semua Unit` / `Sedang Berjalan`
+  memakai merah hydrant (`#eb5757`), `Selesai Diperiksa` hijau.
 
 ## How to get to it (user POV)
 

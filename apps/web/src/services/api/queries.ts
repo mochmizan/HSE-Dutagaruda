@@ -231,7 +231,8 @@ export function useHapusInspeksiHidran() {
 }
 
 /** Hapus unit hidran sebaris datanya: tiap rekam inspeksinya dibersihkan
- *  (foto dulu, lalu rekam — cegah 409), lalu unitnya. */
+ *  (foto dulu, lalu rekam — cegah 409), lalu unitnya. Bila zona unit ini
+ *  kosong (tak ada unit hidran/APAR tersisa), zona ikut dihapus. */
 export function useHapusUnitHidran() {
   const qc = useQueryClient();
   return useMutation({
@@ -242,16 +243,44 @@ export function useHapusUnitHidran() {
         await Promise.allSettled(foto.items.map((f) => k.hapusFoto(f.id)));
         await k.hapusInspeksiHidran(insp.id);
       }
-      return k.hapusUnitHidran(unitId);
+      const unit = (qc.getQueryData<k.ApiHydrantUnit[]>(kunci.unitHidran) ?? []).find(
+        (u) => u.id === unitId,
+      );
+      const hasil = await k.hapusUnitHidran(unitId);
+      await hapusZonaBilaKosong(qc, unit?.zoneId, unitId);
+      return hasil;
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: kunci.unitHidran });
       void qc.invalidateQueries({ queryKey: kunci.inspeksiHidran });
+      void qc.invalidateQueries({ queryKey: kunci.zona });
       void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
       void qc.invalidateQueries({ queryKey: ['umpan'] });
     },
     onError: (err) => window.alert(gagal(err)),
   });
+}
+
+/** Hapus zona bila tak ada unit (hidran maupun APAR) tersisa di dalamnya.
+ *  Gagal diam-diam bila server masih melihat anak (409) — guard API yang menang. */
+async function hapusZonaBilaKosong(
+  qc: ReturnType<typeof useQueryClient>,
+  zoneId: string | undefined,
+  unitTerhapusId: string,
+): Promise<void> {
+  if (!zoneId) return;
+  const sisaHidran = (qc.getQueryData<k.ApiHydrantUnit[]>(kunci.unitHidran) ?? []).some(
+    (u) => u.id !== unitTerhapusId && u.zoneId === zoneId,
+  );
+  const sisaApar = (qc.getQueryData<k.ApiAparUnit[]>(kunci.unitApar) ?? []).some(
+    (u) => u.id !== unitTerhapusId && u.zoneId === zoneId,
+  );
+  if (sisaHidran || sisaApar) return;
+  try {
+    await k.hapusZona(zoneId);
+  } catch {
+    /* abaikan: zona masih beranak di server (cache basi) atau sudah hilang */
+  }
 }
 
 /** Cari id zona berdasarkan nama; buat bila belum ada (hindari zona ganda). */
@@ -329,7 +358,8 @@ export function useHapusInspeksiApar() {
 }
 
 /** Hapus unit APAR sebaris datanya: tiap rekam inspeksinya dibersihkan
- *  (foto dulu, lalu rekam — cegah 409), lalu unitnya. */
+ *  (foto dulu, lalu rekam — cegah 409), lalu unitnya. Bila zona unit ini
+ *  kosong (tak ada unit hidran/APAR tersisa), zona ikut dihapus. */
 export function useHapusUnitApar() {
   const qc = useQueryClient();
   return useMutation({
@@ -340,11 +370,17 @@ export function useHapusUnitApar() {
         await Promise.allSettled(foto.items.map((f) => k.hapusFoto(f.id)));
         await k.hapusInspeksiApar(insp.id);
       }
-      return k.hapusUnitApar(unitId);
+      const unit = (qc.getQueryData<k.ApiAparUnit[]>(kunci.unitApar) ?? []).find(
+        (u) => u.id === unitId,
+      );
+      const hasil = await k.hapusUnitApar(unitId);
+      await hapusZonaBilaKosong(qc, unit?.zoneId, unitId);
+      return hasil;
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: kunci.unitApar });
       void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
+      void qc.invalidateQueries({ queryKey: kunci.zona });
       void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
       void qc.invalidateQueries({ queryKey: ['umpan'] });
     },
