@@ -15,6 +15,7 @@ import {
   useHapusInspeksiP3k,
 } from '@/services/api/queries';
 import { ambilButirP3k } from '@/services/api/klien';
+import { useKonteksLokasi } from '@/features/konteksLokasi';
 import {
   MONTH_KEYS,
   MONTH_NAMES,
@@ -44,6 +45,7 @@ function fmtTanggal(iso: string): string {
  * Box is keyed by site name (one box per site). Empty start; month click opens the input form.
  */
 export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
+  const lokasi = useKonteksLokasi();
   const kotakQuery = useKotakP3k();
   const inspeksiQuery = useInspeksiP3k();
   const buatInspeksi = useSimpanInspeksiP3k();
@@ -56,8 +58,8 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
   const [lokasiKerja, setLokasiKerja] = useState('ITJ JPM Dukuh Atas');
   const [activeMonth, setActiveMonth] = useState<string | null>(null);
 
-  // Kotak pertama pada lokasi aktif (satu kotak per lokasi, sesuai kontrak halaman).
-  const kotak = (kotakQuery.data ?? [])[0] ?? null;
+  // Kotak lokasi aktif (satu kotak per lokasi, sesuai kontrak halaman).
+  const kotak = (kotakQuery.data ?? []).find((b) => b.siteId === lokasi.siteId) ?? null;
   // Grid tahunan dari API — kosong di awal, terisi saat inspeksi dibuat per bulan.
   const grid: P3kYearGrid = useMemo(
     () => (kotak ? petakanGridP3k([kotak], inspeksiQuery.data ?? [], year)[kotak.id] ?? {} : {}),

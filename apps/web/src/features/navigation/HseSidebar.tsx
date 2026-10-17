@@ -7,12 +7,17 @@ import {
   Moon,
   ChevronsLeft,
   ChevronsRight,
+  ChevronDown,
   Filter,
   CheckCircle2,
   LogOut,
   Loader2,
+  MapPin,
+  Plus,
 } from 'lucide-react';
 import { InspectionCategory, CATEGORY_CONFIG } from '../../types/hse';
+import { useKonteksLokasi } from '../konteksLokasi';
+import { useBuatLokasi, useUbahLokasi } from '@/services/api/queries';
 
 interface HseSidebarProps {
   activeCategoryFilter: InspectionCategory | 'ALL';
@@ -46,6 +51,39 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
   keluarBerjalan = false,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const lokasi = useKonteksLokasi();
+  const buatLokasi = useBuatLokasi();
+  const ubahLokasi = useUbahLokasi();
+
+  // Seksi LOKASI: lokasi mana yang terbuka, tambah baris, dan sunting nama sebaris.
+  const [lokasiTerbuka, setLokasiTerbuka] = useState<string | null>(null);
+  const [tambahLokasi, setTambahLokasi] = useState(false);
+  const [namaBaru, setNamaBaru] = useState('');
+  const [suntingId, setSuntingId] = useState<string | null>(null);
+  const [namaSunting, setNamaSunting] = useState('');
+
+  const simpanLokasiBaru = () => {
+    const nama = namaBaru.trim();
+    if (!nama || buatLokasi.isPending) return;
+    buatLokasi.mutate(
+      { name: nama },
+      {
+        onSuccess: (row) => {
+          lokasi.pilihLokasi(row.id);
+          setLokasiTerbuka(row.id);
+          setNamaBaru('');
+          setTambahLokasi(false);
+        },
+      },
+    );
+  };
+
+  const simpanNamaSunting = (id: string) => {
+    const nama = namaSunting.trim();
+    setSuntingId(null);
+    if (!nama || ubahLokasi.isPending) return;
+    ubahLokasi.mutate({ id, name: nama });
+  };
 
   if (isCollapsed) {
     return (
@@ -140,65 +178,132 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
               </span>
             )}
           </button>
+        </div>
 
-          <button
-            type="button"
-            onClick={() => onNavigateView?.('hydrant')}
-            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs rounded-[4px] font-medium cursor-pointer transition-colors pressable-subtle ${
-              currentView === 'hydrant'
-                ? 'bg-[var(--bg-active)] font-semibold text-[var(--primary)]'
-                : 'text-[var(--secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)]'
-            }`}
-          >
-            <span className="text-sm leading-none">🧯</span>
-            <span className="flex-1 text-left truncate">Inspeksi Hydrant</span>
-            <span className="text-[10px] bg-red-500/15 text-red-600 dark:text-red-400 px-1.5 py-0.2 rounded-full font-mono font-bold tabular-nums">
-              {hydrantUnitCount}
-            </span>
-          </button>
+        {/* Lokasi: tambah + sunting nama sebaris (tanpa popup); tiap baris
+            melipat untuk 4 kategori dan memindah lokasi aktif saat dipilih. */}
+        <div className="px-2 pt-4 space-y-1">
+          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
+            <span>Lokasi</span>
+            <button
+              type="button"
+              onClick={() => {
+                setTambahLokasi(true);
+                setNamaBaru('');
+              }}
+              title="Tambah lokasi"
+              aria-label="Tambah lokasi"
+              className="w-5 h-5 rounded-[3px] flex items-center justify-center text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => onNavigateView?.('apar')}
-            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs rounded-[4px] font-medium cursor-pointer transition-colors pressable-subtle ${
-              currentView === 'apar'
-                ? 'bg-[var(--bg-active)] font-semibold text-[var(--primary)]'
-                : 'text-[var(--secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)]'
-            }`}
-          >
-            <ShieldCheck size={15} className={currentView === 'apar' ? 'text-[#f2994a]' : ''} />
-            <span className="flex-1 text-left truncate">Inspeksi APAR</span>
-            <span className="text-[10px] bg-[#f2994a]/15 text-[#f2994a] px-1.5 py-0.2 rounded-full font-mono font-bold tabular-nums">
-              {aparOpenCount}
-            </span>
-          </button>
+          {lokasi.daftarLokasi.map((site) => {
+            const aktif = site.id === lokasi.siteId;
+            const terbuka = site.id === lokasiTerbuka;
+            const sedangSunting = site.id === suntingId;
 
-          <button
-            type="button"
-            onClick={() => onNavigateView?.('p3k')}
-            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs rounded-[4px] font-medium cursor-pointer transition-colors pressable-subtle ${
-              currentView === 'p3k'
-                ? 'bg-[var(--bg-active)] font-semibold text-[var(--primary)]'
-                : 'text-[var(--secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)]'
-            }`}
-          >
-            <span className="text-sm leading-none">🩹</span>
-            <span className="flex-1 text-left truncate">Inspeksi P3K</span>
-          </button>
+            return (
+              <div key={site.id}>
+                <div
+                  className={`w-full flex items-center gap-2 px-2.5 py-1 text-xs rounded-[4px] cursor-pointer pressable-subtle group ${
+                    aktif
+                      ? 'bg-[var(--bg-hover)] font-semibold text-[var(--primary)]'
+                      : 'text-[var(--secondary)] hover:bg-[var(--bg-hover)]'
+                  }`}
+                >
+                  {sedangSunting ? (
+                    <input
+                      autoFocus
+                      value={namaSunting}
+                      onChange={(e) => setNamaSunting(e.target.value)}
+                      onBlur={() => simpanNamaSunting(site.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') simpanNamaSunting(site.id);
+                        if (e.key === 'Escape') setSuntingId(null);
+                      }}
+                      aria-label="Nama lokasi"
+                      className="flex-1 min-w-0 text-xs bg-[var(--bg-main)] border border-[var(--border)] rounded-[3px] px-1.5 py-0.5 text-[var(--primary)] focus:outline-none"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        lokasi.pilihLokasi(site.id);
+                        setLokasiTerbuka(terbuka ? null : site.id);
+                      }}
+                      onDoubleClick={() => {
+                        setSuntingId(site.id);
+                        setNamaSunting(site.name);
+                      }}
+                      title="Klik untuk buka, dobel-klik untuk ganti nama"
+                      className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer"
+                    >
+                      <MapPin size={13} className={aktif ? 'text-[#eb5757]' : 'text-[var(--muted)]'} />
+                      <span className="flex-1 text-left truncate">{site.name}</span>
+                      <ChevronDown
+                        size={12}
+                        className={`text-[var(--muted)] transition-transform ${terbuka ? '' : '-rotate-90'}`}
+                      />
+                    </button>
+                  )}
+                </div>
 
-          <button
-            type="button"
-            onClick={() => onNavigateView?.('patrol')}
-            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs rounded-[4px] font-medium cursor-pointer transition-colors pressable-subtle ${
-              currentView === 'patrol'
-                ? 'bg-[var(--bg-active)] font-semibold text-[var(--primary)]'
-                : 'text-[var(--secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)]'
-            }`}
-          >
-            <span className="text-sm leading-none">🚶</span>
-            <span className="flex-1 text-left truncate">Patroli K3</span>
-          </button>
+                {terbuka && !sedangSunting && (
+                  <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[var(--border)] pl-1">
+                    {(
+                      [
+                        { view: 'hydrant', label: 'Inspeksi Hydrant', ikon: <span className="text-xs leading-none">🧯</span> },
+                        { view: 'apar', label: 'Inspeksi APAR', ikon: <ShieldCheck size={13} className="text-[#f2994a]" /> },
+                        { view: 'p3k', label: 'Inspeksi P3K', ikon: <span className="text-xs leading-none">🩹</span> },
+                        { view: 'patrol', label: 'Patroli K3', ikon: <span className="text-xs leading-none">🚶</span> },
+                      ] as const
+                    ).map((kat) => (
+                      <button
+                        key={kat.view}
+                        type="button"
+                        onClick={() => {
+                          lokasi.pilihLokasi(site.id);
+                          onNavigateView?.(kat.view);
+                        }}
+                        className={`w-full flex items-center gap-2 px-2 py-1 text-[11px] rounded-[3px] cursor-pointer pressable-subtle ${
+                          aktif && currentView === kat.view
+                            ? 'bg-[var(--bg-active)] font-semibold text-[var(--primary)]'
+                            : 'text-[var(--secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)]'
+                        }`}
+                      >
+                        {kat.ikon}
+                        <span className="flex-1 text-left truncate">{kat.label}</span>
+                        {aktif && currentView === kat.view && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#2383e2]" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
+          {tambahLokasi && (
+            <input
+              autoFocus
+              value={namaBaru}
+              onChange={(e) => setNamaBaru(e.target.value)}
+              onBlur={() => {
+                if (namaBaru.trim()) simpanLokasiBaru();
+                else setTambahLokasi(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') simpanLokasiBaru();
+                if (e.key === 'Escape') setTambahLokasi(false);
+              }}
+              placeholder="Nama lokasi baru…"
+              aria-label="Nama lokasi baru"
+              className="w-full text-xs bg-[var(--bg-main)] border border-[var(--border)] rounded-[4px] px-2.5 py-1 text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none"
+            />
+          )}
         </div>
 
         {/* Filter Kategori */}

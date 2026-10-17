@@ -159,13 +159,22 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
   const isDefaultPeriod = period === DEFAULT_PERIOD;
 
   // Unit + hasil inspeksi bulan terpilih dari API; kartu tahunan turunan inspeksi tersimpan.
+  // Lokasi aktif memilih barisnya: unit + inspeksi lokasi lain tidak tampil.
+  const unitSite = useMemo(
+    () => (unitQuery.data ?? []).filter((u) => u.siteId === lokasi.siteId),
+    [unitQuery.data, lokasi.siteId],
+  );
+  const inspeksiSite = useMemo(() => {
+    const idUnit = new Set(unitSite.map((u) => u.id));
+    return (inspeksiQuery.data ?? []).filter((i) => idUnit.has(i.unitId));
+  }, [inspeksiQuery.data, unitSite]);
   const units = petakanUnitApar(
-    unitQuery.data ?? [],
-    inspeksiQuery.data ?? [],
+    unitSite,
+    inspeksiSite,
     lokasi.zonaIdKeNama,
     period,
   );
-  const cards: AparCardsState = petakanKartuApar(unitQuery.data ?? [], inspeksiQuery.data ?? []);
+  const cards: AparCardsState = petakanKartuApar(unitSite, inspeksiSite);
 
   // Bersihkan kelas cetak setiap dialog cetak ditutup
   useEffect(() => {
@@ -184,6 +193,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
     if (!insp) return;
     const unit = (unitQuery.data ?? []).find((u) => u.id === insp.unitId);
     if (unit) {
+      if (unit.siteId !== lokasi.siteId) lokasi.pilihLokasi(unit.siteId);
       setPeriod(insp.period.slice(0, 7));
       setActiveInspectionUnit(petakanUnitApar([unit], [insp], lokasi.zonaIdKeNama, insp.period.slice(0, 7))[0] ?? null);
       onSuntingSelesai?.();
@@ -297,7 +307,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
     overridden: boolean,
     onTersimpan?: () => void,
   ) => {
-    const existing = (inspeksiQuery.data ?? []).find(
+    const existing = inspeksiSite.find(
       (i) => i.unitId === unit.id && i.period.startsWith(period),
     );
     simpanInspeksi.mutate(
@@ -384,7 +394,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
   // ── Foto dokumentasi: unggahan nyata per slot (Kartu, Berat, Pengecekan) ──
 
   const inspeksiAktif: ApiInspeksiApar | null = activeInspectionUnit
-    ? (inspeksiQuery.data ?? []).find(
+    ? inspeksiSite.find(
         (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
       ) ?? null
     : null;
@@ -456,10 +466,10 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
   // Jangkar ekspor PDF: laporan bulanan (rekam pertama bulan ini) + kartu tahunan
   // (rekam unit terpilih pada tahun kartu; jangkar menentukan unit+tahun ekspor).
   const jangkarBulanan =
-    (inspeksiQuery.data ?? []).find((i) => i.period.startsWith(period))?.id ?? null;
+    inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
   const jangkarKartu =
     selectedUnit
-      ? ((inspeksiQuery.data ?? []).find(
+      ? (inspeksiSite.find(
           (i) => i.unitId === selectedUnit.id && i.period.startsWith(cardYear),
         )?.id ?? null)
       : null;

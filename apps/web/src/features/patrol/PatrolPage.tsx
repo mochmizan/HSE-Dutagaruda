@@ -41,17 +41,21 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
   const [lokasiInput, setLokasiInput] = useState('ITJ JPM Dukuh Atas');
   const [isAddOpen, setIsAddOpen] = useState(false);
 
-  // Temuan dari API (laporan + findings), terbaru lebih dulu.
+  // Temuan dari API (laporan + findings), terbaru lebih dulu — lokasi aktif saja.
+  const laporanSite = useMemo(
+    () => (laporanQuery.data ?? []).filter((l) => l.siteId === lokasi.siteId),
+    [laporanQuery.data, lokasi.siteId],
+  );
   const findings = useMemo(
-    () => petakanTemuanPatroli(laporanQuery.data ?? []),
-    [laporanQuery.data],
+    () => petakanTemuanPatroli(laporanSite),
+    [laporanSite],
   );
 
   // Laporan terbaru (rekam patroli tersimpan) — jangkar ekspor PDF.
   const laporanTerbaru: ApiLaporanPatroli | null = useMemo(() => {
-    const daftar = laporanQuery.data ?? [];
+    const daftar = laporanSite;
     return [...daftar].sort((a, b) => b.patrolDate.localeCompare(a.patrolDate))[0] ?? null;
-  }, [laporanQuery.data]);
+  }, [laporanSite]);
 
   const sorted = useMemo(
     () => [...findings].sort((a, b) => b.tanggal.localeCompare(a.tanggal)),

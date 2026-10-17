@@ -43,6 +43,25 @@ export function useLokasi() {
   });
 }
 
+export function useBuatLokasi() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { name: string }) => k.buatLokasi(args),
+    onSettled: () => void qc.invalidateQueries({ queryKey: kunci.lokasi }),
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+export function useUbahLokasi() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; name: string }) =>
+      k.ubahLokasi(args.id, { name: args.name }),
+    onSettled: () => void qc.invalidateQueries({ queryKey: kunci.lokasi }),
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 export function useZona() {
   return useQuery({
     queryKey: kunci.zona,

@@ -68,6 +68,16 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const buatUnit = useBuatUnitHidran();
   const ubahUnit = useUbahUnitHidran();
 
+  // Lokasi aktif memilih barisnya: unit + inspeksi lokasi lain tidak tampil.
+  const unitSite = useMemo(
+    () => (unitQuery.data ?? []).filter((u) => u.siteId === lokasi.siteId),
+    [unitQuery.data, lokasi.siteId],
+  );
+  const inspeksiSite = useMemo(() => {
+    const idUnit = new Set(unitSite.map((u) => u.id));
+    return (inspeksiQuery.data ?? []).filter((i) => idUnit.has(i.unitId));
+  }, [inspeksiQuery.data, unitSite]);
+
   const [filterTab, setFilterTab] = useState<'ON_PROGRESS' | 'ALL' | 'COMPLETED'>('ALL');
   const [zoneFilter, setZoneFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,7 +112,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const period = format(selectedMonth, 'yyyy-MM');
 
   const inspeksiAktif: ApiInspeksiHidran | null = activeInspectionUnit
-    ? (inspeksiQuery.data ?? []).find(
+    ? inspeksiSite.find(
         (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
       ) ?? null
     : null;
@@ -136,6 +146,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     if (!insp) return;
     const unit = (unitQuery.data ?? []).find((u) => u.id === insp.unitId);
     if (unit) {
+      if (unit.siteId !== lokasi.siteId) lokasi.pilihLokasi(unit.siteId);
       setSelectedMonth(new Date(Number(insp.period.slice(0, 4)), Number(insp.period.slice(5, 7)) - 1, 1));
       setActiveInspectionUnit({
         id: unit.id,
@@ -157,8 +168,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
 
   // Unit + hasil inspeksi bulan terpilih dari API, dipetakan ke model UI.
   const units = petakanUnitHidran(
-    unitQuery.data ?? [],
-    inspeksiQuery.data ?? [],
+    unitSite,
+    inspeksiSite,
     lokasi.zonaIdKeNama,
     period,
   );
@@ -167,7 +178,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   // Catatan Hasil Temuan (Findings documentation photos & descriptions)
   // B. Catatan hasil temuan = foto inspeksi nyata bulan terpilih (GET /api/photos via useFotoInspeksi).
   const jangkarTemuan =
-    (inspeksiQuery.data ?? []).find((i) => i.period.startsWith(period))?.id ?? null;
+    inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
   const fotoTemuan = useFotoInspeksi(jangkarTemuan);
   const findings: HydrantFindingItem[] = useMemo(
     () =>
@@ -217,7 +228,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   // Draft & terbit sama-sama menyimpan inspeksi ke API (modal selalu mengisi 6 komponen).
   // Tutup saat mutasi berhasil agar buka-ulang selalu membaca daftar pasca-simpan.
   const handleSaveDraft = (unitId: string, draft: HydrantUnitItem['draftDetails']) => {
-    const existing = (inspeksiQuery.data ?? []).find(
+    const existing = inspeksiSite.find(
       (i) => i.unitId === unitId && i.period.startsWith(period),
     );
     simpanInspeksi.mutate(
@@ -243,7 +254,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     const unit = units.find((u) => u.kode === newReport.assetCode);
     if (unit) {
       const d = newReport.hydrantDetails;
-      const existing = (inspeksiQuery.data ?? []).find(
+      const existing = inspeksiSite.find(
         (i) => i.unitId === unit.id && i.period.startsWith(period),
       );
       simpanInspeksi.mutate({
@@ -340,7 +351,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
 
   // Jangkar ekspor PDF: rekam inspeksi pertama bulan terpilih (lalu berisi).
   const jangkarEkspor =
-    (inspeksiQuery.data ?? []).find((i) => i.period.startsWith(period))?.id ?? null;
+    inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
 
   return (
     <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[var(--bg-main)] text-[var(--primary)] px-6 py-4 select-none font-sans">

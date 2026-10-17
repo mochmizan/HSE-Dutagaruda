@@ -162,6 +162,12 @@ export interface ApiUmpan {
 
 export const ambilLokasi = () => liveGet<Halaman<ApiSite>>('/sites?limit=100');
 
+export const buatLokasi = (body: { name: string; address?: string }) =>
+  livePost<ApiSite>('/sites', body);
+
+export const ubahLokasi = (id: string, body: { name?: string; address?: string }) =>
+  livePatch<ApiSite>(`/sites/${id}`, body);
+
 export const ambilZona = () => liveGet<Halaman<ApiZone>>('/zones?limit=100');
 
 export const ambilUnitHidran = () => liveGet<Halaman<ApiHydrantUnit>>('/hydrant-units?limit=100');
