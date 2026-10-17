@@ -316,7 +316,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   };
 
   const handleDeleteFinding = (id: string) => {
-    hapusFoto.mutate({ id });
+    if (!jangkarTemuan) return;
+    hapusFoto.mutate({ id, inspectionId: jangkarTemuan });
   };
 
   const handlePrint = () => {
