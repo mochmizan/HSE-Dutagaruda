@@ -35,6 +35,7 @@ import {
   useInspeksiHidran,
   useSimpanInspeksiHidran,
   useHapusInspeksiHidran,
+  useHapusUnitHidran,
   useBuatUnitHidran,
   useUbahUnitHidran,
   useUnggahFoto,
@@ -63,6 +64,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const inspeksiQuery = useInspeksiHidran();
   const simpanInspeksi = useSimpanInspeksiHidran();
   const hapusInspeksi = useHapusInspeksiHidran();
+  const hapusUnit = useHapusUnitHidran();
   const buatUnit = useBuatUnitHidran();
   const ubahUnit = useUbahUnitHidran();
 
@@ -116,6 +118,14 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
       delete next[inspectionId];
       return next;
     });
+    setActiveInspectionUnit(null);
+  };
+
+  // Hapus unit sebaris seluruh datanya (dipakai popup bulan tanpa rekam:
+  // belum dimulai = tidak ada rekam bulan untuk dihapus).
+  const handleHapusUnit = () => {
+    if (!activeInspectionUnit) return;
+    hapusUnit.mutate(activeInspectionUnit.id);
     setActiveInspectionUnit(null);
   };
 
@@ -1142,6 +1152,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         onCompleteInspection={handleCompleteInspection}
         onHapusBulan={handleHapusBulan}
         menghapusBulan={hapusInspeksi.isPending}
+        onHapusUnit={handleHapusUnit}
+        menghapusUnit={hapusUnit.isPending}
         menyimpanDraf={simpanInspeksi.isPending}
       />
 

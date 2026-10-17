@@ -327,8 +327,12 @@ export const buatUnitApar = (body: MasukanUnitApar) => livePost<ApiAparUnit>('/a
 export const ubahUnitApar = (id: string, body: Partial<MasukanUnitApar>) =>
   livePatch<ApiAparUnit>(`/apar-units/${id}`, body);
 
+export const hapusUnitApar = (id: string) => liveDelete(`/apar-units/${id}`);
+
 export const ubahUnitHidran = (id: string, body: Partial<MasukanUnitHidran>) =>
   livePatch<ApiHydrantUnit>(`/hydrant-units/${id}`, body);
+
+export const hapusUnitHidran = (id: string) => liveDelete(`/hydrant-units/${id}`);
 
 export const buatZona = (body: { siteId: string; name: string }) =>
   livePost<ApiZone>('/zones', body);

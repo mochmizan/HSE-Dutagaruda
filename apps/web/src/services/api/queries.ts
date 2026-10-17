@@ -230,6 +230,30 @@ export function useHapusInspeksiHidran() {
   });
 }
 
+/** Hapus unit hidran sebaris datanya: tiap rekam inspeksinya dibersihkan
+ *  (foto dulu, lalu rekam — cegah 409), lalu unitnya. */
+export function useHapusUnitHidran() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (unitId: string) => {
+      const semua = qc.getQueryData<k.ApiInspeksiHidran[]>(kunci.inspeksiHidran) ?? [];
+      for (const insp of semua.filter((i) => i.unitId === unitId)) {
+        const foto = await k.ambilFotoInspeksi('hydrant', insp.id);
+        await Promise.allSettled(foto.items.map((f) => k.hapusFoto(f.id)));
+        await k.hapusInspeksiHidran(insp.id);
+      }
+      return k.hapusUnitHidran(unitId);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.unitHidran });
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiHidran });
+      void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 /** Cari id zona berdasarkan nama; buat bila belum ada (hindari zona ganda). */
 async function idZonaAtauBuat(siteId: string, zoneName: string): Promise<string> {
   const nama = zoneName.trim();
@@ -296,6 +320,30 @@ export function useHapusInspeksiApar() {
       return k.hapusInspeksiApar(id);
     },
     onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
+      void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+/** Hapus unit APAR sebaris datanya: tiap rekam inspeksinya dibersihkan
+ *  (foto dulu, lalu rekam — cegah 409), lalu unitnya. */
+export function useHapusUnitApar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (unitId: string) => {
+      const semua = qc.getQueryData<k.ApiInspeksiApar[]>(kunci.inspeksiApar) ?? [];
+      for (const insp of semua.filter((i) => i.unitId === unitId)) {
+        const foto = await k.ambilFotoInspeksi('apar', insp.id);
+        await Promise.allSettled(foto.items.map((f) => k.hapusFoto(f.id)));
+        await k.hapusInspeksiApar(insp.id);
+      }
+      return k.hapusUnitApar(unitId);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.unitApar });
       void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
       void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
       void qc.invalidateQueries({ queryKey: ['umpan'] });

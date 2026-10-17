@@ -20,7 +20,8 @@ Catatan + tanda tangan).
   via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`. Tombol
   tampil untuk setiap rekam tersimpan (draf tersimpan maupun terbit);
   modal draf menutup setelah simpan berhasil agar buka-ulang membaca
-  daftar pasca-simpan.
+  daftar pasca-simpan. Bulan tanpa rekam: `Hapus` menghapus UNIT sebaris
+  seluruh datanya (`apar-delete-unit`).
 
 ## How to get to it (user POV)
 

@@ -33,6 +33,10 @@ interface HydrantInspectionModalProps {
   onHapusBulan?: () => void;
   /** Status mutasi hapus (tombol menandai proses). */
   menghapusBulan?: boolean;
+  /** Hapus unit sebaris datanya (popup bulan tanpa rekam). */
+  onHapusUnit?: () => void;
+  /** Status mutasi hapus unit. */
+  menghapusUnit?: boolean;
   /** Status mutasi simpan draf (tombol menandai proses). */
   menyimpanDraf?: boolean;
 }
@@ -53,6 +57,8 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
   onCompleteInspection,
   onHapusBulan,
   menghapusBulan = false,
+  onHapusUnit,
+  menghapusUnit = false,
   menyimpanDraf = false,
 }) => {
   const [boxHydrant, setBoxHydrant] = useState<HydrantComponentStatus>('LAYAK');
@@ -406,11 +412,11 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
               >
                 {menyimpanDraf ? 'Menyimpan…' : 'Simpan Sebagai Draft (Tetap Berjalan)'}
               </button>
-              {inspeksi && onHapusBulan && (
+              {(inspeksi ? onHapusBulan : onHapusUnit) && (
                 <button
                   type="button"
                   onClick={() => setKonfirmasiHapusBulan(true)}
-                  disabled={menghapusBulan}
+                  disabled={menghapusBulan || menghapusUnit}
                   className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
                 >
                   <Trash2 size={12} /> Hapus
@@ -436,17 +442,22 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
           </div>
         </form>
 
-        {/* Konfirmasi hapus rekam inspeksi (beserta foto buktinya) */}
+        {/* Konfirmasi hapus: rekam bulan bila ada, bila tidak unit sebaris datanya */}
         <ConfirmModal
           isOpen={konfirmasiHapusBulan}
-          title="Hapus Inspeksi"
-          message={`Rekaman inspeksi ${unit.kode} bulan ini beserta seluruh foto buktinya akan dihapus permanen. Lanjutkan?`}
+          title={inspeksi ? 'Hapus Inspeksi' : 'Hapus Unit'}
+          message={
+            inspeksi
+              ? `Rekaman inspeksi ${unit.kode} bulan ini beserta seluruh foto buktinya akan dihapus permanen. Lanjutkan?`
+              : `Unit ${unit.kode} beserta seluruh data inspeksinya akan dihapus permanen. Lanjutkan?`
+          }
           confirmLabel="Hapus"
           accent="#eb5757"
           onClose={() => setKonfirmasiHapusBulan(false)}
           onConfirm={() => {
             setKonfirmasiHapusBulan(false);
-            onHapusBulan?.();
+            if (inspeksi) onHapusBulan?.();
+            else onHapusUnit?.();
           }}
         />
       </div>

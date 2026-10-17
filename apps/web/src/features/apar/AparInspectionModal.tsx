@@ -26,6 +26,10 @@ interface AparInspectionModalProps {
   onHapusBulan?: () => void;
   /** Status mutasi hapus (tombol menandai proses). */
   menghapusBulan?: boolean;
+  /** Hapus unit sebaris datanya (popup bulan tanpa rekam). */
+  onHapusUnit?: () => void;
+  /** Status mutasi hapus unit. */
+  menghapusUnit?: boolean;
   /** Status mutasi simpan draf (tombol menandai proses). */
   menyimpanDraf?: boolean;
 }
@@ -57,6 +61,8 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   onCompleteInspection,
   onHapusBulan,
   menghapusBulan = false,
+  onHapusUnit,
+  menghapusUnit = false,
   menyimpanDraf = false,
 }) => {
   const [values, setValues] = useState<Record<string, AparComponentStatus>>({});
@@ -365,11 +371,11 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
               >
                 {menyimpanDraf ? 'Menyimpan…' : 'Simpan Draft'}
               </button>
-              {inspeksi && onHapusBulan && (
+              {(inspeksi ? onHapusBulan : onHapusUnit) && (
                 <button
                   type="button"
                   onClick={() => setKonfirmasiHapusBulan(true)}
-                  disabled={menghapusBulan}
+                  disabled={menghapusBulan || menghapusUnit}
                   className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
                 >
                   <Trash2 size={12} /> Hapus
@@ -394,17 +400,22 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
           </div>
         </form>
 
-        {/* Konfirmasi hapus rekam inspeksi (beserta foto dokumentasinya) */}
+        {/* Konfirmasi hapus: rekam bulan bila ada, bila tidak unit sebaris datanya */}
         <ConfirmModal
           isOpen={konfirmasiHapusBulan}
-          title="Hapus Inspeksi"
-          message={`Rekaman inspeksi APAR ${unit.kode} bulan ini beserta seluruh foto dokumentasinya akan dihapus permanen. Lanjutkan?`}
+          title={inspeksi ? 'Hapus Inspeksi' : 'Hapus Unit'}
+          message={
+            inspeksi
+              ? `Rekaman inspeksi APAR ${unit.kode} bulan ini beserta seluruh foto dokumentasinya akan dihapus permanen. Lanjutkan?`
+              : `Unit APAR ${unit.kode} beserta seluruh data inspeksinya akan dihapus permanen. Lanjutkan?`
+          }
           confirmLabel="Hapus"
           accent="#f2994a"
           onClose={() => setKonfirmasiHapusBulan(false)}
           onConfirm={() => {
             setKonfirmasiHapusBulan(false);
-            onHapusBulan?.();
+            if (inspeksi) onHapusBulan?.();
+            else onHapusUnit?.();
           }}
         />
       </div>

@@ -41,6 +41,7 @@ import {
   useInspeksiApar,
   useSimpanInspeksiApar,
   useHapusInspeksiApar,
+  useHapusUnitApar,
   useBuatUnitApar,
   useUbahUnitApar,
   useUnggahFoto,
@@ -108,6 +109,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
   const inspeksiQuery = useInspeksiApar();
   const simpanInspeksi = useSimpanInspeksiApar();
   const hapusInspeksi = useHapusInspeksiApar();
+  const hapusUnit = useHapusUnitApar();
   const buatUnit = useBuatUnitApar();
   const ubahUnit = useUbahUnitApar();
 
@@ -398,6 +400,13 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
       delete next[inspectionId];
       return next;
     });
+    setActiveInspectionUnit(null);
+  };
+
+  // Hapus unit sebaris seluruh datanya (dipakai popup bulan tanpa rekam).
+  const handleHapusUnit = () => {
+    if (!activeInspectionUnit) return;
+    hapusUnit.mutate(activeInspectionUnit.id);
     setActiveInspectionUnit(null);
   };
 
@@ -1088,6 +1097,8 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
         onCompleteInspection={handleCompleteInspection}
         onHapusBulan={handleHapusBulan}
         menghapusBulan={hapusInspeksi.isPending}
+        onHapusUnit={handleHapusUnit}
+        menghapusUnit={hapusUnit.isPending}
         menyimpanDraf={simpanInspeksi.isPending}
       />
 

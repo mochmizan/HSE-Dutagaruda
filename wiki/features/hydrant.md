@@ -16,7 +16,8 @@ kolom).
   via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`. Tombol
   tampil untuk setiap rekam tersimpan (draf tersimpan maupun terbit);
   modal draf menutup setelah simpan berhasil agar buka-ulang membaca
-  daftar pasca-simpan.
+  daftar pasca-simpan. Bulan tanpa rekam: `Hapus` menghapus UNIT sebaris
+  seluruh datanya (`hydrant-delete-unit`).
 
 ## How to get to it (user POV)
 
@@ -25,8 +26,8 @@ kolom).
 - Tombol tambah unit/zona di atas tabel (find-or-create zona duplikat).
 - Form `Tambah` Section B di bawah tabel (grid `PhotoCard` 2 kolom).
 - Tombol `Hapus` di modal inspeksi rekam tersimpan (draf tersimpan maupun
-  terbit; tanpa rekam = tanpa tombol) — laporan final saat simpan, tanpa
-  alur persetujuan.
+  terbit; bulan tanpa rekam = hapus UNIT sebaris datanya) — laporan final
+  saat simpan, tanpa alur persetujuan.
 - Tombol `Unduh PDF` di halaman/modal.
 
 ## Driving it with HTTP + browser
