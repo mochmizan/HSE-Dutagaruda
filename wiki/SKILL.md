@@ -90,9 +90,6 @@ Real routes (all auth + `companyId` scoped unless noted; base
 - Umpan kalender: `GET /api/inspections?month=YYYY-MM`
 - Foto: `GET /api/photos?inspectionKind=hydrant&inspectionId=<id>` (daftar),
   `GET /api/photos/:id` (302 ke presign singkat)
-- Persetujuan: `POST /api/approvals/:category/:refId/approval`
-  `{"action":"ajukan|ketahui|setujui|kembalikan"}`,
-  category `hydrant|apar|p3k|patrol`
 - Ekspor PDF: `POST /api/export/:category/:refId` → job,
   `GET /api/pdf-jobs/:id` (status + unduhan, ~2 detik per berkas)
 
@@ -104,8 +101,7 @@ Browser lane (labels below are literal — copy them exactly):
   `Keluar dari aplikasi`). Company header reads
   `PT DUTAGARUDA PIRANTI PRIMA`.
 - Hydrant: row click → modal `Formulir Pemeriksaan` (6 selects + foto +
-  catatan). Terkunci → notice `Laporan terkunci — menunggu persetujuan`.
-- ApprovalBar: `Ajukan`, `Kembalikan`; status `Diketahui`, `Disetujui`.
+  catatan + tombol `Hapus Bulan Ini` untuk rekam bulan ini).
 - APAR: `Selesaikan & Terbitkan`, `Tambah APAR`, `Cetak Kartu`, heading
   `Catatan :`, rekap `Kadaluwarsa APAR`.
 - P3K: year grid 21 items × 12 months (√ / × / KD), rows `TANGGAL INSPEKSI`

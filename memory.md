@@ -21,9 +21,10 @@ anything (takeover lesson: L/K items were already on disk).
 ## Gates (green baselines, re-run these — never trust a report alone)
 
 - API: `docker compose exec -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  → **93/93** (`apps/api/AGENTS.md` documents it). Covers auth, CRUD, 409
+  → **63/63** (`apps/api/AGENTS.md` documents it). Covers auth, CRUD, 409
   duplicate-month, cross-company 404s, Zod 400s, uploads, presigned 302, 5
-  exports, pdfJobs, photo delete, approvals, photo list.
+  exports, pdfJobs, photo delete, photo list. (63 sejak 17 Okt: alur
+  persetujuan dicabut total, dulu 93.)
 - Web: `bun run build` in `apps/web` (tsc + vite, ~2840 modules), oxlint clean.
 - Soak: `bun infra/soak/soak.mjs` → 50/50, p50 ~1.1s (Chromium floor).
 - After `docker compose up -d api`, wait ~15s before checking (caddy→stale
@@ -39,10 +40,8 @@ anything (takeover lesson: L/K items were already on disk).
 - `trustedOrigins` allows 5173/3001/8080 only. Kill stale 5173 listeners first
   (`Get-NetTCPConnection -LocalPort 5173`), or login dies with INVALID_ORIGIN.
 - Dev logins: `pengawas@contoh.id` / `Pengawas123`, approver
-  `budi.approver@contoh.id` / `Approver123`. Dev-only; rotate before sharing.
-- Approval transitions: 400 fires BEFORE the 403 submitter rule — test 403
-  only at DIKETAHUI. Lock-message mapping in web `gagal()` keys on the API
-  substring "proses persetujuan"; rewording `editLocked()` degrades it.
+  `budi.approver@contoh.id` / `Approver123` (login biasa sejak 17 Okt —
+  tidak ada lagi aksi khusus approver). Dev-only; rotate before sharing.
 
 ## API facts
 
@@ -69,7 +68,7 @@ anything (takeover lesson: L/K items were already on disk).
 
 ## Web facts
 
-- Shared UI: `src/components/ui` (PhotoCard, ApprovalBar/WORKFLOW_ORDER,
+- Shared UI: `src/components/ui` (PhotoCard,
   PrintButton, EmptyState, PageHeader, StatCard, ConfirmModal, FileFotoButton,
   UnduhPdfButton). `@/` → `./src`. Use shared, do not duplicate.
 - Server state: `services/api/{klien,queries,liveClient,queryClient}`.
@@ -77,10 +76,9 @@ anything (takeover lesson: L/K items were already on disk).
   APAR year card derives from stored inspections (never local card state).
 - Login screen + session guard + logout. Dev proxy `/api` → `:8080`.
 - Print: APAR scoping via body classes; P3K draft fits one landscape page;
-  approval bars live in modals (per record); 409 surfaces as Indonesian notice.
-- Known residue: `.apar-toolbar-label` CSS unused; patrol bar binds newest
-  report (per-report bar in feed modal); APAR synthetic post-save report has
-  no approvalStatus (Edit closes by design); bundle split live, no router.
+  409 surfaces as Indonesian notice.
+- Known residue: `.apar-toolbar-label` CSS unused; APAR synthetic post-save
+  report has no API id (Edit closes by design); bundle split live, no router.
 
 ## Environment (Windows + PowerShell)
 
@@ -174,6 +172,33 @@ anything (takeover lesson: L/K items were already on disk).
 ## Open decisions (owner)
 
 - Patrol findings photo flow: photo rows vs findings-photo endpoint (pending).
-- Role-gated approvals: owner said KEEP identity-only (any non-submitter).
-  Revisit only if asked.
 - Paper-scan diff for print fidelity: no scan provided yet.
+
+## Debrief (Oct 17 — tier merge + month delete, poteto-mode Feature)
+
+- Owner order: merge staff+pengawas tiers, no mengajukan features; add
+  Hydrant/APAR month delete; work under poteto-mode SKILL.md adapted to
+  OpenCode (subagents on `opencode/glm-5.3-flash-free`, no kenari).
+- Throughput: worker A (API) + worker B (web) parallel, disjoint files;
+  coordinator owned verify + wiki/memory + this debrief.
+- Removed: `routes/approvals.ts` + mount, shared Approval types + `Role`,
+  16 approval columns + `approval_status`/`role` enums (migration
+  `0002_lowly_war_machine`), all `editLocked()` guards + helper, `role`
+  on `POST /api/users`, `ApprovalBar` + all usages/lock logic, approval
+  hooks/types in klien/queries, 30 gate checks → 63/63 green.
+- Kept deliberately: PDF footer sign blocks (paper parity, separate owed
+  print-diff item); approver seed login (ordinary login, demo-safe); dual
+  save buttons (both live saves, out of the ban list); `spec/` frozen.
+- Added: `Hapus Bulan Ini` on Hydrant + APAR modals mirroring P3K
+  (hook deletes month photos first, then record; ConfirmModal step).
+- Real bug found mid-task: finding delete in HydrantPage called
+  `hapusFoto.mutate({id})` without inspectionId, so `invalidateFoto`
+  skipped and the deleted photo stayed on screen. One-line fix
+  (pass `jangkarTemuan`); DB round-trip proved writes/deletes real
+  (upload 201 → list 1 → delete 200 → list 0 → psql 0 rows).
+- Proof: `wiki/artifacts/20261017-tanpa-persetujuan/hapus-bulan/PROOF.md`
+  (month-delete 201/409/200 + approvals route 404 + zero residue).
+  Wiki maps synced same-task; `persetujuan.md` deleted.
+- Watch next: web dist must be rebuilt + `restart caddy` after ANY web
+  edit or reviewers see stale UI; api image bakes a COPY of apps/api
+  (rebuild after src edits, restart is not enough).

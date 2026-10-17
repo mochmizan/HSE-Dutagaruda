@@ -12,10 +12,12 @@ Catatan + tanda tangan).
 - `apar-publish` menerbitkan via `Selesaikan & Terbitkan` → record view
   (badge, metadata, Verifikasi 7 Komponen, Catatan, Bukti Foto).
 - `apar-yearcard` menandai baris bulan laporan; merah + teks tindak lanjut
-  saat `X`; lencana `Terkunci (Disetujui)` saat disetujui.
+  saat `X`.
 - `apar-expiry` menghitung rekap kedaluwarsa (No. format `1, 14, dan 15`).
 - `apar-add-unit` mendaftarkan zona + unit via modal (find-or-create zona).
 - `apar-print` mengunduh PDF / mencetak kartu via `Cetak Kartu`.
+- `apar-delete-month` menghapus rekam bulan ini via tombol `Hapus Bulan
+  Ini` di modal + konfirmasi (foto bulan itu ikut terhapus dulu).
 
 ## How to get to it (user POV)
 
@@ -43,8 +45,8 @@ Preconditions:
   Terbitkan` → record view memuat badge + metadata + Verifikasi 7
   Komponen + Catatan + Bukti Foto. `Edit` membuka ulang modal inspeksi.
 - **Kartu tahunan.** Baris bulan laporan ditandai; sel `X` merah + teks
-  tindak lanjut; setelah Disetujui muncul lencana `Terkunci (Disetujui)`
-  dan modal terkunci (`Laporan terkunci — menunggu persetujuan`).
+  tindak lanjut. Tidak ada status terkunci — semua rekam selalu bisa
+  disunting dan dihapus.
 - **Kedaluwarsa.** Rekap `Kadaluwarsa APAR` terhitung dari inspeksi
   tersimpan (jangan pernah dari state kartu lokal).
 - **Bukti.** `units.json`, `inspections.json`, snapshot record view +
@@ -54,8 +56,8 @@ Preconditions:
 
 - Kartu tahunan hanya-tampil: tidak ada suntingan sel; sinkronisasi satu
   arah modal → tabel + kartu (draf menang atas laporan terbit).
-- Report sintetis pasca-simpan tanpa `approvalStatus` → Edit menutup by
-  design; jangan asert bar persetujuan di sana.
+- Report sintetis pasca-simpan tanpa id API (prefix `rep-`) → tombol Edit
+  menutup by design; tidak ada bar status di tampilan itu.
 - Foto di dalam modal inspeksi (slot Kartu/Penimbangan CO2/Pengecekan per
   caption), BUKAN Section B halaman.
 - CSS `.apar-toolbar-label` tidak terpakai (residu) — jangan pakai sebagai

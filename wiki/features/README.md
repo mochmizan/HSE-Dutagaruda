@@ -1,7 +1,7 @@
 # Peta fitur verifikasi viaannn
 
 Sumber acuan untuk memverifikasi perilaku user-facing aplikasi inspeksi K3
-(Hydrant, APAR, P3K, Patroli K3, alur persetujuan). Baca indeks ini sebelum
+(Hydrant, APAR, P3K, Patroli K3). Baca indeks ini sebelum
 menjalankan aplikasi, lalu pakai file fitur yang cocok sebagai resep.
 Induk skill: [`../SKILL.md`](../SKILL.md).
 
@@ -68,5 +68,3 @@ stabil, state yang dibutuhkan, perintah, dan bukti teramati.
   paraf, cetak landscape.
 - [Patroli K3](./patroli.md) — feed foto tunggal, terbaru dulu, tambah
   temuan + hapus hover.
-- [Alur persetujuan](./persetujuan.md) — Draft → Diajukan → Diketahui →
-  Disetujui + Kembalikan, lintas semua kategori.

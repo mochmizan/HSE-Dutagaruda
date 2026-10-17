@@ -13,7 +13,6 @@ tanggal/paraf, aksi hapus-bulan). Cetak A4 landscape satu halaman.
   simpan ulang).
 - `p3k-clear` menghapus satu bulan penuh via aksi hapus-bulan.
 - `p3k-print` mengunduh PDF landscape via `POST /api/export/p3k/:refId`.
-- `p3k-lock` mengunci form saat status di luar DRAFT.
 
 ## How to get to it (user POV)
 

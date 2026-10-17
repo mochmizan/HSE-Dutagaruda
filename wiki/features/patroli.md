@@ -12,7 +12,6 @@ default hari ini. Cetak A4 portrait (header + grid).
 - `patrol-add` menambah temuan (foto wajib + caption).
 - `patrol-delete` menghapus via hover-delete + konfirmasi.
 - `patrol-print` mengunduh PDF via `POST /api/export/patrol/:refId`.
-- `patrol-approval` menampilkan bar persetujuan untuk laporan terbaru.
 
 ## How to get to it (user POV)
 
@@ -20,7 +19,6 @@ default hari ini. Cetak A4 portrait (header + grid).
 - Form tambah (foto + caption + tanggal) di atas feed.
 - Hover kartu → hapus; klik item feed → modal detail (badge, metadata,
   foto, Edit).
-- Bar persetujuan terikat laporan TERBARU (bukan per-item feed).
 
 ## Driving it with HTTP + browser
 
@@ -49,8 +47,4 @@ Preconditions:
 
 ## Gotchas
 
-- Bar persetujuan mengikat laporan terbaru; modal feed item tidak punya
-  bar per-laporan (residu yang diketahui) — jangan asert sebaliknya.
 - Caption saja di bawah foto (tanpa metadata ramai) itu by design.
-- `patrolDate` ikut di body approval PATCH (lihat `check.ts`
-  approvalTargets) — jangan kirim body kosong untuk patrol.

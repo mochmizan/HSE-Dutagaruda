@@ -12,7 +12,8 @@ kolom).
 - `hydrant-add-unit` mendaftarkan zona + kode unit non-sekuensial via modal.
 - `hydrant-finding` menambah temuan Section B (foto wajib + caption).
 - `hydrant-print` mengunduh PDF A4 via `POST /api/export/hydrant/:refId`.
-- `hydrant-lock` mengunci penyimpanan saat status di luar DRAFT.
+- `hydrant-delete-month` menghapus rekam bulan ini via tombol `Hapus Bulan
+  Ini` di modal + konfirmasi (foto bulan itu ikut terhapus dulu).
 
 ## How to get to it (user POV)
 
@@ -20,6 +21,8 @@ kolom).
 - Klik satu baris tabel unit → modal `Formulir Pemeriksaan`.
 - Tombol tambah unit/zona di atas tabel (find-or-create zona duplikat).
 - Form `Tambah` Section B di bawah tabel (grid `PhotoCard` 2 kolom).
+- Tombol `Hapus Bulan Ini` di modal inspeksi (berapa pun statusnya —
+  laporan final saat simpan, tanpa alur persetujuan).
 - Tombol `Unduh PDF` di halaman/modal.
 
 ## Driving it with HTTP + browser
