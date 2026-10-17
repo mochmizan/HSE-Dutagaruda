@@ -17,7 +17,10 @@ Catatan + tanda tangan).
 - `apar-add-unit` mendaftarkan zona + unit via modal (find-or-create zona).
 - `apar-print` mengunduh PDF / mencetak kartu via `Cetak Kartu`.
 - `apar-delete-month` menghapus permanen rekam bulan ini (beserta foto)
-  via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`.
+  via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`. Tombol
+  tampil untuk setiap rekam tersimpan (draf tersimpan maupun terbit);
+  modal draf menutup setelah simpan berhasil agar buka-ulang membaca
+  daftar pasca-simpan.
 
 ## How to get to it (user POV)
 

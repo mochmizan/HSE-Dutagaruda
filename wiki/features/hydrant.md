@@ -13,7 +13,10 @@ kolom).
 - `hydrant-finding` menambah temuan Section B (foto wajib + caption).
 - `hydrant-print` mengunduh PDF A4 via `POST /api/export/hydrant/:refId`.
 - `hydrant-delete-month` menghapus permanen rekam bulan ini (beserta foto)
-  via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`.
+  via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`. Tombol
+  tampil untuk setiap rekam tersimpan (draf tersimpan maupun terbit);
+  modal draf menutup setelah simpan berhasil agar buka-ulang membaca
+  daftar pasca-simpan.
 
 ## How to get to it (user POV)
 
@@ -21,8 +24,9 @@ kolom).
 - Klik satu baris tabel unit → modal `Formulir Pemeriksaan`.
 - Tombol tambah unit/zona di atas tabel (find-or-create zona duplikat).
 - Form `Tambah` Section B di bawah tabel (grid `PhotoCard` 2 kolom).
-- Tombol `Hapus` di modal inspeksi (berapa pun statusnya —
-  laporan final saat simpan, tanpa alur persetujuan).
+- Tombol `Hapus` di modal inspeksi rekam tersimpan (draf tersimpan maupun
+  terbit; tanpa rekam = tanpa tombol) — laporan final saat simpan, tanpa
+  alur persetujuan.
 - Tombol `Unduh PDF` di halaman/modal.
 
 ## Driving it with HTTP + browser
