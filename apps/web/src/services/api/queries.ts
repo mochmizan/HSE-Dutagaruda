@@ -211,6 +211,25 @@ export function useSimpanInspeksiHidran() {
   });
 }
 
+/** Hapus inspeksi hidran bulan: foto anak dibersihkan dulu (API menolak dengan
+ * 409 bila foto masih lekat), lalu rekam inspeksinya. */
+export function useHapusInspeksiHidran() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const foto = await k.ambilFotoInspeksi('hydrant', id);
+      await Promise.allSettled(foto.items.map((f) => k.hapusFoto(f.id)));
+      return k.hapusInspeksiHidran(id);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiHidran });
+      void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 /** Cari id zona berdasarkan nama; buat bila belum ada (hindari zona ganda). */
 async function idZonaAtauBuat(siteId: string, zoneName: string): Promise<string> {
   const nama = zoneName.trim();
@@ -260,6 +279,25 @@ export function useSimpanInspeksiApar() {
       id ? k.ubahInspeksiApar(id, body) : k.buatInspeksiApar(body),
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+/** Hapus inspeksi APAR bulan: foto dokumentasi dibersihkan dulu (API menolak
+ * dengan 409 bila foto masih lekat), lalu rekam inspeksinya. */
+export function useHapusInspeksiApar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const foto = await k.ambilFotoInspeksi('apar', id);
+      await Promise.allSettled(foto.items.map((f) => k.hapusFoto(f.id)));
+      return k.hapusInspeksiApar(id);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
+      void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
       void qc.invalidateQueries({ queryKey: ['umpan'] });
     },
     onError: (err) => window.alert(gagal(err)),

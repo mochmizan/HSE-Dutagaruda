@@ -213,6 +213,8 @@ export const ubahInspeksiHidran = (
   body: Partial<Omit<MasukanInspeksiHidran, 'unitId' | 'month'>>,
 ) => livePatch<ApiInspeksiHidran>(`/hydrant-inspections/${id}`, body);
 
+export const hapusInspeksiHidran = (id: string) => liveDelete(`/hydrant-inspections/${id}`);
+
 export interface MasukanInspeksiApar {
   unitId: string;
   month: string;
@@ -235,6 +237,8 @@ export const ubahInspeksiApar = (
   id: string,
   body: Partial<Omit<MasukanInspeksiApar, 'unitId' | 'month'>>,
 ) => livePatch<ApiInspeksiApar>(`/apar-inspections/${id}`, body);
+
+export const hapusInspeksiApar = (id: string) => liveDelete(`/apar-inspections/${id}`);
 
 export const buatInspeksiP3k = (body: {
   boxId: string;
