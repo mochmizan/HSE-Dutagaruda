@@ -208,6 +208,17 @@ anything (takeover lesson: L/K items were already on disk).
   `blockedByChildren`, no soft delete anywhere).
 - Owner report open: Hapus missing in draft popup, only on completed.
   Web delegate investigating (briefed Oct 17).
+- RESOLVED Oct 17 (dua lapis). (1) Agen: akar = modal menutup sinkron
+  saat POST melayang → buka-ulang membaca daftar pra-simpan. Perbaikan:
+  modal menutup di `onSuccess` + tombol `Menyimpan…` (`90910c8`,
+  `4e43eb9`, wiki `0899df4`; proof 25/25 LULUS). (2) Langsung: bulan
+  tanpa rekam (belum dimulai) memang tidak punya apa-apa untuk hapus
+  bulan — popup kini menampilkan `Hapus Unit` (judul + pesan adaptif):
+  hook `useHapusUnitHidran/Apar` (foto → rekam → unit), kontrak
+  `hapusUnitHidran/Apar` di klien. Proof HTTP hijau penuh (409 guard,
+  200, 404; `wiki/artifacts/20261017-hapus-unit/PROOF.md`). Commit
+  `b1d261f`. Poteto pensiun pasca ini (owner order): kerja langsung
+  atau agen general.
 
 ## Debrief (Oct 17 — patrol real photo, poteto-agent team)
 
