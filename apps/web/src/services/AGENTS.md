@@ -23,6 +23,9 @@ the Hono API through these hooks.
   `kunci`, mappers `petakan*` (API rows → UI models in `types/hse.ts`).
   Mutations invalidate on settle; `useUbahButirP3k` and
   `useHapusTemuanPatroli` are optimistic with rollback.
+  `useHapusInspeksiHidran`/`useHapusInspeksiApar` delete the month record —
+  child photos are cleaned first (`ambilFotoInspeksi` + `hapusFoto`) so the
+  API's 409-on-remaining-photos guard never trips.
   `jalankanEkspor` posts an export then polls pdfJobs and returns the
   presigned download URL; `unduhBerkas` triggers the browser download.
 - `api/index.ts`: barrel (`client`, `liveClient`, `klien`, `queries`).

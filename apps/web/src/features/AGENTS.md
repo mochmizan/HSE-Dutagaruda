@@ -34,7 +34,12 @@ Domain-specific, self-contained feature slices for the HSE Inspection Platform: 
   “Bukti inspeksi” slot; APAR: Kartu/Penimbangan CO2/Pengecekan slots keyed
   by caption). Session photo lists live in page state (`fotoHidran`,
   `fotoApar`) because the API has no list-photos endpoint. Patrol findings
-  stay placeholders (bare `s3Key`, no photo rows).
+  stay placeholders (bare `s3Key`, no photo rows). Month-record deletion
+  (“Hapus Bulan Ini”, Hydrant & APAR & P3K) mirrors the P3K flow: confirm
+  step (`ConfirmModal`) →
+  `useHapusInspeksiHidran`/`useHapusInspeksiApar` clean the record's child
+  photos first (API answers 409 while photos remain), then delete the
+  record and invalidate inspections + umpan.
 - “Unduh PDF” (`UnduhPdfButton`) on Hydrant/APAR/P3K/Patrol calls
   `POST /api/export/:category/:refId` → `GET /api/pdf-jobs/:id` and opens
   the presigned download URL. Browser “Cetak” stays as the draft path.

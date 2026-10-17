@@ -40,6 +40,7 @@ import {
   useUnitApar,
   useInspeksiApar,
   useSimpanInspeksiApar,
+  useHapusInspeksiApar,
   useBuatUnitApar,
   useUbahUnitApar,
   useUnggahFoto,
@@ -106,6 +107,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
   const unitQuery = useUnitApar();
   const inspeksiQuery = useInspeksiApar();
   const simpanInspeksi = useSimpanInspeksiApar();
+  const hapusInspeksi = useHapusInspeksiApar();
   const buatUnit = useBuatUnitApar();
   const ubahUnit = useUbahUnitApar();
 
@@ -377,6 +379,20 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
         (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
       ) ?? null
     : null;
+
+  // Hapus rekam inspeksi bulan ini: hook membersihkan foto dokumentasi dulu (cegah 409),
+  // laman sekadar menyingkirkan daftar foto sesi + menutup modal.
+  const handleHapusBulan = () => {
+    if (!inspeksiAktif) return;
+    const inspectionId = inspeksiAktif.id;
+    hapusInspeksi.mutate(inspectionId);
+    setFotoApar((prev) => {
+      const next = { ...prev };
+      delete next[inspectionId];
+      return next;
+    });
+    setActiveInspectionUnit(null);
+  };
 
   const handleUnggahFoto = (slot: 'Kartu' | 'Berat' | 'Pengecekan', file: File) => {
     if (!inspeksiAktif) return;
@@ -1063,6 +1079,8 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
         onClose={() => setActiveInspectionUnit(null)}
         onSaveDraft={handleSaveInspectionDraft}
         onCompleteInspection={handleCompleteInspection}
+        onHapusBulan={handleHapusBulan}
+        menghapusBulan={hapusInspeksi.isPending}
       />
 
       {/* Rekam hasil inspeksi — tampil otomatis setelah “Selesaikan & Terbitkan” */}

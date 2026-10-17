@@ -3,7 +3,7 @@ import { X, ShieldCheck, Camera, Trash2 } from 'lucide-react';
 import type { AparUnitItem } from '../../types/hse';
 import type { AparComponentStatus, OverallStatus } from '../../types/domain';
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
-import { FileFotoButton } from '@/components/ui';
+import { ConfirmModal, FileFotoButton } from '@/components/ui';
 import type { ApiInspeksiApar } from '@/services/api/klien';
 import type { FotoTampil } from '@/services/api/queries';
 
@@ -23,6 +23,9 @@ interface AparInspectionModalProps {
   onClose: () => void;
   onSaveDraft: (unitId: string, draft: AparDraft) => void;
   onCompleteInspection: (unit: AparUnitItem, draft: AparDraft, overall: OverallStatus) => void;
+  onHapusBulan?: () => void;
+  /** Status mutasi hapus (tombol menandai proses). */
+  menghapusBulan?: boolean;
 }
 
 const COMPONENT_FIELDS: { key: keyof AparDraft & string; label: string; hint: string }[] = [
@@ -50,12 +53,15 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   onClose,
   onSaveDraft,
   onCompleteInspection,
+  onHapusBulan,
+  menghapusBulan = false,
 }) => {
   const [values, setValues] = useState<Record<string, AparComponentStatus>>({});
   const [notes, setNotes] = useState('');
   const [tindakLanjut, setTindakLanjut] = useState('');
   const [overallStatus, setOverallStatus] = useState<OverallStatus>('LAYAK');
   const [isOverridden, setIsOverridden] = useState(false);
+  const [konfirmasiHapusBulan, setKonfirmasiHapusBulan] = useState(false);
 
   // Init dari draftDetails, fallback ke completedReport.aparDetails (draft menang).
   useEffect(() => {
@@ -347,13 +353,25 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
 
           {/* Kaki */}
           <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Simpan Draft
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Simpan Draft
+              </button>
+              {inspeksi && onHapusBulan && (
+                <button
+                  type="button"
+                  onClick={() => setKonfirmasiHapusBulan(true)}
+                  disabled={menghapusBulan}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
+                >
+                  <Trash2 size={12} /> Hapus Bulan Ini
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -371,6 +389,20 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             </div>
           </div>
         </form>
+
+        {/* Konfirmasi hapus rekam inspeksi bulan ini (beserta foto dokumentasinya) */}
+        <ConfirmModal
+          isOpen={konfirmasiHapusBulan}
+          title="Hapus Inspeksi Bulan Ini"
+          message={`Rekaman inspeksi APAR ${unit.kode} bulan ini beserta seluruh foto dokumentasinya akan dihapus permanen. Lanjutkan?`}
+          confirmLabel="Hapus"
+          accent="#f2994a"
+          onClose={() => setKonfirmasiHapusBulan(false)}
+          onConfirm={() => {
+            setKonfirmasiHapusBulan(false);
+            onHapusBulan?.();
+          }}
+        />
       </div>
     </div>
   );

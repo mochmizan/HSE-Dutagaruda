@@ -34,6 +34,7 @@ import {
   useUnitHidran,
   useInspeksiHidran,
   useSimpanInspeksiHidran,
+  useHapusInspeksiHidran,
   useBuatUnitHidran,
   useUbahUnitHidran,
   useUnggahFoto,
@@ -61,6 +62,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const unitQuery = useUnitHidran();
   const inspeksiQuery = useInspeksiHidran();
   const simpanInspeksi = useSimpanInspeksiHidran();
+  const hapusInspeksi = useHapusInspeksiHidran();
   const buatUnit = useBuatUnitHidran();
   const ubahUnit = useUbahUnitHidran();
 
@@ -102,6 +104,20 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
       ) ?? null
     : null;
+
+  // Hapus rekam inspeksi bulan ini: hook membersihkan foto anak dulu (cegah 409),
+  // laman sekadar menyingkirkan daftar foto sesi + menutup modal.
+  const handleHapusBulan = () => {
+    if (!inspeksiAktif) return;
+    const inspectionId = inspeksiAktif.id;
+    hapusInspeksi.mutate(inspectionId);
+    setFotoHidran((prev) => {
+      const next = { ...prev };
+      delete next[inspectionId];
+      return next;
+    });
+    setActiveInspectionUnit(null);
+  };
 
   // Sunting dari dasbor: bila rekamnya bulan terpilih, buka modal inspeksinya.
   useEffect(() => {
@@ -1164,6 +1180,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         onClose={() => setActiveInspectionUnit(null)}
         onSaveDraft={handleSaveDraft}
         onCompleteInspection={handleCompleteInspection}
+        onHapusBulan={handleHapusBulan}
+        menghapusBulan={hapusInspeksi.isPending}
       />
 
       {/* 3. Modal Tambah Catatan Hasil Temuan */}

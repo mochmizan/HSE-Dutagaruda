@@ -12,7 +12,7 @@ import {
   InspectionReport,
 } from '../../types/hse';
 import { computeHydrantOverallStatus } from '../../lib/statusCalculator';
-import { FileFotoButton } from '@/components/ui';
+import { ConfirmModal, FileFotoButton } from '@/components/ui';
 import type { ApiInspeksiHidran } from '@/services/api/klien';
 import type { FotoTampil } from '@/services/api/queries';
 
@@ -30,6 +30,9 @@ interface HydrantInspectionModalProps {
   onClose: () => void;
   onSaveDraft: (unitId: string, draft: HydrantUnitItem['draftDetails']) => void;
   onCompleteInspection: (newReport: InspectionReport) => void;
+  onHapusBulan?: () => void;
+  /** Status mutasi hapus (tombol menandai proses). */
+  menghapusBulan?: boolean;
 }
 
 const AKSIEN_HYDRANT = '#eb5757';
@@ -46,6 +49,8 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
   onClose,
   onSaveDraft,
   onCompleteInspection,
+  onHapusBulan,
+  menghapusBulan = false,
 }) => {
   const [boxHydrant, setBoxHydrant] = useState<HydrantComponentStatus>('LAYAK');
   const [fireHose, setFireHose] = useState<HydrantComponentStatus>('LAYAK');
@@ -56,6 +61,7 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
   const [notes, setNotes] = useState('');
   const [overallStatus, setOverallStatus] = useState<OverallStatus>('LAYAK');
   const [isOverridden, setIsOverridden] = useState(false);
+  const [konfirmasiHapusBulan, setKonfirmasiHapusBulan] = useState(false);
 
   // Initialize form with unit draft or defaults
   useEffect(() => {
@@ -388,13 +394,25 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
 
           {/* Footer Controls */}
           <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable"
-            >
-              Simpan Sebagai Draft (Tetap Berjalan)
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable"
+              >
+                Simpan Sebagai Draft (Tetap Berjalan)
+              </button>
+              {inspeksi && onHapusBulan && (
+                <button
+                  type="button"
+                  onClick={() => setKonfirmasiHapusBulan(true)}
+                  disabled={menghapusBulan}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
+                >
+                  <Trash2 size={12} /> Hapus Bulan Ini
+                </button>
+              )}
+            </div>
 
             <div className="flex items-center gap-2">
               <button
@@ -413,6 +431,20 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
             </div>
           </div>
         </form>
+
+        {/* Konfirmasi hapus rekam inspeksi bulan ini (beserta foto buktinya) */}
+        <ConfirmModal
+          isOpen={konfirmasiHapusBulan}
+          title="Hapus Inspeksi Bulan Ini"
+          message={`Rekaman inspeksi ${unit.kode} bulan ini beserta seluruh foto buktinya akan dihapus permanen. Lanjutkan?`}
+          confirmLabel="Hapus"
+          accent="#eb5757"
+          onClose={() => setKonfirmasiHapusBulan(false)}
+          onConfirm={() => {
+            setKonfirmasiHapusBulan(false);
+            onHapusBulan?.();
+          }}
+        />
       </div>
     </div>
   );
