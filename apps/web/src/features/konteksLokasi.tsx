@@ -21,6 +21,8 @@ export interface NilaiLokasi {
   zonaNamaKeId: (name: string) => string;
   /** Seluruh lokasi perusahaan (untuk seksi LOKASI sidebar). */
   daftarLokasi: LokasiRingkas[];
+  /** Nama proyek pendek untuk header (“PT DUTAGARUDA”). */
+  namaProyek: string;
   /** Pindah lokasi aktif; seluruh halaman memfilter data per siteId ini. */
   pilihLokasi: (siteId: string) => void;
 }
@@ -34,6 +36,7 @@ const bawaan: NilaiLokasi = {
   zonaIdKeNama: () => '–',
   zonaNamaKeId: () => '',
   daftarLokasi: [],
+  namaProyek: '–',
   pilihLokasi: () => {},
 };
 
@@ -58,6 +61,7 @@ export const PenyediaLokasi: React.FC<{ children: React.ReactNode }> = ({ childr
       (lokasi.data ?? []).find((s) => s.id === pilihanId) ??
       [...(lokasi.data ?? [])].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
     const zonaSite = (zona.data ?? []).filter((z) => site && z.siteId === site.id);
+    const namaPerusahaan = perusahaan.data?.name ?? '';
     return {
       siteId: site?.id ?? '',
       siteName: site?.name ?? 'Memuat lokasi…',
@@ -67,6 +71,7 @@ export const PenyediaLokasi: React.FC<{ children: React.ReactNode }> = ({ childr
       zonaIdKeNama: (zoneId) => (zona.data ?? []).find((z) => z.id === zoneId)?.name ?? '–',
       zonaNamaKeId: (name) => (zona.data ?? []).find((z) => z.name === name)?.id ?? '',
       daftarLokasi: daftar,
+      namaProyek: namaPerusahaan ? namaPerusahaan.split(' ').slice(0, 2).join(' ') : '–',
       pilihLokasi: setPilihanId,
     };
   }, [lokasi.data, zona.data, perusahaan.data, pilihanId, daftar]);

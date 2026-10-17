@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
-  MapPin,
+  Briefcase,
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
@@ -521,13 +521,13 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
               <span>Kembali ke Dashboard Kalender</span>
             </button>
             <span>/</span>
-            <span className="hover:text-[var(--primary)] cursor-pointer">{lokasi.clientName}</span>
+            <span className="hover:text-[var(--primary)] cursor-pointer">{lokasi.siteName}</span>
             <span>/</span>
             <span className="text-[var(--primary)] font-medium">Inspeksi APAR</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
-            <MapPin size={12} />
-            <span>{lokasi.siteName}</span>
+            <Briefcase size={12} />
+            <span>{lokasi.namaProyek}</span>
           </div>
         </div>
 

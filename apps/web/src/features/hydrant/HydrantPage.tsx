@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
+  Briefcase,
   Flame,
   CheckCircle2,
   Clock,
   AlertCircle,
   Plus,
   Search,
-  MapPin,
   ChevronRight,
   ChevronLeft,
   ChevronDown,
@@ -395,14 +395,14 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
               <span>Kembali ke Dashboard Kalender</span>
             </button>
             <span>/</span>
-            <span className="hover:text-[var(--primary)] cursor-pointer">{lokasi.clientName}</span>
+            <span className="hover:text-[var(--primary)] cursor-pointer">{lokasi.siteName}</span>
             <span>/</span>
             <span className="text-[var(--primary)] font-medium">Inspeksi Hydrant</span>
           </div>
 
           <div className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
-            <MapPin size={12} />
-            <span>{lokasi.siteName}</span>
+            <Briefcase size={12} />
+            <span>{lokasi.namaProyek}</span>
           </div>
         </div>
 

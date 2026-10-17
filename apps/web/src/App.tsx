@@ -61,11 +61,6 @@ function AppIsi() {
     kotakP3k: new Map((kotakP3k.data ?? []).map((b) => [b.id, b])),
   });
 
-  // Angka lokasi aktif untuk panel Detail Lokasi (unit/kotak terdaftar).
-  const unitHidranSite = (unitHidran.data ?? []).filter((u) => u.siteId === lokasi.siteId);
-  const unitAparSite = (unitApar.data ?? []).filter((u) => u.siteId === lokasi.siteId);
-  const kotakP3kSite = (kotakP3k.data ?? []).filter((b) => b.siteId === lokasi.siteId);
-
   // Sync dark class on document element
   useEffect(() => {
     if (isDarkMode) {
@@ -159,8 +154,6 @@ function AppIsi() {
         onToggleTheme={toggleTheme}
         currentView={currentView}
         onNavigateView={setCurrentView}
-        siteName={lokasi.siteName}
-        clientName={lokasi.clientName}
         namaPengguna={sesi.data.nama}
         onKeluar={() => keluar.mutate()}
         keluarBerjalan={keluar.isPending}
@@ -176,11 +169,11 @@ function AppIsi() {
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
                   <span className="hover:text-[var(--primary)] cursor-pointer">
-                    {lokasi.clientName}
+                    {lokasi.siteName}
                   </span>
                   <span>/</span>
                   <span className="text-[var(--primary)] font-medium">
-                    {lokasi.siteName}
+                    {lokasi.namaProyek}
                   </span>
                 </div>
 
@@ -209,8 +202,8 @@ function AppIsi() {
               />
             </div>
 
-            {/* Detail Lokasi Aktif (pengganti 4 kartu KPI) */}
-            <div className="w-full mt-3 p-4 border border-[var(--border)] rounded-[6px] bg-[var(--bg-sidebar)] shadow-xs">
+            {/* Detail Lokasi Aktif (tanpa kartu angka) */}
+            <div className="w-full mt-3 px-1 py-2 border-t border-[var(--border)]">
               <div className="flex items-center gap-2.5">
                 <span className="w-9 h-9 rounded-[6px] bg-[#2383e2]/15 text-[#2383e2] flex items-center justify-center flex-shrink-0">
                   <MapPin size={18} />
@@ -220,34 +213,8 @@ function AppIsi() {
                     {lokasi.siteName}
                   </h2>
                   <p className="text-xs text-[var(--muted)] truncate">
-                    {lokasi.address} — {lokasi.clientName}
+                    {lokasi.address} — {lokasi.namaProyek}
                   </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                <div className="px-2.5 py-2 rounded-[4px] bg-[var(--bg-main)] border border-[var(--border)]">
-                  <div className="text-lg font-bold font-mono text-[var(--primary)] tabular-nums">
-                    {lokasi.zonaNamaList.length}
-                  </div>
-                  <div className="text-[11px] text-[var(--muted)]">Zona Terpantau</div>
-                </div>
-                <div className="px-2.5 py-2 rounded-[4px] bg-[var(--bg-main)] border border-[var(--border)]">
-                  <div className="text-lg font-bold font-mono text-[#eb5757] tabular-nums">
-                    {unitHidranSite.length}
-                  </div>
-                  <div className="text-[11px] text-[var(--muted)]">Unit Hydrant</div>
-                </div>
-                <div className="px-2.5 py-2 rounded-[4px] bg-[var(--bg-main)] border border-[var(--border)]">
-                  <div className="text-lg font-bold font-mono text-[#f2994a] tabular-nums">
-                    {unitAparSite.length}
-                  </div>
-                  <div className="text-[11px] text-[var(--muted)]">Unit APAR</div>
-                </div>
-                <div className="px-2.5 py-2 rounded-[4px] bg-[var(--bg-main)] border border-[var(--border)]">
-                  <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
-                    {kotakP3kSite.length}
-                  </div>
-                  <div className="text-[11px] text-[var(--muted)]">Kotak P3K</div>
                 </div>
               </div>
             </div>

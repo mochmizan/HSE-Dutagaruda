@@ -57,6 +57,43 @@ function ambilDaftarOrganisasi(mentah: unknown): Array<{ id: string }> {
   return [];
 }
 
+export interface Proyek {
+  id: string;
+  nama: string;
+}
+
+function petakanProyek(mentah: unknown): Proyek[] {
+  const daftar = ambilDaftarOrganisasi(mentah) as Array<{ id?: unknown; name?: unknown }>;
+  return daftar
+    .filter((o) => typeof o.id === 'string')
+    .map((o) => ({ id: String(o.id), nama: typeof o.name === 'string' && o.name ? o.name : String(o.id) }));
+}
+
+/** Daftar proyek (organisasi) milik pengguna — tiap proyek punya lokasi sendiri. */
+export function useDaftarProyek() {
+  return useQuery({
+    queryKey: ['proyek'],
+    queryFn: async () => petakanProyek(await liveGet<unknown>('/auth/organization/list')),
+    staleTime: 60_000,
+  });
+}
+
+/** Pindah proyek aktif: set organisasi aktif lalu muat ulang seluruh data. */
+export function usePindahProyek() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (organizationId: string) => {
+      await livePost('/auth/organization/set-active', { organizationId });
+      return ambilSesi();
+    },
+    onSuccess: (sesi) => {
+      qc.setQueryData(['sesi'], sesi);
+      void qc.invalidateQueries();
+    },
+    onError: (err) => window.alert(err instanceof ApiError ? err.message : 'Gagal pindah proyek.'),
+  });
+}
+
 export function useMasuk() {
   const qc = useQueryClient();
   return useMutation({

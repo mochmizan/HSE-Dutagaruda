@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   CalendarDays,
   ShieldCheck,
-  ChevronsUpDown,
   Sun,
   Moon,
   ChevronsLeft,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { InspectionCategory, CATEGORY_CONFIG } from '../../types/hse';
 import { useKonteksLokasi } from '../konteksLokasi';
+import { useDaftarProyek, usePindahProyek, useSesi } from '../auth/sesi';
 import { useBuatLokasi, useUbahLokasi, useUnitHidran, useUnitApar, useKotakP3k } from '@/services/api/queries';
 
 interface HseSidebarProps {
@@ -26,8 +26,6 @@ interface HseSidebarProps {
   onToggleTheme: (e?: React.MouseEvent) => void;
   currentView?: 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol';
   onNavigateView?: (view: 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol') => void;
-  siteName: string;
-  clientName: string;
   namaPengguna: string;
   onKeluar: () => void;
   keluarBerjalan?: boolean;
@@ -40,14 +38,16 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
   onToggleTheme,
   currentView = 'dashboard',
   onNavigateView,
-  siteName,
-  clientName,
   namaPengguna,
   onKeluar,
   keluarBerjalan = false,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const lokasi = useKonteksLokasi();
+  const sesi = useSesi();
+  const daftarProyek = useDaftarProyek();
+  const pindahProyek = usePindahProyek();
+  const [proyekTerbuka, setProyekTerbuka] = useState(false);
   const buatLokasi = useBuatLokasi();
   const ubahLokasi = useUbahLokasi();
 
@@ -121,21 +121,57 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
     <aside className="w-64 h-screen border-r border-[var(--border)] bg-[var(--bg-sidebar)] flex flex-col justify-between select-none flex-shrink-0 z-30 transition-[width] duration-200 ease-[var(--ease-out)] font-sans">
       {/* Header & Site Selector */}
       <div className="flex flex-col">
-        {/* Workspace Switcher / Site Selector */}
+        {/* Workspace Switcher / Pengalih Proyek */}
         <div className="p-2 border-b border-[var(--border)] flex items-center justify-between group">
-          <div className="flex items-center gap-2 flex-1 min-w-0 px-1 py-1 rounded-[4px] hover:bg-[var(--bg-hover)] cursor-pointer pressable-subtle">
-            <div className="w-7 h-7 rounded-[4px] bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center justify-center text-sm font-bold flex-shrink-0">
-              🛡️
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold text-[var(--primary)] truncate leading-tight">
-                {siteName}
+          <div className="flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => setProyekTerbuka((v) => !v)}
+              title="Ganti proyek"
+              aria-label="Ganti proyek"
+              className="w-full flex items-center gap-2 px-1 py-1 rounded-[4px] hover:bg-[var(--bg-hover)] cursor-pointer pressable-subtle"
+            >
+              <div className="w-7 h-7 rounded-[4px] bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                🛡️
               </div>
-              <div className="text-[11px] text-[var(--muted)] truncate">
-                {clientName}
+              <div className="flex-1 min-w-0 text-left">
+                <div className="text-[13px] font-semibold text-[var(--primary)] truncate leading-tight">
+                  {lokasi.namaProyek}
+                </div>
+                <div className="text-[11px] text-[var(--muted)] truncate">
+                  {lokasi.siteName}
+                </div>
               </div>
-            </div>
-            <ChevronsUpDown size={14} className="text-[var(--icon-secondary)] flex-shrink-0" />
+              <ChevronDown
+                size={14}
+                className={`text-[var(--icon-secondary)] flex-shrink-0 transition-transform ${proyekTerbuka ? '' : '-rotate-90'}`}
+              />
+            </button>
+            {proyekTerbuka && (
+              <div className="mt-1 space-y-0.5">
+                {(daftarProyek.data ?? []).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      if (p.id !== sesi.data?.perusahaanId) pindahProyek.mutate(p.id);
+                      setProyekTerbuka(false);
+                    }}
+                    disabled={pindahProyek.isPending}
+                    className={`w-full flex items-center gap-2 px-2 py-1 text-xs rounded-[4px] cursor-pointer pressable-subtle disabled:opacity-40 ${
+                      p.id === sesi.data?.perusahaanId
+                        ? 'bg-[var(--bg-hover)] font-semibold text-[var(--primary)]'
+                        : 'text-[var(--secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)]'
+                    }`}
+                  >
+                    <span className="flex-1 text-left truncate">{p.nama}</span>
+                    {p.id === sesi.data?.perusahaanId && (
+                      <CheckCircle2 size={12} className="text-[#2383e2]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <button
