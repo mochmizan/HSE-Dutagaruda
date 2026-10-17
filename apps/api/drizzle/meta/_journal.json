@@ -15,6 +15,13 @@
       "when": 1791899621423,
       "tag": "0001_lean_alex_wilder",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792216694674,
+      "tag": "0002_lowly_war_machine",
+      "breakpoints": true
     }
   ]
 }
