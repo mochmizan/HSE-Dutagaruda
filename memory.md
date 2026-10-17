@@ -13,8 +13,10 @@ anything (takeover lesson: L/K items were already on disk).
   workers. Fresh worker per task, no resumes.
 - Thin/stalled reports: message the same session again (provider traffic kills
   sessions sometimes). New spawn only when the session is dead.
-- Coordinator owns browser verification (workers have no browser tool; HTTP
-  proofs only). First real browser run is mandatory before calling UI done.
+- Coordinator owns design + browser-verification plan (workers have no browser
+  tool; HTTP proofs only, real browser run is owed before calling UI done).
+  Coordinator runs NO verification passes itself — builds, gates, proofs,
+  dist rebuilds, and caddy restarts are all delegated.
 - Page edits update their `wiki/features/` map file in the same task
   (labels, entry points, gotchas) and prove via `wiki/SKILL.md`.
 
@@ -188,12 +190,24 @@ anything (takeover lesson: L/K items were already on disk).
 
 ## Team (poteto-agent roster, reuse via sessionID)
 
-- Owner order: all implementation goes through poteto-agent from now on;
-  same agents reused across tasks (resume, no fresh spawns per task).
-- `ses_eb76829d5ffe6m6dedmpbTG1Kt` — API delegate (routes/schema/gate).
-- `ses_eb76829cbffeFeqr19xOGpWxl2` — Web delegate (pages/hooks/build).
-- Coordinator (this chat): design, verify, docs, reply. No browser tool
-  here — browser lane stays an explicit owner step or an owed item.
+- Owner order (Oct 17, replaces poteto-agent roster): no more poteto-agent
+  — too slow. Coordinator does the work directly or spawns general agents.
+  Roster sesi poteto pensiun; tugas draft-popup yang tertunda diselesaikan
+  langsung saat laporannya mendarat.
+- Coordinator (this chat): engineering lead + PM — design, briefs, docs,
+  reply. No implementation, no verification runs. No browser tool
+  here — browser lane is an explicit delegate step or an owed owner step.
+
+## Debrief (Oct 17 — label Hapus hydrant+apar, poteto-agent team)
+
+- Web delegate renamed modal button `Hapus Bulan Ini` → `Hapus` (+ title
+  `Hapus Inspeksi`), hydrant + apar, zero logic change. APAR wiring
+  untouched. Commits `f00a1c6` + `66fbce7` (AGENTS label sync).
+- Confirmed to owner: Hapus hard-deletes (photos first for 409 guard,
+  then `db.delete` record; `inspections.ts` + `units.ts` guard with
+  `blockedByChildren`, no soft delete anywhere).
+- Owner report open: Hapus missing in draft popup, only on completed.
+  Web delegate investigating (briefed Oct 17).
 
 ## Debrief (Oct 17 — patrol real photo, poteto-agent team)
 
