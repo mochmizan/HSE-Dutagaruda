@@ -4,7 +4,6 @@ import {
   Flame,
   Camera,
   Trash2,
-  Lock,
 } from 'lucide-react';
 import {
   HydrantUnitItem,
@@ -13,7 +12,7 @@ import {
   InspectionReport,
 } from '../../types/hse';
 import { computeHydrantOverallStatus } from '../../lib/statusCalculator';
-import { ApprovalBar, FileFotoButton } from '@/components/ui';
+import { FileFotoButton } from '@/components/ui';
 import type { ApiInspeksiHidran } from '@/services/api/klien';
 import type { FotoTampil } from '@/services/api/queries';
 
@@ -57,9 +56,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
   const [notes, setNotes] = useState('');
   const [overallStatus, setOverallStatus] = useState<OverallStatus>('LAYAK');
   const [isOverridden, setIsOverridden] = useState(false);
-
-  // Terkunci saat laporan sudah masuk proses persetujuan (bukan Draf).
-  const terkunci = inspeksi != null && inspeksi.approvalStatus !== 'DRAFT';
 
   // Initialize form with unit draft or defaults
   useEffect(() => {
@@ -191,22 +187,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleComplete} className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Bilah persetujuan (laporan tersimpan saja) */}
-          {inspeksi && (
-            <ApprovalBar
-              category="hydrant"
-              refId={inspeksi.id}
-              status={inspeksi.approvalStatus}
-              submittedById={inspeksi.approvalSubmittedById}
-              accent={AKSIEN_HYDRANT}
-            />
-          )}
-          {terkunci && (
-            <div className="no-print flex items-center gap-2 p-2.5 rounded-[5px] border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-medium">
-              <Lock size={13} className="shrink-0" />
-              <span>Laporan terkunci — menunggu persetujuan. Gunakan “Kembalikan” untuk menyunting lagi.</span>
-            </div>
-          )}
           {/* Component Checklists Grid (6 components) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -224,7 +204,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
                 </div>
                 <select
                   value={boxHydrant}
-                  disabled={terkunci}
                   onChange={(e) => setBoxHydrant(e.target.value as HydrantComponentStatus)}
                   className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2]"
                 >
@@ -242,7 +221,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
                 </div>
                 <select
                   value={fireHose}
-                  disabled={terkunci}
                   onChange={(e) => setFireHose(e.target.value as HydrantComponentStatus)}
                   className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2]"
                 >
@@ -260,7 +238,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
                 </div>
                 <select
                   value={hoseCoupling}
-                  disabled={terkunci}
                   onChange={(e) => setHoseCoupling(e.target.value as HydrantComponentStatus)}
                   className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2]"
                 >
@@ -278,7 +255,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
                 </div>
                 <select
                   value={hoseRack}
-                  disabled={terkunci}
                   onChange={(e) => setHoseRack(e.target.value as HydrantComponentStatus)}
                   className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2]"
                 >
@@ -296,7 +272,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
                 </div>
                 <select
                   value={nozzle}
-                  disabled={terkunci}
                   onChange={(e) => setNozzle(e.target.value as HydrantComponentStatus)}
                   className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2]"
                 >
@@ -314,7 +289,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
                 </div>
                 <select
                   value={valvePillar}
-                  disabled={terkunci}
                   onChange={(e) => setValvePillar(e.target.value as HydrantComponentStatus)}
                   className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2]"
                 >
@@ -340,7 +314,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
 
               <select
                 value={overallStatus}
-                disabled={terkunci}
                 onChange={(e) => {
                   setOverallStatus(e.target.value as OverallStatus);
                   setIsOverridden(true);
@@ -374,7 +347,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
             <textarea
               rows={2}
               value={notes}
-              disabled={terkunci}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Contoh: Tekanan valve stabil di 8 bar. Selang dan nozzle bersih siap pakai..."
               className="w-full text-xs p-2.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2383e2]"
@@ -408,7 +380,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
               </div>
             )}
             <FileFotoButton
-              terkunci={terkunci}
               belumTersimpan={inspeksi == null}
               sibuk={mengunggah}
               onFile={(file) => onUnggahFoto(file, KETERANGAN_FOTO)}
@@ -420,7 +391,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
             <button
               type="button"
               onClick={handleSaveDraft}
-              disabled={terkunci}
               className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable"
             >
               Simpan Sebagai Draft (Tetap Berjalan)
@@ -436,7 +406,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={terkunci}
                 className="px-4 py-1.5 rounded-[4px] bg-[#eb5757] hover:bg-[#d94444] text-white text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Selesaikan &amp; Terbitkan Laporan

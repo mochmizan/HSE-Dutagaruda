@@ -1,4 +1,3 @@
-import { Lock } from 'lucide-react';
 import { parseISO } from 'date-fns';
 import { formatIndonesianDate } from '../../lib/dates';
 import type { AparUnitItem, AparYearCell, AparYearGrid } from '../../types/hse';
@@ -6,7 +5,6 @@ import type { AparUnitItem, AparYearCell, AparYearGrid } from '../../types/hse';
 interface AparYearCardProps {
   unit: AparUnitItem;
   period: string; // YYYY-MM — bulan laporan ditandai sebagai baris berjalan
-  locked: boolean; // true saat rekam bulan sudah diajukan (bukan Draf)
   year: string;
   onYearChange: (year: string) => void;
   grid: AparYearGrid;
@@ -43,7 +41,6 @@ const fallbackCell = (): AparYearCell => ({
 export const AparYearCard: React.FC<AparYearCardProps> = ({
   unit,
   period,
-  locked,
   year,
   onYearChange,
   grid,
@@ -73,11 +70,6 @@ export const AparYearCard: React.FC<AparYearCardProps> = ({
           <p className="text-[11px] text-[var(--muted)] mt-0.5">
             Jenis {unit.jenis} • Ukuran {unit.ukuran} • Tahun Pembuatan{' '}
             <span className="tabular-nums">{unit.tahunPembuatan}</span>
-            {locked && (
-              <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--muted)]">
-                <Lock size={10} /> Terkunci (Disetujui)
-              </span>
-            )}
           </p>
           <p className="no-print text-[10px] text-[var(--muted)] mt-0.5">
             Klik baris tabel di atas untuk mengubah hasil pemeriksaan.

@@ -317,7 +317,7 @@ function AppIsi() {
         onEdit={(rep) => {
           // Sunting dari dasbor: pindah ke halaman kategori lalu buka modal inspeksi rekam nyata.
           setDetailReport(null);
-          setBukaSunting({ kategori: rep.approvalCategory ?? null, refId: rep.id });
+          setBukaSunting({ kategori: rep.category.toLowerCase(), refId: rep.id });
           if (rep.category === 'HYDRANT') setCurrentView('hydrant');
           else if (rep.category === 'APAR') setCurrentView('apar');
           else if (rep.category === 'P3K') setCurrentView('p3k');

@@ -775,7 +775,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                           onOpenReportDetail(unit.completedReport);
                         } else {
                           // Tanpa pengait detail (halaman mandiri): modal inspeksi
-                          // menampilkan hasil tersimpan + bilah persetujuan.
+                          // menampilkan hasil tersimpan.
                           setActiveInspectionUnit(unit);
                         }
                       }}

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { X, ShieldCheck, Camera, Trash2, Lock } from 'lucide-react';
+import { X, ShieldCheck, Camera, Trash2 } from 'lucide-react';
 import type { AparUnitItem } from '../../types/hse';
 import type { AparComponentStatus, OverallStatus } from '../../types/domain';
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
-import { ApprovalBar, FileFotoButton } from '@/components/ui';
+import { FileFotoButton } from '@/components/ui';
 import type { ApiInspeksiApar } from '@/services/api/klien';
 import type { FotoTampil } from '@/services/api/queries';
 
@@ -56,9 +56,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   const [tindakLanjut, setTindakLanjut] = useState('');
   const [overallStatus, setOverallStatus] = useState<OverallStatus>('LAYAK');
   const [isOverridden, setIsOverridden] = useState(false);
-
-  // Terkunci saat laporan sudah masuk proses persetujuan (bukan Draf).
-  const terkunci = inspeksi != null && inspeksi.approvalStatus !== 'DRAFT';
 
   // Init dari draftDetails, fallback ke completedReport.aparDetails (draft menang).
   useEffect(() => {
@@ -196,22 +193,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
 
         {/* Isi formulir */}
         <form onSubmit={handleComplete} className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Bilah persetujuan (laporan tersimpan saja) */}
-          {inspeksi && (
-            <ApprovalBar
-              category="apar"
-              refId={inspeksi.id}
-              status={inspeksi.approvalStatus}
-              submittedById={inspeksi.approvalSubmittedById}
-              accent={APAR_ACCENT}
-            />
-          )}
-          {terkunci && (
-            <div className="no-print flex items-center gap-2 p-2.5 rounded-[5px] border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-medium">
-              <Lock size={13} className="shrink-0" />
-              <span>Laporan terkunci — menunggu persetujuan. Gunakan “Kembalikan” untuk menyunting lagi.</span>
-            </div>
-          )}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
               Daftar 7 Komponen APAR
@@ -228,7 +209,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
                   </div>
                   <select
                     value={values[f.key] ?? 'BAIK'}
-                    disabled={terkunci}
                     onChange={(e) => setValue(f.key, e.target.value as AparComponentStatus)}
                     className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#f2994a]"
                   >
@@ -256,7 +236,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
               </div>
               <select
                 value={overallStatus}
-                disabled={terkunci}
                 onChange={(e) => {
                   setOverallStatus(e.target.value as OverallStatus);
                   setIsOverridden(true);
@@ -289,7 +268,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             <textarea
               rows={2}
               value={notes}
-              disabled={terkunci}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Contoh: Tekanan pada zona hijau, segel utuh, selang lentur siap pakai…"
               className="w-full text-xs p-2.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#f2994a]"
@@ -304,7 +282,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             <textarea
               rows={2}
               value={tindakLanjut}
-              disabled={terkunci}
               onChange={(e) => setTindakLanjut(e.target.value)}
               placeholder="Contoh: Isi ulang tabung & ganti segel sebelum akhir bulan…"
               className="w-full text-xs p-2.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#f2994a]"
@@ -331,7 +308,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
                     <span className="w-24 shrink-0 text-[11px] font-medium text-[var(--secondary)]">{f.slot}</span>
                     <span className="flex-1 text-[10px] text-[var(--muted)]">{f.hint}</span>
                     <FileFotoButton
-                      terkunci={terkunci || f.disabled}
+                      nonaktif={f.disabled}
                       belumTersimpan={inspeksi == null}
                       sibuk={mengunggah}
                       onFile={(file) => onUnggahFoto(f.slot, file)}
@@ -373,7 +350,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             <button
               type="button"
               onClick={handleSaveDraft}
-              disabled={terkunci}
               className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Simpan Draft
@@ -388,7 +364,6 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={terkunci}
                 className="px-4 py-1.5 rounded-[4px] bg-[#f2994a] hover:bg-[#e08830] text-white text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Selesaikan &amp; Terbitkan

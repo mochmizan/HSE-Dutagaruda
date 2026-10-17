@@ -10,7 +10,7 @@ import {
   useHapusTemuanPatroli,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { ApprovalBar, LABEL_STATUS, PhotoCard, EmptyState, UnduhPdfButton } from '@/components/ui';
+import { PhotoCard, EmptyState, UnduhPdfButton } from '@/components/ui';
 import type { ApiLaporanPatroli } from '@/services/api/klien';
 
 interface PatrolPageProps {
@@ -47,12 +47,11 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
     [laporanQuery.data],
   );
 
-  // Alur persetujuan laporan terbaru (laporan = rekam patroli tersimpan).
+  // Laporan terbaru (rekam patroli tersimpan) — jangkar ekspor PDF.
   const laporanTerbaru: ApiLaporanPatroli | null = useMemo(() => {
     const daftar = laporanQuery.data ?? [];
     return [...daftar].sort((a, b) => b.patrolDate.localeCompare(a.patrolDate))[0] ?? null;
   }, [laporanQuery.data]);
-  const statusLaporan = laporanTerbaru?.approvalStatus ?? 'DRAFT';
 
   const sorted = useMemo(
     () => [...findings].sort((a, b) => b.tanggal.localeCompare(a.tanggal)),
@@ -118,15 +117,6 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Alur persetujuan laporan terbaru (layar saja; sama di semua halaman inspeksi) */}
-      <ApprovalBar
-        category="patrol"
-        refId={laporanTerbaru?.id ?? null}
-        status={statusLaporan}
-        submittedById={laporanTerbaru?.approvalSubmittedById ?? null}
-        accent="#2f80ed"
-      />
-
       {/* Stats */}
       <div className="no-print grid grid-cols-3 gap-3 mb-4">
         {[
@@ -187,19 +177,6 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
             >
               {sorted.map((finding) => (
                 <div key={finding.id} className="flex flex-col items-center">
-                  <span
-                    className={`no-print mb-2 px-2 py-0.5 rounded-[3px] text-[10px] font-semibold border tabular-nums ${
-                      finding.approvalStatus === 'DISETUJUI'
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                        : finding.approvalStatus === 'DIAJUKAN'
-                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                          : finding.approvalStatus === 'DIKETAHUI'
-                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                            : 'bg-[var(--bg-hover)] text-[var(--muted)] border-[var(--border)]'
-                    }`}
-                  >
-                    {LABEL_STATUS[finding.approvalStatus]}
-                  </span>
                   <PhotoCard
                     imageUrl={finding.photoUrl}
                     caption={finding.caption}

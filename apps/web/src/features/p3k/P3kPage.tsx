@@ -14,7 +14,6 @@ import {
   useUbahInspeksiP3k,
   useHapusInspeksiP3k,
 } from '@/services/api/queries';
-import type { ApiInspeksiP3k } from '@/services/api/klien';
 import { ambilButirP3k } from '@/services/api/klien';
 import {
   MONTH_KEYS,
@@ -64,23 +63,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
     () => (kotak ? petakanGridP3k([kotak], inspeksiQuery.data ?? [], year)[kotak.id] ?? {} : {}),
     [kotak, inspeksiQuery.data, year],
   );
-
-  // Alur persetujuan: per bulan (satu rekam inspeksi per bulan). Bulan terbuka kini.
-  const inspeksiBulanAktif: ApiInspeksiP3k | null = useMemo(() => {
-    if (!activeMonth || !kotak) return null;
-    return (
-      (inspeksiQuery.data ?? []).find(
-        (i) => i.boxId === kotak.id && i.period.startsWith(`${year}-${activeMonth}`),
-      ) ?? null
-    );
-  }, [activeMonth, kotak, inspeksiQuery.data, year]);
-  const bulanTerkunci = (m: string): boolean => {
-    if (!kotak) return false;
-    const baris = (inspeksiQuery.data ?? []).find(
-      (i) => i.boxId === kotak.id && i.period.startsWith(`${year}-${m}`),
-    );
-    return baris != null && baris.approvalStatus !== 'DRAFT';
-  };
 
   // Jangkar ekspor PDF tahunan: rekam inspeksi kotak aktif pada tahun terpilih.
   const jangkarEkspor = kotak
@@ -185,8 +167,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Alur persetujuan pindah ke modal isi bulan (satu rekam per bulan) */}
-
       {/* Stats */}
       <div className="no-print grid grid-cols-3 gap-3 mb-4">
         {[
@@ -254,15 +234,8 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
                   <th key={m} className="py-1 px-1 text-center align-middle print:py-0.5">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (bulanTerkunci(m)) return;
-                        setActiveMonth(m);
-                      }}
-                      title={
-                        bulanTerkunci(m)
-                          ? 'Laporan terkunci — menunggu persetujuan'
-                          : `Isi ${MONTH_NAMES[i]} ${year}`
-                      }
+                      onClick={() => setActiveMonth(m)}
+                      title={`Isi ${MONTH_NAMES[i]} ${year}`}
                       className="no-print inline-flex items-center gap-1 font-bold hover:text-[#27ae60] pressable cursor-pointer tabular-nums"
                     >
                       {MONTH_SHORT[i]}
@@ -359,8 +332,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
         isOpen={activeMonth !== null}
         monthLabel={activeIdx >= 0 ? `${MONTH_NAMES[activeIdx]} ${year}` : ''}
         initial={activeData}
-        terkunci={bulanTerkunci(activeMonth ?? '')}
-        inspeksi={inspeksiBulanAktif}
         onClose={() => setActiveMonth(null)}
         onSave={(data) => {
           if (activeMonth && kotak) {

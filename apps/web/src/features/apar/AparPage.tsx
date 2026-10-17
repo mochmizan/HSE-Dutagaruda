@@ -122,12 +122,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
   // Tahun kartu diangkat ke halaman agar sinkronisasi tahu konteks tahun.
   const [cardYear, setCardYear] = useState<string>('2026');
 
-  // Alur kerja laporan: tersimpan per baris inspeksi (bilah di dalam modal inspeksi).
-  // Bulan terkunci bila ada rekam inspeksi bulan ini yang sudah diajukan.
-  const bulanTerkunci = (inspeksiQuery.data ?? []).some(
-    (i) => i.period.startsWith(period) && i.approvalStatus !== 'DRAFT',
-  );
-
   // Foto dokumentasi per inspeksi (id baris inspeksi → daftar foto sesi).
   const [fotoApar, setFotoApar] = useState<Record<string, FotoTampil[]>>({});
   const unggahFoto = useUnggahFoto();
@@ -438,8 +432,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
         )?.id ?? null)
       : null;
 
-  // Peran bilah persetujuan kini datang dari rekam inspeksi (tanpa pemilih peran lokal).
-
   // ── Modal tambah zona & unit APAR (menyimpan ke API) ──
   const handleAddZone = (_zoneName: string) => {
     // Zona dibuat bersama unit pada handleAddAparUnits (butuh siteId).
@@ -578,8 +570,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
           </div>
         </div>
       </div>
-
-      {/* b. Bilah persetujuan berada di dalam modal inspeksi (satu rekam per unit-bulan) */}
 
       {/* c. 4 kartu statistik (layar saja) */}
       <div className="no-print grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -956,7 +946,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
                 onChange={(e) =>
                   setSigNames((prev) => prev.map((v, i) => (i === s.idx ? e.target.value : v)))
                 }
-                readOnly={bulanTerkunci}
                 aria-label={`Nama ${s.caption}`}
                 className="no-print w-full bg-transparent text-left font-bold text-[var(--primary)] border-b border-black/70 hover:border-black focus:border-black focus:outline-none read-only:opacity-80 px-0 py-0.5"
               />
@@ -966,7 +955,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
                 onChange={(e) =>
                   setSigRoles((prev) => prev.map((v, i) => (i === s.idx ? e.target.value : v)))
                 }
-                readOnly={bulanTerkunci}
                 aria-label={`Jabatan ${s.caption}`}
                 className="no-print mt-0.5 w-full bg-transparent text-left text-[11px] text-[var(--muted)] border-b border-transparent hover:border-[var(--border)] focus:border-[var(--border)] focus:outline-none read-only:opacity-80 px-0 py-0.5"
               />
@@ -1052,7 +1040,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
             <AparYearCard
               unit={selectedUnit}
               period={period}
-              locked={bulanTerkunci}
               year={cardYear}
               onYearChange={setCardYear}
               grid={activeGrid}
