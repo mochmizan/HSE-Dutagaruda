@@ -1,5 +1,4 @@
 export * from './calendar';
-export * from './kpi';
 export * from './reports';
 export * from './navigation';
 export * from './hydrant';

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { InspectionCategory, CATEGORY_CONFIG } from '../../types/hse';
 import { useKonteksLokasi } from '../konteksLokasi';
-import { useBuatLokasi, useUbahLokasi } from '@/services/api/queries';
+import { useBuatLokasi, useUbahLokasi, useUnitHidran, useUnitApar, useKotakP3k } from '@/services/api/queries';
 
 interface HseSidebarProps {
   activeCategoryFilter: InspectionCategory | 'ALL';
@@ -26,8 +26,6 @@ interface HseSidebarProps {
   onToggleTheme: (e?: React.MouseEvent) => void;
   currentView?: 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol';
   onNavigateView?: (view: 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol') => void;
-  aparOpenCount?: number;
-  hydrantUnitCount?: number;
   siteName: string;
   clientName: string;
   namaPengguna: string;
@@ -42,8 +40,6 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
   onToggleTheme,
   currentView = 'dashboard',
   onNavigateView,
-  aparOpenCount = 0,
-  hydrantUnitCount = 0,
   siteName,
   clientName,
   namaPengguna,
@@ -54,6 +50,16 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
   const lokasi = useKonteksLokasi();
   const buatLokasi = useBuatLokasi();
   const ubahLokasi = useUbahLokasi();
+
+  // Badge hitung per lokasi: unit/kotak terdaftar (patroli tak punya angka wajar).
+  const unitHidran = useUnitHidran();
+  const unitApar = useUnitApar();
+  const kotakP3k = useKotakP3k();
+  const hitungLokasi = (siteId: string) => ({
+    hydrant: (unitHidran.data ?? []).filter((u) => u.siteId === siteId).length,
+    apar: (unitApar.data ?? []).filter((u) => u.siteId === siteId).length,
+    p3k: (kotakP3k.data ?? []).filter((b) => b.siteId === siteId).length,
+  });
 
   // Seksi LOKASI: lokasi mana yang terbuka, tambah baris, dan sunting nama sebaris.
   const [lokasiTerbuka, setLokasiTerbuka] = useState<string | null>(null);
@@ -254,10 +260,10 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
                   <div className="ml-5 mt-0.5 space-y-0.5 border-l border-[var(--border)] pl-1">
                     {(
                       [
-                        { view: 'hydrant', label: 'Inspeksi Hydrant', ikon: <span className="text-xs leading-none">🧯</span> },
-                        { view: 'apar', label: 'Inspeksi APAR', ikon: <ShieldCheck size={13} className="text-[#f2994a]" /> },
-                        { view: 'p3k', label: 'Inspeksi P3K', ikon: <span className="text-xs leading-none">🩹</span> },
-                        { view: 'patrol', label: 'Patroli K3', ikon: <span className="text-xs leading-none">🚶</span> },
+                        { view: 'hydrant', label: 'Inspeksi Hydrant', ikon: <span className="text-xs leading-none">🧯</span>, badge: hitungLokasi(site.id).hydrant, badgeKelas: 'bg-red-500/15 text-red-600 dark:text-red-400' },
+                        { view: 'apar', label: 'Inspeksi APAR', ikon: <ShieldCheck size={13} className="text-[#f2994a]" />, badge: hitungLokasi(site.id).apar, badgeKelas: 'bg-[#f2994a]/15 text-[#f2994a]' },
+                        { view: 'p3k', label: 'Inspeksi P3K', ikon: <span className="text-xs leading-none">🩹</span>, badge: hitungLokasi(site.id).p3k, badgeKelas: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+                        { view: 'patrol', label: 'Patroli K3', ikon: <span className="text-xs leading-none">🚶</span>, badge: 0, badgeKelas: '' },
                       ] as const
                     ).map((kat) => (
                       <button
@@ -275,6 +281,11 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
                       >
                         {kat.ikon}
                         <span className="flex-1 text-left truncate">{kat.label}</span>
+                        {kat.badge > 0 && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold tabular-nums ${kat.badgeKelas}`}>
+                            {kat.badge}
+                          </span>
+                        )}
                         {aktif && currentView === kat.view && (
                           <span className="w-1.5 h-1.5 rounded-full bg-[#2383e2]" />
                         )}
