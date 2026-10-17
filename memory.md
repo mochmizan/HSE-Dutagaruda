@@ -24,7 +24,7 @@ anything (takeover lesson: L/K items were already on disk).
   → **63/63** (`apps/api/AGENTS.md` documents it). Covers auth, CRUD, 409
   duplicate-month, cross-company 404s, Zod 400s, uploads, presigned 302, 5
   exports, pdfJobs, photo delete, photo list. (63 sejak 17 Okt: alur
-  persetujuan dicabut total, dulu 93.)
+  persetujuan dicabut total, dulu 93. 66 sejak foto temuan patroli asli.)
 - Web: `bun run build` in `apps/web` (tsc + vite, ~2840 modules), oxlint clean.
 - Soak: `bun infra/soak/soak.mjs` → 50/50, p50 ~1.1s (Chromium floor).
 - After `docker compose up -d api`, wait ~15s before checking (caddy→stale
@@ -169,13 +169,49 @@ anything (takeover lesson: L/K items were already on disk).
   Pemeriksaan` click) TERUTANG — sesi itu tanpa browser tool. Artefak
   bukti: `wiki/artifacts/` (git-ignored, selamat dari cleanup).
 
+## Prototype (frozen, folded from ohs/scrape HANDOVER.md Oct 17)
+
+- `D:\dev\ohs\scrape` is the UI-only prototype (Hydrant/APAR/P3K/Patrol
+  DONE 12 Okt). Read-only reference. No code there, ever.
+- Its HANDOVER.md was folded here and deleted. Prototype debt that
+  carried over: patrol finding photos were placeholders (fix in flight,
+  see below); everything else (storage, PDF, auth, DB) is real in this
+  repo now.
+
 ## Open decisions (owner)
 
-- Patrol findings photo flow: photo rows vs findings-photo endpoint (pending).
-- Paper-scan diff for print fidelity: no scan provided yet.
+- Patrol findings photo flow: DECIDED Oct 17 (lead call) — findings-photo
+  endpoint, not photo-row joins. Findings already own s3Key/mime/bytes/
+  sha256; single-query feed reads stay; delete cascades. In build now.
+- Paper-scan diff for print fidelity: BLOCKED — no scan provided yet.
+  Owner supplies one paper scan per category to unblock.
+
+## Team (poteto-agent roster, reuse via sessionID)
+
+- Owner order: all implementation goes through poteto-agent from now on;
+  same agents reused across tasks (resume, no fresh spawns per task).
+- `ses_eb76829d5ffe6m6dedmpbTG1Kt` — API delegate (routes/schema/gate).
+- `ses_eb76829cbffeFeqr19xOGpWxl2` — Web delegate (pages/hooks/build).
+- Coordinator (this chat): design, verify, docs, reply. No browser tool
+  here — browser lane stays an explicit owner step or an owed item.
+
+## Debrief (Oct 17 — patrol real photo, poteto-agent team)
+
+- Reused the same two poteto-agents via resume (owner order: always
+  reuse, no fresh spawns). Both hit the nesting depth limit for their
+  own spawns and owned their diffs directly per the playbook exception.
+- API: `POST /:id/findings/photo` (multipart, guard ala uploads.ts),
+  `GET /findings/:fid/photo` (302), Garage best-effort cleanup on
+  finding/report delete. JSON findings endpoint kept. Gate 66/66.
+- Web: add-form uploads real File (8 MB guard, Indonesian messages),
+  feed resolves per-finding URL, `draft/` rows keep grey placeholder.
+  Build exit 0.
+- Coordinator proof (HTTP lane, fixture `uji-` bersih): report 201,
+  upload 201 (70 bytes, real key), resolve 302 garage, list 1, delete
+  finding 200, delete report 200, re-read 404. Evidence:
+  `wiki/artifacts/20261017-temuan-foto/patroli/PROOF.md`.
 
 ## Debrief (Oct 17 — tier merge + month delete, poteto-mode Feature)
-
 - Owner order: merge staff+pengawas tiers, no mengajukan features; add
   Hydrant/APAR month delete; work under poteto-mode SKILL.md adapted to
   OpenCode (subagents on `opencode/glm-5.3-flash-free`, no kenari).

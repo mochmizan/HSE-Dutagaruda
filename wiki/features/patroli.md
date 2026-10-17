@@ -25,8 +25,9 @@ default hari ini. Cetak A4 portrait (header + grid).
 Preconditions:
 
 - Doctor hijau; login + set-active selesai.
-- Foto temuan patroli = placeholder `s3Key` draf (unggah foto temuan patrol
-  asli BELUM ada — scope owner). Jangan asert photo rows untuk temuan.
+- Form tambah mengunggah foto ASLI (`POST
+  /:id/findings/photo`, multipart; JPEG/PNG/WebP maks 8 MB). Baris lama
+  `draft/` masih tampil placeholder abu-abu.
 
 - **Buka daftar.** `curl.exe -s -b $J
   "http://localhost:8080/api/safety-patrol-reports" -o
@@ -36,10 +37,12 @@ Preconditions:
   wiki/artifacts/<run-id>/patroli/findings.json`. Tiap temuan punya
   caption + tanggal.
 - **Tambah-hapus (mutasi).** Tambah via form dengan caption prefix `uji-`
-  (foto: placeholder draf yang diizinkan), verifikasi muncul di feed,
+  (foto asli ikut terunggah), verifikasi muncul di feed,
   lalu hapus via `DELETE
   /api/safety-patrol-reports/<id>/findings/<fid>`; baca ulang feed =
   hilang. Fixture `uji-` tidak boleh tersisa.
+- **Resolve foto.** `GET /api/safety-patrol-reports/findings/<fid>/photo`
+  → 302 ke presign Garage (60 dtk).
 - **Browser.** Tambah via form (foto wajib divalidasi kosong), hover kartu
   → hapus bekerja, tanggal default = hari ini.
 - **Bukti.** `reports.json`, `findings.json`, snapshot feed + `PROOF.md`
