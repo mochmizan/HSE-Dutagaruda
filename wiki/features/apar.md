@@ -16,8 +16,8 @@ Catatan + tanda tangan).
 - `apar-expiry` menghitung rekap kedaluwarsa (No. format `1, 14, dan 15`).
 - `apar-add-unit` mendaftarkan zona + unit via modal (find-or-create zona).
 - `apar-print` mengunduh PDF / mencetak kartu via `Cetak Kartu`.
-- `apar-delete-month` menghapus rekam bulan ini via tombol `Hapus Bulan
-  Ini` di modal + konfirmasi (foto bulan itu ikut terhapus dulu).
+- `apar-delete-month` menghapus permanen rekam bulan ini (beserta foto)
+  via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`.
 
 ## How to get to it (user POV)
 

@@ -409,7 +409,7 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
                   disabled={menghapusBulan}
                   className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
                 >
-                  <Trash2 size={12} /> Hapus Bulan Ini
+                  <Trash2 size={12} /> Hapus
                 </button>
               )}
             </div>
@@ -432,10 +432,10 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
           </div>
         </form>
 
-        {/* Konfirmasi hapus rekam inspeksi bulan ini (beserta foto buktinya) */}
+        {/* Konfirmasi hapus rekam inspeksi (beserta foto buktinya) */}
         <ConfirmModal
           isOpen={konfirmasiHapusBulan}
-          title="Hapus Inspeksi Bulan Ini"
+          title="Hapus Inspeksi"
           message={`Rekaman inspeksi ${unit.kode} bulan ini beserta seluruh foto buktinya akan dihapus permanen. Lanjutkan?`}
           confirmLabel="Hapus"
           accent="#eb5757"
