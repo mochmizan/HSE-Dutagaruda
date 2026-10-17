@@ -4,18 +4,26 @@ import { X, Upload, Camera, AlertCircle, Check, Image as ImageIcon } from 'lucid
 export interface AddPatrolFindingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddFinding: (finding: { photoUrl: string; caption: string; tanggal: string }) => void;
+  onAddFinding: (finding: { file: File; caption: string; tanggal: string }) => void;
+  /** True saat unggahan berjalan: tombol simpan nonaktif. */
+  isMenyimpan?: boolean;
 }
 
 const todayIso = (): string => new Date().toISOString().slice(0, 10);
+
+/** Format yang diterima server dan batas ukuran unggahan. */
+const TIPE_FOTO_DITERIMA = ['image/jpeg', 'image/png', 'image/webp'];
+const BATAS_FOTO_BYTE = 8 * 1024 * 1024;
 
 /** Add form for one patrol photo: photo required, caption required, date defaults to today. */
 export const AddPatrolFindingModal: React.FC<AddPatrolFindingModalProps> = ({
   isOpen,
   onClose,
   onAddFinding,
+  isMenyimpan = false,
 }) => {
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [caption, setCaption] = useState<string>('');
   const [tanggal, setTanggal] = useState<string>(todayIso());
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -24,9 +32,11 @@ export const AddPatrolFindingModal: React.FC<AddPatrolFindingModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setImagePreview('');
+      setSelectedFile(null);
       setCaption('');
       setTanggal(todayIso());
       setErrorMessage('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, [isOpen]);
 
@@ -44,24 +54,28 @@ export const AddPatrolFindingModal: React.FC<AddPatrolFindingModalProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        setErrorMessage('File yang dipilih harus berupa gambar (JPG, PNG, WebP).');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImagePreview(event.target?.result as string);
-        setErrorMessage('');
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!TIPE_FOTO_DITERIMA.includes(file.type)) {
+      setErrorMessage('Format foto harus JPEG, PNG, atau WebP.');
+      return;
     }
+    if (file.size > BATAS_FOTO_BYTE) {
+      setErrorMessage('Ukuran foto maksimal 8 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result as string);
+      setSelectedFile(file);
+      setErrorMessage('');
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
-    if (!imagePreview) {
+    if (!selectedFile) {
       setErrorMessage('Unggah foto patroli terlebih dahulu.');
       return;
     }
@@ -73,8 +87,7 @@ export const AddPatrolFindingModal: React.FC<AddPatrolFindingModalProps> = ({
       setErrorMessage('Pilih tanggal pengambilan foto.');
       return;
     }
-    onAddFinding({ photoUrl: imagePreview, caption: caption.trim(), tanggal });
-    onClose();
+    onAddFinding({ file: selectedFile, caption: caption.trim(), tanggal });
   };
 
   return (
@@ -127,7 +140,7 @@ export const AddPatrolFindingModal: React.FC<AddPatrolFindingModalProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -204,10 +217,11 @@ export const AddPatrolFindingModal: React.FC<AddPatrolFindingModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 text-xs font-semibold rounded bg-[#2f80ed] hover:brightness-95 text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable"
+              disabled={isMenyimpan}
+              className="px-4 py-1.5 text-xs font-semibold rounded bg-[#2f80ed] hover:brightness-95 text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Check size={13} strokeWidth={2.5} />
-              <span>Simpan Foto</span>
+              <span>{isMenyimpan ? 'Menyimpan…' : 'Simpan Foto'}</span>
             </button>
           </div>
         </form>

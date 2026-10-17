@@ -6,7 +6,7 @@ import { AddPatrolFindingModal } from './AddPatrolFindingModal';
 import {
   petakanTemuanPatroli,
   useLaporanPatroli,
-  useBuatTemuanPatroli,
+  useUnggahFotoTemuanPatroli,
   useHapusTemuanPatroli,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
@@ -35,7 +35,7 @@ function fmtTanggal(iso: string): string {
 export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
   const lokasi = useKonteksLokasi();
   const laporanQuery = useLaporanPatroli();
-  const buatTemuan = useBuatTemuanPatroli();
+  const unggahFoto = useUnggahFotoTemuanPatroli();
   const hapusTemuan = useHapusTemuanPatroli();
 
   const [lokasiInput, setLokasiInput] = useState('ITJ JPM Dukuh Atas');
@@ -63,13 +63,18 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
     return findings.filter((f) => f.tanggal.startsWith(prefix)).length;
   }, [findings]);
 
-  const handleAdd = (draft: { photoUrl: string; caption: string; tanggal: string }) => {
+  const handleAdd = (draft: { file: File; caption: string; tanggal: string }) => {
     if (!lokasi.siteId) return;
-    // Unggahan foto adalah lingkup pekerja lain; s3Key sementara memakai penanda draft.
-    buatTemuan.mutate({
-      laporan: { siteId: lokasi.siteId, patrolDate: draft.tanggal },
-      temuan: { description: draft.caption, s3Key: `draft/${Date.now()}.jpg` },
-    });
+    unggahFoto.mutate(
+      {
+        siteId: lokasi.siteId,
+        patrolDate: draft.tanggal,
+        file: draft.file,
+        description: draft.caption,
+        locationNote: lokasiInput || undefined,
+      },
+      { onSuccess: () => setIsAddOpen(false) },
+    );
   };
 
   const handleDelete = (id: string) => {
@@ -193,6 +198,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onAddFinding={handleAdd}
+        isMenyimpan={unggahFoto.isPending}
       />
     </main>
   );
