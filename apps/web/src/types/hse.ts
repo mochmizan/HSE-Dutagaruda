@@ -20,9 +20,6 @@ export interface InspectionReport {
   overallStatus: import('./domain').OverallStatus;
   summaryNotes?: string;
   photoUrl?: string;
-  /** Status persetujuan dari API (umpan dashboard); laporan sintetis tanpa ini. */
-  approvalStatus?: 'DRAFT' | 'DIAJUKAN' | 'DIKETAHUI' | 'DISETUJUI';
-  approvalCategory?: 'hydrant' | 'apar' | 'p3k' | 'patrol';
   // Specific details
   hydrantDetails?: {
     boxHydrant: import('./domain').HydrantComponentStatus;
@@ -228,6 +225,4 @@ export interface AparYearCell {
 }
 
 export type AparYearGrid = Record<string, AparYearCell>;
-
-export type ReportWorkflowStatus = 'Draft' | 'Submitted' | 'Known' | 'Approved';
 

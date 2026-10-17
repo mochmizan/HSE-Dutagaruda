@@ -15,19 +15,16 @@ the Hono API through these hooks.
 - `api/klien.ts`: endpoint contracts. Response/request types declared here
   (verbatim to API routes: `Halaman<T>`, `ApiInspeksiHidran`, `ApiUmpan`, …)
   plus one function per endpoint. This is the system boundary; internal code
-  trusts these types. Carries approval (`kirimPersetujuan`), photo
-  (`unggahFoto` multipart via `livePostForm`, `hapusFoto`), and PDF export
+  trusts these types. Carries photo
+  (`unggahFoto` multipart via `livePostForm`, `hapusFoto`) and PDF export
   (`eksporPdf`, `ambilPdfJob`) contracts.
 - `api/queries.ts`: TanStack Query hooks (`useSesi`-style naming in
   Indonesian: `useUnitHidran`, `useSimpanInspeksiApar`, …), query keys under
   `kunci`, mappers `petakan*` (API rows → UI models in `types/hse.ts`).
   Mutations invalidate on settle; `useUbahButirP3k` and
-  `useHapusTemuanPatroli` are optimistic with rollback. Approval mutations
-  share one hook (`useAksiPersetujuan`, invalidates all inspection keys +
-  umpan). `jalankanEkspor` posts an export then polls pdfJobs and returns the
+  `useHapusTemuanPatroli` are optimistic with rollback.
+  `jalankanEkspor` posts an export then polls pdfJobs and returns the
   presigned download URL; `unduhBerkas` triggers the browser download.
-  `gagal()` maps the API edit-lock 409 to
-  “Laporan terkunci — menunggu persetujuan.”
 - `api/index.ts`: barrel (`client`, `liveClient`, `klien`, `queries`).
 - `api/queryClient.ts`: global `QueryClient` (retry 1, staleTime 30s,
   refetchOnWindowFocus off).
@@ -57,10 +54,7 @@ the Hono API through these hooks.
   rollback is trivial.
 - Indonesian error surfaced via `window.alert` in hook `onError` (acceptable
   until a toast exists).
-- Approval lifecycle rules are owned by the API (`POST
-  /api/approvals/:category/:refId/approval`); the web mirrors them only for
-  disabling buttons. Submitter cannot setujui; content edits 409 beyond
-  DRAFT. Photo uploads exist for hydrant/APAR inspections only — patrol
+- Photo uploads exist for hydrant/APAR inspections only — patrol
   findings keep placeholder `s3Key`s (owner decision pending on a
   findings-photo flow; do not invent an endpoint).
 - Presigned URLs (`garage:3900`) resolve only inside the Docker network.

@@ -67,26 +67,6 @@ export type ApiStatusApar = 'BAIK' | 'TIDAK_BAIK' | 'NA';
 export type ApiStatusP3k = 'STANDAR' | 'DIBAWAH_STANDAR' | 'KADALUARSA';
 export type ApiStatusAkhir = 'LAYAK' | 'LAYAK_DENGAN_CATATAN' | 'TIDAK_LAYAK';
 
-// ── Persetujuan (alur kerja laporan) ──
-
-export type ApiStatusPersetujuan = 'DRAFT' | 'DIAJUKAN' | 'DIKETAHUI' | 'DISETUJUI';
-export type AksiPersetujuan = 'ajukan' | 'ketahui' | 'setujui' | 'kembalikan';
-export type KategoriPersetujuan = 'hydrant' | 'apar' | 'p3k' | 'patrol';
-
-export interface ApiHasilPersetujuan {
-  id: string;
-  approvalStatus: ApiStatusPersetujuan;
-  approvalSubmittedById: string | null;
-  approvalActorId: string;
-  approvalActedAt: string;
-}
-
-export const kirimPersetujuan = (
-  category: KategoriPersetujuan,
-  refId: string,
-  action: AksiPersetujuan,
-) => livePost<ApiHasilPersetujuan>(`/approvals/${category}/${refId}/approval`, { action });
-
 export interface ApiInspeksiHidran {
   id: string;
   companyId: string;
@@ -102,10 +82,6 @@ export interface ApiInspeksiHidran {
   overallStatus: ApiStatusAkhir;
   overallOverridden: boolean;
   notes: string | null;
-  approvalStatus: ApiStatusPersetujuan;
-  approvalSubmittedById: string | null;
-  approvalActorId: string | null;
-  approvalActedAt: string | null;
   createdAt: string;
 }
 
@@ -125,10 +101,6 @@ export interface ApiInspeksiApar {
   overallStatus: ApiStatusAkhir;
   overallOverridden: boolean;
   notes: string | null;
-  approvalStatus: ApiStatusPersetujuan;
-  approvalSubmittedById: string | null;
-  approvalActorId: string | null;
-  approvalActedAt: string | null;
   createdAt: string;
 }
 
@@ -140,10 +112,6 @@ export interface ApiInspeksiP3k {
   notes: string | null;
   inspectionDate: string | null;
   paraf: string | null;
-  approvalStatus: ApiStatusPersetujuan;
-  approvalSubmittedById: string | null;
-  approvalActorId: string | null;
-  approvalActedAt: string | null;
   createdAt: string;
   items?: ApiButirP3k[];
 }
@@ -165,10 +133,6 @@ export interface ApiLaporanPatroli {
   siteId: string;
   patrolDate: string;
   inspectorUserId: string;
-  approvalStatus: ApiStatusPersetujuan;
-  approvalSubmittedById: string | null;
-  approvalActorId: string | null;
-  approvalActedAt: string | null;
   createdAt: string;
   findings?: ApiTemuanPatroli[];
 }

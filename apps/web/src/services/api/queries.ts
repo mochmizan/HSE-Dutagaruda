@@ -8,7 +8,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { InspectionReport, AparUnitItem, HydrantUnitItem } from '@/types/hse';
 import type { AparYearGrid } from '@/types/hse';
 import type { AparCardsState } from '@/lib/aparSync';
-import type { ApiStatusPersetujuan } from './klien';
 import { emptyYearGrid, DRAFT_TO_YEAR } from '@/lib/aparSync';
 import type { OverallStatus } from '@/types/domain';
 import * as k from './klien';
@@ -150,38 +149,9 @@ export function useUmpan(month: Period) {
 function gagal(err: unknown): string {
   if (err instanceof ApiError) {
     const pesan = (err.data as { pesan?: string } | undefined)?.pesan;
-    const teks = pesan || err.message;
-    // 409 sunting pada laporan yang sudah masuk proses persetujuan → pesan kunci.
-    if (err.status === 409 && teks.includes('proses persetujuan')) {
-      return 'Laporan terkunci — menunggu persetujuan.';
-    }
-    return teks;
+    return pesan || err.message;
   }
   return 'Terjadi kesalahan tak terduga.';
-}
-
-// ── Persetujuan ──
-
-export interface AksiPersetujuanArgs {
-  category: k.KategoriPersetujuan;
-  refId: string;
-  action: k.AksiPersetujuan;
-}
-
-/** Satu mutasi untuk seluruh kategori; settle → invalidate baris + umpan. */
-export function useAksiPersetujuan() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (args: AksiPersetujuanArgs) => k.kirimPersetujuan(args.category, args.refId, args.action),
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: kunci.inspeksiHidran });
-      void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
-      void qc.invalidateQueries({ queryKey: kunci.inspeksiP3k });
-      void qc.invalidateQueries({ queryKey: kunci.laporanPatroli });
-      void qc.invalidateQueries({ queryKey: ['umpan'] });
-    },
-    onError: (err) => window.alert(gagal(err)),
-  });
 }
 
 // ── Ekspor PDF ──
@@ -562,8 +532,6 @@ export function petakanUnitHidran(
         inspectorName: namaPetugas,
         overallStatus: insp.overallStatus as OverallStatus,
         summaryNotes: insp.notes ?? 'Pemeriksaan 6 komponen selesai dan diverifikasi.',
-        approvalStatus: insp.approvalStatus,
-        approvalCategory: 'hydrant' as const,
         hydrantDetails: {
           boxHydrant: insp.boxHydrant,
           fireHose: insp.fireHose,
@@ -637,8 +605,6 @@ export function petakanUnitApar(
         inspectorName: namaPetugas,
         overallStatus: insp.overallStatus as OverallStatus,
         summaryNotes: insp.notes ?? 'Pemeriksaan 7 komponen selesai dan diverifikasi.',
-        approvalStatus: insp.approvalStatus,
-        approvalCategory: 'apar' as const,
         aparDetails: {
           jenis: (u.jenis ?? 'POWDER') as 'POWDER' | 'CO2',
           ukuran: u.ukuran ?? '',
@@ -697,10 +663,6 @@ export interface TemuanPatroliTampil {
   photoUrl: string;
   caption: string;
   tanggal: string;
-  /** Status persetujuan laporan induk temuan (chip per kartu umpan). */
-  approvalStatus: ApiStatusPersetujuan;
-  /** ID laporan induk untuk bilah persetujuan per laporan di modal. */
-  laporanId: string;
 }
 
 export function petakanTemuanPatroli(
@@ -714,8 +676,6 @@ export function petakanTemuanPatroli(
       photoUrl: f.s3Key.startsWith('draft/') ? '' : livePhotoUrl(f.s3Key),
       caption: f.description,
       tanggal: l.patrolDate,
-      approvalStatus: l.approvalStatus,
-      laporanId: l.id,
     })),
   );
 }
@@ -746,8 +706,6 @@ export function petakanUmpanKeLaporan(
       inspectorName: namaPetugas,
       overallStatus: r.overallStatus as OverallStatus,
       summaryNotes: r.notes ?? undefined,
-      approvalStatus: r.approvalStatus,
-      approvalCategory: 'hydrant' as const,
       hydrantDetails: {
         boxHydrant: r.boxHydrant,
         fireHose: r.fireHose,
@@ -772,8 +730,6 @@ export function petakanUmpanKeLaporan(
       inspectorName: namaPetugas,
       overallStatus: r.overallStatus as OverallStatus,
       summaryNotes: r.notes ?? undefined,
-      approvalStatus: r.approvalStatus,
-      approvalCategory: 'apar' as const,
       aparDetails: {
         jenis: (unit?.jenis ?? 'POWDER') as 'POWDER' | 'CO2',
         ukuran: unit?.ukuran ?? '',
@@ -801,8 +757,6 @@ export function petakanUmpanKeLaporan(
       assetCode: box ? box.name : 'Kotak P3K',
       inspectorName: namaPetugas,
       overallStatus: 'LAYAK' as OverallStatus,
-      approvalStatus: r.approvalStatus,
-      approvalCategory: 'p3k' as const,
       p3kDetails: { boxName: box?.name ?? '', itemsTotal: 21, itemsUnderStandard: 0, needsRestock: false },
     };
   });
@@ -817,8 +771,6 @@ export function petakanUmpanKeLaporan(
     assetCode: 'Patroli K3',
     inspectorName: namaPetugas,
     overallStatus: 'LAYAK' as OverallStatus,
-    approvalStatus: r.approvalStatus,
-    approvalCategory: 'patrol' as const,
     patrolDetails: {
       findingsCount: 0,
       criticalCount: 0,
