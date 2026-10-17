@@ -286,6 +286,41 @@ async function main(): Promise<void> {
   const findingDel = await req(authed, "DELETE", `/api/safety-patrol-reports/findings/${findingId}`);
   record("hapus-temuan-patroli", findingDel.status === 200, `(${findingDel.status})`);
 
+  const fotoTemuan = await reqForm(
+    authed,
+    `/api/safety-patrol-reports/${patrolId}/findings/photo`,
+    { description: "Temuan foto uji" },
+    { name: "uji.png", type: "image/png", content: fotoUji() },
+  );
+  const fotoTemuanJson = fotoTemuan.json as
+    | { id?: string; s3Key?: string; bytes?: number }
+    | null;
+  const fotoTemuanId = fotoTemuanJson?.id ?? "";
+  record(
+    "unggah-temuan-foto",
+    fotoTemuan.status === 201 &&
+      fotoTemuanId !== "" &&
+      (fotoTemuanJson?.bytes ?? 0) > 0 &&
+      (fotoTemuanJson?.s3Key ?? "").startsWith("foto/"),
+    `(${fotoTemuan.status})`,
+  );
+
+  const fotoTemuanRes = await fetch(`${BASE}/api/safety-patrol-reports/findings/${fotoTemuanId}/photo`, {
+    headers: { Origin: ORIGIN, Cookie: authed.header },
+    redirect: "manual",
+  });
+  const fotoTemuanLoc = fotoTemuanRes.headers.get("location") ?? "";
+  record(
+    "temuan-foto-302",
+    fotoTemuanRes.status === 302 &&
+      fotoTemuanLoc.includes("X-Amz-Signature") &&
+      fotoTemuanLoc.includes("X-Amz-Expires=60"),
+    `(${fotoTemuanRes.status})`,
+  );
+
+  const fotoTemuanDel = await req(authed, "DELETE", `/api/safety-patrol-reports/findings/${fotoTemuanId}`);
+  record("hapus-temuan-foto", fotoTemuanDel.status === 200, `(${fotoTemuanDel.status})`);
+
   const feed = await req(authed, "GET", "/api/inspections?month=2026-09");
   const feedJson = feed.json as Record<string, unknown> | null;
   const feedKeysOk =
