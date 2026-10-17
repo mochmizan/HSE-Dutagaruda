@@ -25,10 +25,10 @@ Domain-specific, self-contained feature slices for the HSE Inspection Platform: 
 - All numeric counters and date numbers must use `tabular-nums` class.
 - Interactive cards and buttons must use `pressable` or `pressable-subtle` classes for Emil Kowalski tactile feedback.
 - Data comes from `@/services/api/queries` hooks; pages hold no mock state. Hydrant/APAR pages map API rows via `petakanUnitHidran`/`petakanUnitApar`/`petakanKartuApar`; P3K grid via `features/p3k/petaApi.ts`; patrol feed via `petakanTemuanPatroli`.
-- Reports are final on save: no approval bar anywhere. `FileFotoButton`
-  (components/ui) exports no `terkunci` prop; modals save via
+- Reports are final on save: no approval bar anywhere. Modals save via
   `useSimpanInspeksi*` on every submit and `ReportDetailModal` shows Edit for
-  API-sourced reports (ids not starting with `rep-`).
+  API-sourced reports (ids not starting with `rep-`); `FileFotoButton`
+  has no approval-disable prop (only `nonaktif` for unit-specific slots).
 - Photo uploads in inspection modals are real: `useUnggahFoto`/
   `useHapusFoto` against `/api/uploads` + `/api/photos/:id` (Hydrant: one
   “Bukti inspeksi” slot; APAR: Kartu/Penimbangan CO2/Pengecekan slots keyed
