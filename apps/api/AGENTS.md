@@ -50,6 +50,12 @@ PDF storage, and Gotenberg PDF rendering.
 - Reports are final on save. There is no approval workflow: no
   `approval_*` columns, no `/api/approvals` route, no edit-lock guards, and
   no role input on `POST /api/users`. All content routes edit freely.
+- Patrol findings with photos: `POST /api/safety-patrol-reports/:id/findings/photo`
+  (multipart `file` + `description` + `locationNote`?, JPEG/PNG/WebP 8 MB,
+  stores `foto/<companyId>/<findingId>.<ext>` + sha256, 201),
+  `GET /api/safety-patrol-reports/findings/:fid/photo` → 302 presigned 60s.
+  Finding and report DELETE remove Garage objects best-effort (never fail the
+  row delete). The JSON `POST /:id/findings` stays for old clients.
 
 ## Work Guidance
 
@@ -72,7 +78,7 @@ PDF storage, and Gotenberg PDF rendering.
 
 - Full gate (runs inside the network so presigned fetches work):
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  — expect 63/63 (CRUD + upload round-trip + photo list + 5 exports +
+  — expect 66/66 (CRUD + upload round-trip + photo list + 5 exports +
   pdf-job flow + typed-client probe `klien-tertipikasi`). The gate's
   byte-fetch check maps the public storage origin onto `CHECK_BASE` so it
   validates the same Caddy `/storage` route.
