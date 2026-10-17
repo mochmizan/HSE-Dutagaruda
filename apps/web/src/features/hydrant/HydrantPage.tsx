@@ -484,12 +484,12 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
       {/* 4 Summary Stats Cards (Screen view) */}
       <div className="no-print grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {/* Card 1: Total Units */}
-        <div className="p-3 bg-[var(--bg-main)] border border-[var(--border)] rounded-[6px] shadow-xs flex flex-col justify-between">
+        <div className="p-3 border border-[var(--border)] rounded-[6px] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">
               Total Hydrant Terdaftar
             </span>
-            <span className="text-xs">ðŸ¢</span>
+            <span className="text-xs">🏢</span>
           </div>
           <div className="my-1.5">
             <div className="text-2xl font-bold font-mono text-[var(--primary)] tabular-nums">
@@ -505,7 +505,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         </div>
 
         {/* Card 2: On Progress (Highlighted Red/Amber) */}
-        <div className="p-3 bg-gradient-to-b from-[#eb5757]/[0.09] to-[#eb5757]/[0.02] dark:from-[#eb5757]/[0.15] dark:to-[#eb5757]/[0.04] border border-[#eb5757]/35 rounded-[6px] shadow-xs flex flex-col justify-between">
+        <div className="p-3 border border-[#eb5757]/35 rounded-[6px] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-[#eb5757] uppercase tracking-wider">
               Sedang Berjalan (On Progress)
@@ -528,7 +528,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         </div>
 
         {/* Card 3: Completed */}
-        <div className="p-3 bg-gradient-to-b from-emerald-500/[0.08] to-emerald-500/[0.02] dark:from-emerald-500/[0.14] dark:to-emerald-500/[0.04] border border-emerald-500/30 rounded-[6px] shadow-xs flex flex-col justify-between">
+        <div className="p-3 border border-emerald-500/30 rounded-[6px] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
               Selesai Diperiksa
@@ -551,12 +551,12 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         </div>
 
         {/* Card 4: Progress Percentage */}
-        <div className="p-3 bg-[var(--bg-main)] border border-[var(--border)] rounded-[6px] shadow-xs flex flex-col justify-between">
+        <div className="p-3 border border-[var(--border)] rounded-[6px] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">
               Kemajuan Bulan Ini
             </span>
-            <span className="text-xs">ðŸ“Š</span>
+            <span className="text-xs">📊</span>
           </div>
           <div className="my-1.5">
             <div className="text-2xl font-bold font-mono text-[var(--primary)] tabular-nums">
