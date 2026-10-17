@@ -33,6 +33,8 @@ interface HydrantInspectionModalProps {
   onHapusBulan?: () => void;
   /** Status mutasi hapus (tombol menandai proses). */
   menghapusBulan?: boolean;
+  /** Status mutasi simpan draf (tombol menandai proses). */
+  menyimpanDraf?: boolean;
 }
 
 const AKSIEN_HYDRANT = '#eb5757';
@@ -51,6 +53,7 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
   onCompleteInspection,
   onHapusBulan,
   menghapusBulan = false,
+  menyimpanDraf = false,
 }) => {
   const [boxHydrant, setBoxHydrant] = useState<HydrantComponentStatus>('LAYAK');
   const [fireHose, setFireHose] = useState<HydrantComponentStatus>('LAYAK');
@@ -116,6 +119,7 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
   if (!isOpen || !unit) return null;
 
   const handleSaveDraft = () => {
+    // Laman menutup modal saat mutasi berhasil; gagal = tetap terbuka + alarm.
     onSaveDraft(unit.id, {
       boxHydrant,
       fireHose,
@@ -126,7 +130,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
       notes,
       overallStatus,
     });
-    onClose();
   };
 
   const handleComplete = (e: React.FormEvent) => {
@@ -398,9 +401,10 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
               <button
                 type="button"
                 onClick={handleSaveDraft}
-                className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable"
+                disabled={menyimpanDraf}
+                className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Simpan Sebagai Draft (Tetap Berjalan)
+                {menyimpanDraf ? 'Menyimpan…' : 'Simpan Sebagai Draft (Tetap Berjalan)'}
               </button>
               {inspeksi && onHapusBulan && (
                 <button

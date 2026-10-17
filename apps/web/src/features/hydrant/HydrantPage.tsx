@@ -205,24 +205,28 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   });
 
   // Draft & terbit sama-sama menyimpan inspeksi ke API (modal selalu mengisi 6 komponen).
+  // Tutup saat mutasi berhasil agar buka-ulang selalu membaca daftar pasca-simpan.
   const handleSaveDraft = (unitId: string, draft: HydrantUnitItem['draftDetails']) => {
     const existing = (inspeksiQuery.data ?? []).find(
       (i) => i.unitId === unitId && i.period.startsWith(period),
     );
-    simpanInspeksi.mutate({
-      id: existing?.id,
-      unitId,
-      month: period,
-      boxHydrant: draft?.boxHydrant ?? 'LAYAK',
-      fireHose: draft?.fireHose ?? 'LAYAK',
-      hoseCoupling: draft?.hoseCoupling ?? 'LAYAK',
-      hoseRack: draft?.hoseRack ?? 'LAYAK',
-      nozzle: draft?.nozzle ?? 'LAYAK',
-      valvePillar: draft?.valvePillar ?? 'LAYAK',
-      overallStatus: draft?.overallStatus,
-      overallOverridden: Boolean(draft?.overallStatus),
-      notes: draft?.notes,
-    });
+    simpanInspeksi.mutate(
+      {
+        id: existing?.id,
+        unitId,
+        month: period,
+        boxHydrant: draft?.boxHydrant ?? 'LAYAK',
+        fireHose: draft?.fireHose ?? 'LAYAK',
+        hoseCoupling: draft?.hoseCoupling ?? 'LAYAK',
+        hoseRack: draft?.hoseRack ?? 'LAYAK',
+        nozzle: draft?.nozzle ?? 'LAYAK',
+        valvePillar: draft?.valvePillar ?? 'LAYAK',
+        overallStatus: draft?.overallStatus,
+        overallOverridden: Boolean(draft?.overallStatus),
+        notes: draft?.notes,
+      },
+      { onSuccess: () => setActiveInspectionUnit(null) },
+    );
   };
 
   const handleCompleteInspection = (newReport: InspectionReport) => {
@@ -481,8 +485,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         </div>
       </div>
 
-      {/* 4 Summary Stats Cards (Screen view) */}
-      <div className="no-print grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      {/* 2 Summary Stats Cards (Screen view) */}
+      <div className="no-print grid grid-cols-2 gap-3 mb-4">
         {/* Card 1: Total Units */}
         <div className="p-3 border border-[var(--border)] rounded-[6px] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -504,30 +508,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
           </div>
         </div>
 
-        {/* Card 2: On Progress (Highlighted Red/Amber) */}
-        <div className="p-3 border border-[#eb5757]/35 rounded-[6px] shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#eb5757] uppercase tracking-wider">
-              Sedang Berjalan (On Progress)
-            </span>
-            <span className="text-[10px] bg-[#eb5757] text-white font-bold px-1.5 py-0.2 rounded">
-              Prioritas
-            </span>
-          </div>
-          <div className="my-1.5">
-            <div className="text-2xl font-bold font-mono text-[#eb5757] tabular-nums">
-              {onProgressUnits.length} Unit
-            </div>
-            <div className="text-[10px] text-[#eb5757]/80 mt-0.5">
-              Menunggu / dalam proses verifikasi
-            </div>
-          </div>
-          <div className="text-[10px] text-[#eb5757] pt-1 border-t border-[#eb5757]/20 font-medium">
-            Fokus inspeksi shift minggu ini
-          </div>
-        </div>
-
-        {/* Card 3: Completed */}
+        {/* Card 2: Completed */}
         <div className="p-3 border border-emerald-500/30 rounded-[6px] shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
@@ -550,31 +531,9 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
           </div>
         </div>
 
-        {/* Card 4: Progress Percentage */}
-        <div className="p-3 border border-[var(--border)] rounded-[6px] shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-              Kemajuan Bulan Ini
-            </span>
-            <span className="text-xs">📊</span>
-          </div>
-          <div className="my-1.5">
-            <div className="text-2xl font-bold font-mono text-[var(--primary)] tabular-nums">
-              {totalUnits > 0 ? Math.round((completedUnits.length / totalUnits) * 100) : 0}%
-            </div>
-            {/* Progress bar */}
-            <div className="w-full bg-[var(--bg-hover)] h-1.5 rounded-full mt-1.5 overflow-hidden">
-              <div
-                className="bg-[#eb5757] h-full rounded-full transition-all duration-300"
-                style={{ width: `${totalUnits > 0 ? (completedUnits.length / totalUnits) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
-          <div className="text-[10px] text-[var(--muted)] pt-1 border-t border-[var(--border)]">
-            Target 100% sebelum 30 September
-          </div>
-        </div>
       </div>
+
+      {/* Filter Tabs & View Controls Toolbar */}
 
       {/* Filter Tabs & View Controls Toolbar */}
       <div className="no-print flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 pb-3 mb-3 border-b border-[var(--border)]">
@@ -1183,6 +1142,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         onCompleteInspection={handleCompleteInspection}
         onHapusBulan={handleHapusBulan}
         menghapusBulan={hapusInspeksi.isPending}
+        menyimpanDraf={simpanInspeksi.isPending}
       />
 
       {/* 3. Modal Tambah Catatan Hasil Temuan */}
