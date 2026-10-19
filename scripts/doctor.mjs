@@ -56,7 +56,8 @@ const kunciOk = /GARAGE_SECRET_KEY=.+/.test(env) && !env.includes("viaannn-dev-s
 cek("env-garage-kunci", kunciOk, !env ? "infra/.env hilang" : kunciOk ? "ok" : "masih placeholder");
 
 const git = await sh("git", ["status", "--short"]);
-cek("git-bersih", git.out === "", git.out.split("\n").length + " berkas kotor");
+const kotor = git.out === "" ? 0 : git.out.split("\n").length;
+cek("git-bersih", kotor === 0, kotor === 0 ? "" : `${kotor} berkas kotor`);
 
 const dist = await sh("bun", ["scripts/cek-dist.mjs"]);
 cek("dist-konsisten", dist.code === 0, dist.code === 0 ? "" : (dist.err || dist.out).split("\n")[0]);
