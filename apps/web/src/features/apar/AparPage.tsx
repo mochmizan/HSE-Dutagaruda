@@ -542,6 +542,7 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
           judul="Selesai Diperiksa"
           nilai={completedUnits.length}
           rincian={`dari ${units.length} unit terdaftar`}
+          ikon="✅"
           lencana="Lengkap"
           kaki="Laporan telah diterbitkan"
           isi={

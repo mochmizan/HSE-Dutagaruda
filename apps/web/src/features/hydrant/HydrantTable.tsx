@@ -44,10 +44,11 @@ interface HydrantTableProps {
 }
 
 /**
- * Tabel Section A halaman Hydrant: satu baris per unit, tujuh kolom.
+ * Tabel Section A halaman Hydrant: satu baris per unit, enam kolom.
  *
- * Dipisah dari HydrantPage agar halaman tidak lagi 1000+ baris. Markup dan
- * kelasnya sama dengan versi sebelumnya.
+ * Kolom "Catatan / Temuan" sengaja tidak ada: catatan panjang membuat baris
+ * melar dan tabel jauh lebih lebar daripada tabel APAR. Catatan tetap terbaca
+ * saat baris dibuka.
  */
 export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => (
   <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
@@ -55,16 +56,15 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
       <thead>
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
           <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
-          <th className="py-2.5 px-3 min-w-[90px] text-center align-middle">Kode Unit</th>
-          <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Lokasi &amp; Zona</th>
-          <th className="py-2.5 px-3 min-w-[354px] text-center align-middle">
+          <th className="py-2.5 px-3 min-w-[96px] text-center align-middle">Kode Hydrant</th>
+          <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Zona</th>
+          <th className="py-2.5 px-3 min-w-[408px] text-center align-middle">
             <div className="flex items-center justify-center gap-1 text-center">
               <span>Verifikasi 6 Komponen</span>
             </div>
           </th>
           <th className="py-2.5 px-3 min-w-[140px] text-center align-middle">Status Kelayakan</th>
           <th className="py-2.5 px-3 min-w-[200px] text-center align-middle">Petugas &amp; Tanggal</th>
-          <th className="py-2.5 px-3 min-w-[280px] text-center align-middle">Catatan / Temuan</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-[var(--border)] text-xs">
@@ -73,7 +73,6 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
           const isOnProgress = unit.status === 'SEDANG_BERJALAN';
           const komponen = detailKomponen(unit);
           const tidakLayak = unitTidakLayak(unit, komponen);
-          const notesText = unit.completedReport?.summaryNotes || unit.draftDetails?.notes || '';
 
           return (
             <tr
@@ -165,25 +164,6 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
                   <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 text-center">
                     {tanggalTampil(unit)}
                   </p>
-                </div>
-              </td>
-
-              <td className="py-2.5 px-3 text-center align-middle text-[11px] text-[var(--secondary)]">
-                <div className="flex items-start justify-center text-left">
-                  {notesText ? (
-                    <span
-                      className="italic line-clamp-3 max-w-[320px] text-[var(--primary)] inline-block"
-                      title={notesText}
-                    >
-                      {notesText.split('\n').filter(Boolean).map((baris, i) => (
-                        <span key={i} className="block leading-snug">
-                          {baris}
-                        </span>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="text-[var(--muted)] text-[10px] text-center inline-block">–</span>
-                  )}
                 </div>
               </td>
             </tr>

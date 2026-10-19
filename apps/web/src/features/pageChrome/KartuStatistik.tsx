@@ -24,8 +24,44 @@ const KELAS_WADAH: Record<NadaKartu, string> = {
   netral: 'bg-[var(--bg-main)] border-[var(--border)]',
   aksen: '',
   hijau:
-    'bg-gradient-to-b from-emerald-500/[0.08] to-emerald-500/[0.02] dark:from-emerald-500/[0.14] dark:to-emerald-500/[0.04] border-emerald-500/30',
-  amber: 'bg-[var(--bg-main)] border-amber-500/30',
+    'bg-gradient-to-br from-emerald-500/[0.10] via-emerald-500/[0.04] to-transparent dark:from-emerald-500/[0.16] dark:via-emerald-500/[0.06] border-emerald-500/30',
+  amber:
+    'bg-gradient-to-br from-amber-500/[0.10] via-amber-500/[0.04] to-transparent dark:from-amber-500/[0.16] dark:via-amber-500/[0.06] border-amber-500/30',
+};
+
+const KELAS_LENCANA: Record<NadaKartu, string> = {
+  netral: 'bg-[var(--bg-hover)] text-[var(--secondary)] border-[var(--border)]',
+  hijau: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+  amber: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+  aksen: 'text-white border-transparent',
+};
+
+const KELAS_ANGKA: Record<NadaKartu, string> = {
+  netral: 'text-[var(--primary)]',
+  hijau: 'text-emerald-600 dark:text-emerald-400',
+  amber: 'text-amber-600 dark:text-amber-400',
+  aksen: '',
+};
+
+const KELAS_JUDUL: Record<NadaKartu, string> = {
+  netral: 'text-[var(--muted)]',
+  hijau: 'text-emerald-600 dark:text-emerald-400',
+  amber: 'text-amber-600 dark:text-amber-400',
+  aksen: '',
+};
+
+const KELAS_IKON: Record<NadaKartu, string> = {
+  netral: 'bg-[var(--bg-hover)] border-[var(--border)]',
+  hijau: 'bg-emerald-500/15 border-emerald-500/25',
+  amber: 'bg-amber-500/15 border-amber-500/25',
+  aksen: 'bg-white/20 border-white/30',
+};
+
+const KELAS_KAKI: Record<NadaKartu, string> = {
+  netral: 'text-[var(--muted)] border-[var(--border)]',
+  hijau: 'text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  amber: 'text-amber-600 dark:text-amber-400 border-amber-500/20',
+  aksen: '',
 };
 
 /**
@@ -54,80 +90,62 @@ export const KartuStatistik: React.FC<KartuStatistikProps> = ({
         }
       : undefined;
 
-  const warnaJudul = nada === 'aksen' && aksen ? { color: aksen } : undefined;
+  const gayaJudul = nada === 'aksen' && aksen ? { color: aksen } : undefined;
+  const gayaAngka = nada === 'aksen' && aksen ? { color: aksen } : undefined;
+  const gayaLencana = nada === 'aksen' && aksen ? { backgroundColor: aksen } : undefined;
+  const gayaKaki =
+    nada === 'aksen' && aksen ? { color: aksen, borderColor: `${aksen}33` } : undefined;
 
   return (
     <div
       className={`p-3 rounded-[6px] border shadow-xs flex flex-col justify-between ${KELAS_WADAH[nada]}`}
       style={gayaAksen}
     >
-      <div className="flex items-center justify-between">
-        <span
-          className={`text-[11px] uppercase tracking-wider ${
-            nada === 'netral' ? 'font-semibold text-[var(--muted)]' : 'font-bold'
-          } ${
-            nada === 'hijau'
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : nada === 'amber'
-              ? 'text-amber-600 dark:text-amber-400'
-              : ''
-          }`}
-          style={warnaJudul}
-        >
-          {judul}
-        </span>
-        {lencana ? (
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {ikon && (
+            <span
+              className={`w-6 h-6 rounded-[5px] border grid place-items-center text-[12px] leading-none flex-shrink-0 ${KELAS_IKON[nada]}`}
+            >
+              {ikon}
+            </span>
+          )}
           <span
-            className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-              nada === 'hijau'
-                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                : nada === 'aksen'
-                ? 'text-white'
-                : ''
-            }`}
-            style={nada === 'aksen' && aksen ? { backgroundColor: aksen } : undefined}
+            className={`text-[11px] uppercase tracking-wider font-semibold truncate ${KELAS_JUDUL[nada]}`}
+            style={gayaJudul}
+          >
+            {judul}
+          </span>
+        </div>
+        {lencana && (
+          <span
+            className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-[3px] border flex-shrink-0 ${KELAS_LENCANA[nada]}`}
+            style={gayaLencana}
           >
             {lencana}
           </span>
-        ) : (
-          ikon && <span className="text-xs">{ikon}</span>
         )}
       </div>
 
-      <div className="my-1.5">
-        <div className="flex items-end gap-2 flex-wrap">
-          <div
-            className={`text-2xl font-bold font-mono tabular-nums ${
-              nada === 'netral'
-                ? 'text-[var(--primary)]'
-                : nada === 'hijau'
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : nada === 'amber'
-                ? 'text-amber-600 dark:text-amber-400'
-                : ''
-            }`}
-            style={nada === 'aksen' && aksen ? { color: aksen } : undefined}
+      <div className="mt-2.5">
+        <div className="flex items-baseline gap-1.5">
+          <span
+            className={`text-[26px] leading-none font-bold font-mono tabular-nums ${KELAS_ANGKA[nada]}`}
+            style={gayaAngka}
           >
-            {nilai} {satuan}
-          </div>
-          {rincian && (
-            <div className="text-[10px] text-[var(--muted)] pb-1 tabular-nums">{rincian}</div>
-          )}
+            {nilai}
+          </span>
+          <span className="text-[11px] font-medium text-[var(--muted)]">{satuan}</span>
         </div>
+        {rincian && (
+          <p className="mt-1 text-[10px] text-[var(--muted)] tabular-nums">{rincian}</p>
+        )}
         {isi}
       </div>
 
       <div
-        className={`text-[10px] pt-1 border-t font-medium ${
-          nada === 'netral'
-            ? 'text-[var(--muted)] border-[var(--border)] font-normal'
-            : nada === 'hijau'
-            ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-            : nada === 'amber'
-            ? 'text-amber-600 dark:text-amber-400 border-amber-500/20'
-            : ''
-        }`}
-        style={nada === 'aksen' && aksen ? { color: aksen, borderColor: `${aksen}33` } : undefined}
+        className={`mt-2.5 pt-1.5 border-t text-[10px] font-medium ${KELAS_KAKI[nada]}`}
+        style={gayaKaki}
       >
         {kaki}
       </div>

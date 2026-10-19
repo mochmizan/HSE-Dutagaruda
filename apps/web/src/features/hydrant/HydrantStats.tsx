@@ -32,6 +32,7 @@ export const HydrantStats: React.FC<HydrantStatsProps> = ({ totalUnits, jumlahZo
         judul="Selesai Diperiksa"
         nilai={completed}
         rincian={`dari ${totalUnits} unit terdaftar`}
+        ikon="✅"
         lencana="Lengkap"
         kaki="Laporan telah diterbitkan"
         isi={
