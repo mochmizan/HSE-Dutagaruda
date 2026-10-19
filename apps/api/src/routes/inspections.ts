@@ -5,9 +5,8 @@ import {
   computeAparOverallStatus,
   computeHydrantOverallStatus,
   firstOfMonth,
-  toPeriodKey,
 } from "@viaannn/shared";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, gt, gte, lt } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client.js";
 import {
@@ -21,7 +20,14 @@ import {
   photos,
 } from "../db/schema.js";
 import { companyId, requireSession } from "../auth/middleware.js";
-import { blockedByChildren, duplicateMonth, listPage, newId, notFound } from "./helpers.js";
+import {
+  blockedByChildren,
+  duplicateMonth,
+  listPage,
+  newId,
+  notFound,
+  periodRange,
+} from "./helpers.js";
 import {
   aparInspectionBodySchema,
   hydrantInspectionBodySchema,
@@ -60,15 +66,25 @@ export const hydrantInspectionsApp = new Hono()
   .use("*", requireSession)
 
   .get("/", zValidator("query", listQuerySchema), async (c) => {
-  const { cursor, limit } = c.req.valid("query");
+  const { cursor, limit, siteId, period } = c.req.valid("query");
   const owned = companyId(c);
+  const rentang = period ? periodRange(period) : null;
   const page = await listPage({
     limit,
     fetch: (n) =>
       db
-        .select()
+        .select(getTableColumns(hydrantInspections))
         .from(hydrantInspections)
-        .where(and(eq(hydrantInspections.companyId, owned), cursor ? gt(hydrantInspections.id, cursor) : undefined))
+        .innerJoin(hydrantUnits, eq(hydrantInspections.unitId, hydrantUnits.id))
+        .where(
+          and(
+            eq(hydrantInspections.companyId, owned),
+            siteId ? eq(hydrantUnits.siteId, siteId) : undefined,
+            rentang ? gte(hydrantInspections.period, rentang.from) : undefined,
+            rentang ? lt(hydrantInspections.period, rentang.to) : undefined,
+            cursor ? gt(hydrantInspections.id, cursor) : undefined,
+          ),
+        )
         .orderBy(asc(hydrantInspections.id))
         .limit(n),
   });
@@ -79,13 +95,20 @@ export const hydrantInspectionsApp = new Hono()
   const { month, unitId } = c.req.valid("query");
   if (!unitId) return c.json({ items: [] });
   const owned = companyId(c);
+  const rentang = periodRange(month);
   const rows = await db
     .select()
     .from(hydrantInspections)
-    .where(and(eq(hydrantInspections.companyId, owned), eq(hydrantInspections.unitId, unitId)))
+    .where(
+      and(
+        eq(hydrantInspections.companyId, owned),
+        eq(hydrantInspections.unitId, unitId),
+        gte(hydrantInspections.period, rentang.from),
+        lt(hydrantInspections.period, rentang.to),
+      ),
+    )
     .orderBy(asc(hydrantInspections.period));
-  const wanted = rows.filter((r) => toPeriodKey(r.period) === month);
-  return c.json({ items: wanted });
+  return c.json({ items: rows });
   })
 
   .post("/", zValidator("json", hydrantInspectionBodySchema), async (c) => {
@@ -205,15 +228,25 @@ export const aparInspectionsApp = new Hono()
   .use("*", requireSession)
 
   .get("/", zValidator("query", listQuerySchema), async (c) => {
-  const { cursor, limit } = c.req.valid("query");
+  const { cursor, limit, siteId, period } = c.req.valid("query");
   const owned = companyId(c);
+  const rentang = period ? periodRange(period) : null;
   const page = await listPage({
     limit,
     fetch: (n) =>
       db
-        .select()
+        .select(getTableColumns(aparInspections))
         .from(aparInspections)
-        .where(and(eq(aparInspections.companyId, owned), cursor ? gt(aparInspections.id, cursor) : undefined))
+        .innerJoin(aparUnits, eq(aparInspections.unitId, aparUnits.id))
+        .where(
+          and(
+            eq(aparInspections.companyId, owned),
+            siteId ? eq(aparUnits.siteId, siteId) : undefined,
+            rentang ? gte(aparInspections.period, rentang.from) : undefined,
+            rentang ? lt(aparInspections.period, rentang.to) : undefined,
+            cursor ? gt(aparInspections.id, cursor) : undefined,
+          ),
+        )
         .orderBy(asc(aparInspections.id))
         .limit(n),
   });
@@ -224,12 +257,20 @@ export const aparInspectionsApp = new Hono()
   const { month, unitId } = c.req.valid("query");
   if (!unitId) return c.json({ items: [] });
   const owned = companyId(c);
+  const rentang = periodRange(month);
   const rows = await db
     .select()
     .from(aparInspections)
-    .where(and(eq(aparInspections.companyId, owned), eq(aparInspections.unitId, unitId)))
+    .where(
+      and(
+        eq(aparInspections.companyId, owned),
+        eq(aparInspections.unitId, unitId),
+        gte(aparInspections.period, rentang.from),
+        lt(aparInspections.period, rentang.to),
+      ),
+    )
     .orderBy(asc(aparInspections.period));
-  return c.json({ items: rows.filter((r) => toPeriodKey(r.period) === month) });
+  return c.json({ items: rows });
   })
 
   .post("/", zValidator("json", aparInspectionBodySchema), async (c) => {
@@ -352,15 +393,25 @@ export const p3kInspectionsApp = new Hono()
   .use("*", requireSession)
 
   .get("/", zValidator("query", listQuerySchema), async (c) => {
-  const { cursor, limit } = c.req.valid("query");
+  const { cursor, limit, siteId, period } = c.req.valid("query");
   const owned = companyId(c);
+  const rentang = period ? periodRange(period) : null;
   const page = await listPage({
     limit,
     fetch: (n) =>
       db
-        .select()
+        .select(getTableColumns(p3kInspections))
         .from(p3kInspections)
-        .where(and(eq(p3kInspections.companyId, owned), cursor ? gt(p3kInspections.id, cursor) : undefined))
+        .innerJoin(p3kBoxes, eq(p3kInspections.boxId, p3kBoxes.id))
+        .where(
+          and(
+            eq(p3kInspections.companyId, owned),
+            siteId ? eq(p3kBoxes.siteId, siteId) : undefined,
+            rentang ? gte(p3kInspections.period, rentang.from) : undefined,
+            rentang ? lt(p3kInspections.period, rentang.to) : undefined,
+            cursor ? gt(p3kInspections.id, cursor) : undefined,
+          ),
+        )
         .orderBy(asc(p3kInspections.id))
         .limit(n),
   });
@@ -371,12 +422,20 @@ export const p3kInspectionsApp = new Hono()
   const { month, boxId } = c.req.valid("query");
   if (!boxId) return c.json({ items: [] });
   const owned = companyId(c);
+  const rentang = periodRange(month);
   const rows = await db
     .select()
     .from(p3kInspections)
-    .where(and(eq(p3kInspections.companyId, owned), eq(p3kInspections.boxId, boxId)))
+    .where(
+      and(
+        eq(p3kInspections.companyId, owned),
+        eq(p3kInspections.boxId, boxId),
+        gte(p3kInspections.period, rentang.from),
+        lt(p3kInspections.period, rentang.to),
+      ),
+    )
     .orderBy(asc(p3kInspections.period));
-  return c.json({ items: rows.filter((r) => toPeriodKey(r.period) === month) });
+  return c.json({ items: rows });
   })
 
   .post("/", zValidator("json", p3kInspectionBodySchema), async (c) => {

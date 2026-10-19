@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, lt } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../db/client.js";
@@ -11,7 +11,7 @@ import {
   sites,
 } from "../db/schema.js";
 import { companyId, requireSession } from "../auth/middleware.js";
-import { listPage, newId, notFound } from "./helpers.js";
+import { listPage, newId, notFound, periodRange } from "./helpers.js";
 import { deleteObject, presignedGet, putBytes } from "../storage.js";
 import {
   idParamSchema,
@@ -34,8 +34,9 @@ export const patrolApp = new Hono()
   .use("*", requireSession)
 
   .get("/", zValidator("query", listQuerySchema), async (c) => {
-  const { cursor, limit, siteId } = c.req.valid("query");
+  const { cursor, limit, siteId, period } = c.req.valid("query");
   const owned = companyId(c);
+  const rentang = period ? periodRange(period) : null;
   const page = await listPage({
     limit,
     fetch: (n) =>
@@ -46,6 +47,8 @@ export const patrolApp = new Hono()
           and(
             eq(safetyPatrolReports.companyId, owned),
             siteId ? eq(safetyPatrolReports.siteId, siteId) : undefined,
+            rentang ? gte(safetyPatrolReports.patrolDate, rentang.from) : undefined,
+            rentang ? lt(safetyPatrolReports.patrolDate, rentang.to) : undefined,
             cursor ? gt(safetyPatrolReports.id, cursor) : undefined,
           ),
         )

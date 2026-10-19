@@ -21,6 +21,14 @@ export function newId(): string {
   return createId();
 }
 
+/** Rentang setengah terbuka [awal bulan, awal bulan berikutnya) untuk kolom
+ *  `period`/`patrol_date` yang menyimpan tanggal pertama bulan. */
+export function periodRange(month: string): { from: string; to: string } {
+  const [tahun, bulan] = month.split("-").map(Number);
+  const berikut = bulan === 12 ? `${tahun + 1}-01` : `${tahun}-${String(bulan + 1).padStart(2, "0")}`;
+  return { from: `${month}-01`, to: `${berikut}-01` };
+}
+
 export function duplicateMonth(): HTTPException {
   return new HTTPException(409, {
     message: "Inspeksi bulan tersebut sudah ada untuk aset ini.",
