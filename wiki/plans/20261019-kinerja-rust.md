@@ -1,6 +1,28 @@
 # Rencana: refactor + kecepatan + sumber daya (Rust di jalur PDF)
 
-Tanggal: 2026-10-19. Status: menunggu persetujuan sebelum eksekusi.
+Tanggal: 2026-10-19. Status: **Fase 1, 2, 4, 5, 6 SELESAI dan terverifikasi.
+Fase 3 (Rust/Typst) DIPARKIR atas keputusan pemilik — Gotenberg tetap.**
+
+## 0. Status eksekusi
+
+| Fase | Status | Bukti |
+|---|---|---|
+| 0 pin perilaku | selesai | `wiki/artifacts/20261019-kinerja/baseline-ui.json` + `scripts/bench/pin-ui.ts` |
+| 1 infra | selesai | 421 KB → 123 KB di kabel (71% hemat, `zstd`), diverifikasi dengan `http` mentah |
+| 2 data-loss | selesai | paging mengikuti `nextCursor` di `klien.ts`; 150 baris bukti dipakai lalu dibersihkan |
+| 3 PDF Rust | **diparkir** | Gotenberg dipertahankan; format akan disetir per klien nanti |
+| 4 API | selesai | 4 indeks FK + indeks periode/kedaluwarsa, `cookieCache`, pool eksplisit, presign paralel |
+| 5 dekomposisi | selesai | Hydrant 1139 → 705 baris, APAR 1090 → 912; paritas tabel diverifikasi di browser |
+| 6 gerbang | selesai | 63 unit test, CI, retensi `pdf_jobs` (34 baris sampah dihapus) |
+
+Cacat PDF yang ditemukan di jalur hidup sudah ditutup:
+
+- Section B mencetak foto bukti, bukan temuan. Penyebab: query di `exports.ts`
+  tidak memfilter `photos.temuan`. **Sekarang Hydrant bulanan 41 KB, bukan 4,3 MB.**
+- APAR bulanan 1 halaman. **Sekarang 2 halaman** dengan blok `Catatan :` bergaris.
+- P3K kehilangan `TANGGAL INSPEKSI`/`PARAF`. **Sekarang tercetak** dan diuji.
+- Kop "Lokasi Fasilitas Utama" ternyata memang nama situs di seed, bukan bug.
+- P3K dan Patroli belum punya fixture hidup; probe menandainya `lewati`, bukan lulus.
 
 ## 1. Putusan ringkas
 
@@ -347,9 +369,12 @@ hanya dipindah.
 
 ## 7. Yang saya butuhkan darimu
 
-1. API ikut ditulis ulang ke Rust, atau tetap TypeScript dan Rust hanya di jalur
-   PDF. Default saya yang kedua.
-2. Empat pertanyaan template di Fase 0b. Ini yang menentukan bentuk golden file.
+1. ~~API ikut ditulis ulang ke Rust~~ — dijawab: API tetap TypeScript, Rust hanya
+   diusulkan untuk PDF. Fase 3 sekarang diparkir, jadi tidak ada yang menunggu.
+2. Empat pertanyaan template di Fase 0b. Tiga sudah terjawab oleh template itu
+   sendiri (Section B = temuan saja, APAR 2 halaman, P3K butuh tanggal/paraf).
+   Yang masih terbuka: **nama lokasi di kop** — nama situs atau teks tetap
+   "Lokasi Fasilitas Utama"? Saat ini kop mencetak nama situs (`sites.name`),
+   yang di seed bernama "Lokasi Fasilitas Utama".
 
-Fase 1 dan 2 tidak bergantung pada dua hal itu, jadi saya bisa mulai dari sana
-begitu kamu bilang jalan.
+Fase 1, 2, 4, 5, 6 tidak bergantung pada jawaban itu dan sudah dikerjakan.

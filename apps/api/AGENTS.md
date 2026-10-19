@@ -11,11 +11,25 @@ PDF storage, and Gotenberg PDF rendering.
 - `src/routes/*` — CRUD, feed, settings, uploads, exports, pdf-jobs.
 - `src/storage.ts` — Garage S3 client: `putBytes`, `presignedGet` (60s default),
   `getBytes`, `objectExists`, `deleteObject`.
+- `src/db/client.ts` — one explicit postgres-js pool (`DB_POOL_MAX` default 10,
+  30s idle, 10s connect, 30min max lifetime, `DB_STATEMENT_TIMEOUT_MS` default
+  15000). Do not reintroduce a bare `postgres(url)`: unbounded statement time
+  lets one stuck query hold a pool slot forever.
+- `src/retensi-pdf.ts` — `pdf_jobs` retention. Deletes `done` older than
+  `RETENSI_HARI` (default 30) plus `failed`/`queued` older than
+  `RETENSI_GAGAL_JAM` (default 24, both are terminal states with no worker).
+  Objects are deleted before rows so a failed object delete keeps the row as a
+  trace. Run dry-run first, then `--hapus`:
+  `docker compose -f infra/docker-compose.yml exec -T api bun run src/retensi-pdf.ts --hapus`.
 - `src/pdf/render.ts` — Gotenberg 8 client (`waitForSelector=#pdf-ready`,
   `waitDelay=300ms`, `failOnResourceLoadingFailed=true`).
 - `src/pdf/templates.ts` — pure HTML builders for the 5 paper forms
   (hydrant-monthly, apar-monthly, apar-card, p3k-yearly landscape, patrol-report).
   Fonts embedded as data URLs from `src/pdf/fonts.ts`. No db access here.
+  `aparMonthly` emits an explicit `.page-break` after the component table so
+  page 2 is expiry + a ruled `Catatan :` block + signatures (spec/06-print.md).
+  `p3kYearly` prints the `TANGGAL INSPEKSI` and `PARAF PETUGAS` rows required by
+  the paper form, blank when `inspectionDate` is null.
 - `src/pdf/fonts.ts` — base64 WOFF2 (Inter 400/700). Regenerate only from the
   jsDelivr fontsource files (Google Fonts CSS returned wrong bytes; see memory).
 
@@ -43,6 +57,17 @@ PDF storage, and Gotenberg PDF rendering.
   Garage, whose signature check (Host + path + query) still passes. Pass
   `audience: "internal"` to `presignedGet` for URLs consumed inside the compose
   network (Gotenberg template `<img src>`).
+- Monthly export photos are filtered to `photos.temuan = true` (Section B is
+  "Catatan Hasil Temuan"). Without that filter the 3,7 MB evidence photo is
+  printed too and one Hydrant page grows to 4,3 MB. Presigning runs in parallel;
+  keep it that way or every extra photo adds a Garage round trip to export time.
+- `GET /api/safety-patrol-reports` embeds each report's `findings` in the list
+  response (one extra query for the whole page, not one per report). Do not
+  reintroduce client-side per-report fetches.
+- List endpoints page with `nextCursor` and `limit` (max 100). Clients must
+  follow the cursor; the web client does so in `ambilSemua` (`klien.ts`).
+  `siteId` and `period` are accepted query filters on inspections, units, zones,
+  boxes and patrol reports and are applied in SQL.
 - `GET /api/photos?inspectionKind=hydrant|apar&inspectionId=` lists a photo
   owner inspection's photos, tenant-scoped (unknown or other-company
   inspection is 404): `{ items: [{ id, caption, createdAt }] }` ordered by
@@ -96,6 +121,13 @@ PDF storage, and Gotenberg PDF rendering.
   `hc<AppType>` typing: check.ts calls `hc<AppType>(BASE).api.sites.$get`,
   which fails tsc if any sub-app loses its chained registration.
 - PDF orientation proof: portrait MediaBox ≈ 595×842 pt, landscape ≈ 842×595 pt.
+- Unit tests: `bun run test` from the repo root (63 tests). Covers
+  `packages/shared/src/status.ts` + `dates.ts`, `apps/web/src/lib/aparSync.ts` +
+  `dates.ts`, and the PDF template builders (`templates.test.ts`).
+- PDF size/page proof: `bun scripts/bench/pdf.ts` renders all categories and
+  `bun scripts/bench/cek-pdf.ts <file>` prints page count. Hydrant monthly must
+  stay far below 100 KB (4,3 MB means the `temuan` photo filter regressed) and
+  APAR monthly must be 2 pages.
 
 ## Child DOX Index
 

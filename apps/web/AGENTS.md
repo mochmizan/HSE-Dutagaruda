@@ -1,8 +1,10 @@
-# Frontend Web Client DOX — `preview`
+# Frontend Web Client DOX — `@viaannn/web`
 
 ## Purpose
 
-The `preview` directory contains the production-grade React + TypeScript + Vite web client for the HSE Inspection Digitization Platform. It delivers the responsive field inspector and staff interface with Notion-kit tokens, fixed 6-week calendar view, 4 core category KPI counters, dual-mode report panels, inspection modals, and Agentation visual feedback.
+The `apps/web` directory contains the production-grade React + TypeScript + Vite web client for the HSE Inspection Digitization Platform. It delivers the responsive field inspector and staff interface with Notion-kit tokens, fixed 6-week calendar view, 4 core category KPI counters, dual-mode report panels, inspection modals, and Agentation visual feedback.
+
+The workspace package is `@viaannn/web` (renamed from `preview` so the root `bun run build` can target it; a package literally named `preview` made the root build silently skip the web app and ship stale bundles).
 
 ## Ownership
 
@@ -31,8 +33,9 @@ The `preview` directory contains the production-grade React + TypeScript + Vite 
 
 ## Verification
 
-- Build command: `bun run build`
+- Build command: `bun run build` (from this directory) — root `bun run build` also builds this package now.
 - Typecheck: `tsc -b`
+- Lint: `bun run lint` (must stay free of errors and warnings)
 - Dev server port: `5173`
 
 ## Child DOX Index
