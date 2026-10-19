@@ -19,6 +19,11 @@ export const auth = betterAuth({
   ],
   database: drizzleAdapter(db, { provider: "pg", schema: authSchema }),
   emailAndPassword: { enabled: true },
-  session: { expiresIn: 60 * 60 * 24 * 7 },
+  session: {
+    expiresIn: 60 * 60 * 24 * 7,
+    // A signed session_data cookie lets getSession answer without the session
+    // and user reads. Sign-out expires the cookie in the same response.
+    cookieCache: { enabled: true, maxAge: 300 },
+  },
   plugins: [organization()],
 });
