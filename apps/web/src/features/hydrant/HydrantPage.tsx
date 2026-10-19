@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Flame } from 'lucide-react';
-import { format, addMonths, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { HydrantUnitItem, InspectionReport } from '../../types/hse';
 import { HydrantInspectionModal } from './HydrantInspectionModal';
@@ -8,8 +8,8 @@ import { HydrantTable } from './HydrantTable';
 import { HydrantCards } from './HydrantCards';
 import { HydrantFindings } from './HydrantFindings';
 import { HydrantPrintHeader, HydrantPrintSignatures } from './HydrantPrintChrome';
-import { HydrantToolbar } from './HydrantToolbar';
-import { HydrantStats, HydrantFilterBar } from './HydrantStats';
+import { HydrantStats } from './HydrantStats';
+import { PageHeader, FilterBar } from '@/features/pageChrome';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';
 import { HydrantFindingItem } from './types';
@@ -89,8 +89,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     const kini = new Date();
     return new Date(kini.getFullYear(), kini.getMonth(), 1);
   });
-  const handlePrevMonth = () => setSelectedMonth((prev) => subMonths(prev, 1));
-  const handleNextMonth = () => setSelectedMonth((prev) => addMonths(prev, 1));
   const handleResetToCurrentMonth = () => {
     const kini = new Date();
     setSelectedMonth(new Date(kini.getFullYear(), kini.getMonth(), 1));
@@ -364,33 +362,39 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[var(--bg-main)] text-[var(--primary)] px-6 py-4 select-none font-sans">
       <HydrantPrintHeader siteName={lokasi.siteName} monthLabel={monthLabel} />
 
-      <HydrantToolbar
+      <PageHeader
         namaProyek={lokasi.namaProyek}
         siteName={lokasi.siteName}
+        remahKategori="Inspeksi Hydrant"
+        ikon={<Flame size={18} strokeWidth={2.2} />}
+        aksen="#eb5757"
+        judul="Laporan Inspeksi Hydrant"
+        deskripsi="Monitoring progres pemeriksaan fisik 6 komponen hydrant gedung per unit"
         isCollapsed={isCollapsed}
         onToggleCollapsed={onToggleCollapsed}
-        selectedMonth={selectedMonth}
-        isCurrentMonth={isCurrentMonth}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-        onResetToCurrentMonth={handleResetToCurrentMonth}
+        bulan={selectedMonth}
+        tampilkanReset={!isCurrentMonth}
+        onResetBulan={handleResetToCurrentMonth}
         onPilihBulan={setSelectedMonth}
-        onTambahZona={() => setIsAddZoneModalOpen(true)}
-        onCetak={handlePrint}
+        labelTambah="Tambah Zona & Unit"
+        onTambah={() => setIsAddZoneModalOpen(true)}
+        kategoriEkspor="hydrant-monthly"
         jangkarEkspor={jangkarEkspor}
-        period={period}
+        namaBerkas={period}
+        onCetak={handlePrint}
       />
 
       <HydrantStats
         totalUnits={totalUnits}
         jumlahZona={zones.length}
         completed={completedUnits.length}
+        onProgress={onProgressUnits.length}
       />
 
-      <HydrantFilterBar
+      <FilterBar
         filterTab={filterTab}
         onFilterTab={setFilterTab}
-        totalUnits={totalUnits}
+        total={totalUnits}
         onProgress={onProgressUnits.length}
         completed={completedUnits.length}
         zona={zones}

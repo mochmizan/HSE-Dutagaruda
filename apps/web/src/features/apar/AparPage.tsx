@@ -17,9 +17,7 @@ import { computeAparOverallStatus } from '../../lib/statusCalculator';
 import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
 import { PrintButton, UnduhPdfButton } from '@/components/ui';
-import { AparHeader } from './AparHeader';
-import { AparStats } from './AparStats';
-import { AparFilterBar } from './AparFilterBar';
+import { PageHeader, FilterBar, KartuStatistik } from '@/features/pageChrome';
 import { AparPrintHeader, AparExpiry, AparSignatures } from './AparPrintChrome';
 import {
   unitHasIssue,
@@ -183,6 +181,15 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   const inProgressUnits = useMemo(() => units.filter((u) => u.status === 'SEDANG_BERJALAN'), [units]);
   const expiringUnits = useMemo(() => units.filter((u) => daysToExpiry(u.expiredDate) <= 90), [units]);
 
+  // Bilah progres di kartu ringkas. Dihitung sekali dari jumlah unit; tanpa
+  // pembagi nol (halaman tanpa unit) bilahnya kosong, bukan `NaN`.
+  const persenSelesai = units.length
+    ? Math.round((completedUnits.length / units.length) * 100)
+    : 0;
+  const persenBerjalan = units.length
+    ? Math.round((inProgressUnits.length / units.length) * 100)
+    : 0;
+
   const filteredUnits = useMemo(
     () =>
       units.filter((unit) => {
@@ -234,12 +241,6 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   // ─────────────────────────────────────────────────────────
   // EVENTS
   // ─────────────────────────────────────────────────────────
-  const shiftMonth = (delta: number) => {
-    // Tanpa pagar tahun: pengalih bulan harus bisa melewati Desember → Januari.
-    // Sebelumnya `return` saat tahun ≠ 2026, jadi periode 2027 tidak pernah bisa dipilih.
-    const next = new Date(year || 2026, (month || 9) - 1 + delta, 1);
-    setPeriod(format(next, 'yyyy-MM'));
-  };
 
   const scrollToCard = () => {
     requestAnimationFrame(() =>
@@ -480,33 +481,92 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   // ─────────────────────────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[var(--bg-main)] text-[var(--primary)] px-6 py-4 select-none font-sans">
-      <AparHeader
+      <PageHeader
         namaProyek={lokasi.namaProyek}
         siteName={lokasi.siteName}
+        remahKategori="Inspeksi APAR"
+        ikon={<ShieldCheck size={18} strokeWidth={2.2} />}
+        aksen={APAR_ACCENT}
+        judul="Laporan Inspeksi APAR"
+        deskripsi="Monitoring progres pemeriksaan fisik 7 komponen APAR gedung per unit"
         isCollapsed={isCollapsed}
         onToggleCollapsed={onToggleCollapsed}
-        period={period}
-        isDefaultPeriod={isDefaultPeriod}
-        onShiftMonth={shiftMonth}
-        onPilihPeriode={setPeriod}
-        onResetPeriode={() => setPeriod(DEFAULT_PERIOD)}
+        bulan={monthDate}
+        tampilkanReset={!isDefaultPeriod}
+        onResetBulan={() => setPeriod(DEFAULT_PERIOD)}
+        onPilihBulan={(d) => setPeriod(format(d, 'yyyy-MM'))}
+        labelTambah="Tambah Zona & Unit"
         onTambah={() => setIsAddModalOpen(true)}
-        jangkarBulanan={jangkarBulanan}
-        onCetakLaporan={handlePrintReport}
+        kategoriEkspor="apar-monthly"
+        jangkarEkspor={jangkarBulanan}
+        namaBerkas={period}
+        onCetak={handlePrintReport}
       />
 
-      <AparStats
-        total={units.length}
-        jumlahZona={zones.length}
-        inProgress={inProgressUnits.length}
-        completed={completedUnits.length}
-        expiring={expiringUnits.length}
-      />
+      <div className="no-print grid grid-cols-2 gap-3 mb-4">
+        <KartuStatistik
+          nada="netral"
+          judul="Total APAR Terdaftar"
+          nilai={units.length}
+          rincian={`${zones.length} Zona Terpantau`}
+          ikon="🧯"
+          kaki="Wajib periksa 1x per bulan"
+          isi={
+            <div className="mt-2 space-y-1.5">
+              <div className="flex h-1.5 rounded-full overflow-hidden bg-[var(--bg-hover)]">
+                <div
+                  className="bg-emerald-500"
+                  style={{ width: `${persenSelesai}%` }}
+                  title={`${completedUnits.length} unit selesai`}
+                />
+                <div
+                  className="bg-amber-500"
+                  style={{ width: `${persenBerjalan}%` }}
+                  title={`${inProgressUnits.length} unit berjalan`}
+                />
+              </div>
+              <div className="flex items-center gap-3 text-[10px] text-[var(--muted)] tabular-nums">
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {completedUnits.length} selesai
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  {inProgressUnits.length} berjalan
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600/50" />
+                  {expiringUnits.length} kedaluwarsa ≤90 hari
+                </span>
+              </div>
+            </div>
+          }
+        />
+        <KartuStatistik
+          nada="hijau"
+          judul="Selesai Diperiksa"
+          nilai={completedUnits.length}
+          rincian={`dari ${units.length} unit terdaftar`}
+          lencana="Lengkap"
+          kaki="Laporan telah diterbitkan"
+          isi={
+            <div className="mt-2">
+              <div className="flex h-1.5 rounded-full overflow-hidden bg-emerald-500/15">
+                <div className="bg-emerald-500" style={{ width: `${persenSelesai}%` }} />
+              </div>
+              <div className="mt-1.5 text-[10px] text-[var(--muted)] tabular-nums">
+                {persenSelesai}% unit sudah punya laporan terbit
+              </div>
+            </div>
+          }
+        />
+      </div>
 
-      <AparFilterBar
+      <FilterBar
         filterTab={filterTab}
         onFilterTab={setFilterTab}
         total={units.length}
+        onProgress={inProgressUnits.length}
         completed={completedUnits.length}
         zona={zones}
         zoneFilter={zoneFilter}
@@ -515,6 +575,7 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
         onSearchQuery={setSearchQuery}
         viewMode={viewMode}
         onViewMode={setViewMode}
+        placeholderCari="Cari kode, zona, atau petugas…"
       />
 
       {/* e. Bagian A — hasil pemeriksaan */}

@@ -56,8 +56,8 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
           <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
           <th className="py-2.5 px-3 min-w-[90px] text-center align-middle">Kode Unit</th>
-          <th className="py-2.5 px-3 min-w-[210px] text-center align-middle">Lokasi &amp; Zona</th>
-          <th className="py-2.5 px-3 min-w-[264px] text-center align-middle">
+          <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Lokasi &amp; Zona</th>
+          <th className="py-2.5 px-3 min-w-[354px] text-center align-middle">
             <div className="flex items-center justify-center gap-1 text-center">
               <span>Verifikasi 6 Komponen</span>
             </div>
