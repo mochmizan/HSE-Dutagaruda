@@ -192,13 +192,10 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   const completedUnits = useMemo(() => units.filter((u) => u.status === 'SELESAI'), [units]);
   const inProgressUnits = useMemo(() => units.filter((u) => u.status === 'SEDANG_BERJALAN'), [units]);
 
-  // Bilah progres di kartu ringkas. Dihitung sekali dari jumlah unit; tanpa
-  // pembagi nol (halaman tanpa unit) bilahnya kosong, bukan `NaN`.
+  // Persentase untuk bilah di kartu "Selesai Diperiksa". Kartu total tidak
+  // memakai bilah: angkanya sudah muncul di kartu sebelah.
   const persenSelesai = units.length
     ? Math.round((completedUnits.length / units.length) * 100)
-    : 0;
-  const persenBerjalan = units.length
-    ? Math.round((inProgressUnits.length / units.length) * 100)
     : 0;
 
   const filteredUnits = useMemo(
@@ -539,32 +536,6 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
           rincian={`${zones.length} Zona Terpantau`}
           ikon="🧯"
           kaki="Wajib periksa 1x per bulan"
-          isi={
-            <div className="mt-2 space-y-1.5">
-              <div className="flex h-1.5 rounded-full overflow-hidden bg-[var(--bg-hover)]">
-                <div
-                  className="bg-emerald-500"
-                  style={{ width: `${persenSelesai}%` }}
-                  title={`${completedUnits.length} unit selesai`}
-                />
-                <div
-                  className="bg-amber-500"
-                  style={{ width: `${persenBerjalan}%` }}
-                  title={`${inProgressUnits.length} unit berjalan`}
-                />
-              </div>
-              <div className="flex items-center gap-3 text-[10px] text-[var(--muted)] tabular-nums">
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  {completedUnits.length} selesai
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  {inProgressUnits.length} berjalan
-                </span>
-              </div>
-            </div>
-          }
         />
         <KartuStatistik
           nada="hijau"

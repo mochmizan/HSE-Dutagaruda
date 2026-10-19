@@ -5,18 +5,17 @@ interface HydrantStatsProps {
   totalUnits: number;
   jumlahZona: number;
   completed: number;
-  onProgress: number;
 }
 
-/** Dua kartu ringkas di atas tabel: total unit dan unit selesai. */
-export const HydrantStats: React.FC<HydrantStatsProps> = ({
-  totalUnits,
-  jumlahZona,
-  completed,
-  onProgress,
-}) => {
+/**
+ * Dua kartu ringkas di atas tabel: total unit dan unit selesai.
+ *
+ * Bilah progres hanya ada di kartu "Selesai Diperiksa". Kartu total sengaja
+ * tanpa bilah: angka selesai sudah muncul di kartu sebelah, jadi bilah kedua
+ * mengulang informasi yang sama.
+ */
+export const HydrantStats: React.FC<HydrantStatsProps> = ({ totalUnits, jumlahZona, completed }) => {
   const persenSelesai = totalUnits ? Math.round((completed / totalUnits) * 100) : 0;
-  const persenBerjalan = totalUnits ? Math.round((onProgress / totalUnits) * 100) : 0;
 
   return (
     <div className="no-print grid grid-cols-2 gap-3 mb-4">
@@ -27,32 +26,6 @@ export const HydrantStats: React.FC<HydrantStatsProps> = ({
         rincian={`${jumlahZona} Zona Terpantau`}
         ikon="🏢"
         kaki="Wajib periksa 1x per bulan"
-        isi={
-          <div className="mt-2 space-y-1.5">
-            <div className="flex h-1.5 rounded-full overflow-hidden bg-[var(--bg-hover)]">
-              <div
-                className="bg-emerald-500"
-                style={{ width: `${persenSelesai}%` }}
-                title={`${completed} unit selesai`}
-              />
-              <div
-                className="bg-amber-500"
-                style={{ width: `${persenBerjalan}%` }}
-                title={`${onProgress} unit berjalan`}
-              />
-            </div>
-            <div className="flex items-center gap-3 text-[10px] text-[var(--muted)] tabular-nums">
-              <span className="inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                {completed} selesai
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                {onProgress} berjalan
-              </span>
-            </div>
-          </div>
-        }
       />
       <KartuStatistik
         nada="hijau"

@@ -388,7 +388,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         totalUnits={totalUnits}
         jumlahZona={zones.length}
         completed={completedUnits.length}
-        onProgress={onProgressUnits.length}
       />
 
       <FilterBar
