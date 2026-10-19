@@ -259,7 +259,10 @@ export const p3kInspectionItems = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("p3k_inspection_items_company_id_idx").on(t.companyId)],
+  (t) => [
+    index("p3k_inspection_items_company_id_idx").on(t.companyId),
+    index("p3k_inspection_items_inspection_id_idx").on(t.inspectionId),
+  ],
 );
 
 export const safetyPatrolReports = pgTable(
@@ -302,7 +305,10 @@ export const safetyPatrolFindings = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("safety_patrol_findings_company_id_idx").on(t.companyId)],
+  (t) => [
+    index("safety_patrol_findings_company_id_idx").on(t.companyId),
+    index("safety_patrol_findings_report_id_idx").on(t.reportId),
+  ],
 );
 
 export const photos = pgTable(
@@ -335,6 +341,8 @@ export const photos = pgTable(
   },
   (t) => [
     index("photos_company_id_idx").on(t.companyId),
+    index("photos_hydrant_inspection_id_idx").on(t.hydrantInspectionId),
+    index("photos_apar_inspection_id_idx").on(t.aparInspectionId),
     check(
       "photos_single_owner_check",
       sql`num_nonnulls("hydrant_inspection_id", "apar_inspection_id") = 1`,
