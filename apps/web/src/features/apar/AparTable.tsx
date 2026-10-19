@@ -2,6 +2,7 @@ import React from 'react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { formatIndonesianDate } from '../../lib/dates';
+import { KeteranganTeks } from '@/features/pageChrome';
 import type { AparUnitItem } from '../../types/hse';
 import { COMPONENT_LABELS, ComponentChip, EligibilityBadge } from './AparBadges';
 
@@ -40,9 +41,10 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka }) => (
           <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Zona</th>
           <th className="py-2.5 px-3 min-w-[110px] text-center align-middle">Jenis / Ukuran</th>
           <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Periode Expired</th>
-          <th className="py-2.5 px-3 min-w-[264px] text-center align-middle">Verifikasi 7 Komponen</th>
+          <th className="py-2.5 px-3 min-w-[145px] text-center align-middle">Verifikasi 7 Komponen</th>
           <th className="py-2.5 px-3 min-w-[140px] text-center align-middle">Status Kelayakan</th>
           <th className="py-2.5 px-3 min-w-[170px] text-center align-middle">Petugas &amp; Tanggal</th>
+          <th className="py-2.5 px-3 min-w-[119px] text-center align-middle">Keterangan</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-[var(--border)] text-xs">
@@ -89,6 +91,10 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka }) => (
                       : unit.scheduledDate || 'Bulan Ini'}
                   </p>
                 </div>
+              </td>
+
+              <td className="py-2.5 px-3 align-middle text-[11px] text-[var(--secondary)]">
+                <KeteranganTeks teks={unit.completedReport?.summaryNotes || unit.draftDetails?.notes} />
               </td>
             </tr>
           );

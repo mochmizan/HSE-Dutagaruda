@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertCircle, Check, CheckCircle2, Clock, X } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { KeteranganTeks } from '@/features/pageChrome';
 import type { HydrantUnitItem } from '../../types/hse';
 
 /** Enam komponen hydrant, urut sesuai kertas. */
@@ -58,13 +59,14 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
           <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
           <th className="py-2.5 px-3 min-w-[96px] text-center align-middle">Kode Hydrant</th>
           <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Zona</th>
-          <th className="py-2.5 px-3 min-w-[408px] text-center align-middle">
+          <th className="py-2.5 px-3 min-w-[224px] text-center align-middle">
             <div className="flex items-center justify-center gap-1 text-center">
               <span>Verifikasi 6 Komponen</span>
             </div>
           </th>
           <th className="py-2.5 px-3 min-w-[140px] text-center align-middle">Status Kelayakan</th>
           <th className="py-2.5 px-3 min-w-[200px] text-center align-middle">Petugas &amp; Tanggal</th>
+          <th className="py-2.5 px-3 min-w-[184px] text-center align-middle">Keterangan</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-[var(--border)] text-xs">
@@ -73,6 +75,7 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
           const isOnProgress = unit.status === 'SEDANG_BERJALAN';
           const komponen = detailKomponen(unit);
           const tidakLayak = unitTidakLayak(unit, komponen);
+          const notesText = unit.completedReport?.summaryNotes || unit.draftDetails?.notes || '';
 
           return (
             <tr
@@ -165,6 +168,10 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
                     {tanggalTampil(unit)}
                   </p>
                 </div>
+              </td>
+
+              <td className="py-2.5 px-3 align-middle text-[11px] text-[var(--secondary)]">
+                <KeteranganTeks teks={notesText} />
               </td>
             </tr>
           );
