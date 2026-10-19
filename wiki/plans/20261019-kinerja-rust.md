@@ -340,6 +340,12 @@ Lulus bila: build hijau, tidak ada berkas di atas 220 baris, paritas visual
 dibuktikan di browser pada kedua halaman, dan tidak ada baris terduplikasi yang
 hanya dipindah.
 
+Status. Lapisan data sudah tuntas: `queries.ts` 925 baris menjadi barel 16
+baris di atas sembilan modul (terbesar `pemetaan-unit.ts` 205 baris), dan
+`klien.ts` sengaja dibiarkan utuh karena tipe dan fungsinya saling menyisip
+sehingga pemotongan per rentang baris merusak batas sistem. Halaman, modal, dan
+bilah samping dikerjakan bergelombang dengan satu agen per himpunan berkas.
+
 ### Fase 6, gerbang produksi
 
 - Satu workflow CI, build, `check.ts`, probe. Sekarang tidak ada CI sama sekali.
