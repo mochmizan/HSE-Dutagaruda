@@ -45,7 +45,9 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack, isCollapsed, onToggleC
   const ubahButir = useUbahButirP3k();
   const hapusInspeksi = useHapusInspeksiP3k();
 
-  const [year, setYear] = useState('2026');
+  // Tahun berjalan, bukan tahun yang dipatok: grid tahunan harus membuka tahun
+  // ini tanpa perlu diklik dua kali setiap Januari.
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
   const [unitKerja, setUnitKerja] = useState('HSE');
   const [lokasiKerja, setLokasiKerja] = useState('ITJ JPM Dukuh Atas');
   const [activeMonth, setActiveMonth] = useState<string | null>(null);

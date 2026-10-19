@@ -47,7 +47,16 @@ import type { ApiInspeksiApar } from '@/services/api/klien';
 // ─────────────────────────────────────────────────────────────
 
 const APAR_ACCENT = '#f2994a';
-const DEFAULT_PERIOD = '2026-09';
+
+/**
+ * Periode awal = bulan kalender nyata.
+ *
+ * Sebelumnya dipatok `2026-09`, jadi aplikasi selalu membuka September 2026
+ * walau hari ini Oktober. Dihitung saat modul dimuat; `resetPeriode()` memakai
+ * nilai yang sama supaya tombol `Bulan Ini` kembali ke bulan berjalan.
+ */
+const bulanBerjalan = (): string => format(new Date(), 'yyyy-MM');
+const DEFAULT_PERIOD = bulanBerjalan();
 
 /** Tanda tangan dokumen bawaan (gaya kertas; dapat diketik di layar). */
 const sekarangIso = () => new Date().toISOString();
@@ -58,7 +67,10 @@ const APAR_SIGNATURES = {
   disetujui: { nama: 'Ir. Hendra Wijaya', jabatan: 'Kepala Operasional Logistik' },
 } as const;
 
-/** Tanggal inspeksi contoh pada periode bawaan (gaya kertas). */
+/**
+ * Tanggal inspeksi contoh pada gaya kertas — HANYA untuk periode September 2026
+ * (data contoh PRD). Periode lain memakai tanggal rekam nyata dari API.
+ */
 const APAR_INSPECTION_DATES_SEPT_2026 = ['2026-09-16', '2026-09-18'];
 
 /** Sisa hari menuju tanggal kedaluwarsa (negatif = sudah kedaluwarsa). */
@@ -97,7 +109,7 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   // Selalu ada satu kartu terbuka — default APAR 01, tidak pernah menunggu klik.
   const [selectedKode, setSelectedKode] = useState<string>('01');
   // Tahun kartu diangkat ke halaman agar sinkronisasi tahu konteks tahun.
-  const [cardYear, setCardYear] = useState<string>('2026');
+  const [cardYear, setCardYear] = useState<string>(() => String(new Date().getFullYear()));
 
   // Foto dokumentasi per inspeksi (id baris inspeksi → daftar foto sesi).
   // Foto dokumentasi dibaca dari API (lihat `fotoAktif`), bukan disimpan per
@@ -128,9 +140,9 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   const [detailReport, setDetailReport] = useState<InspectionReport | null>(null);
 
   const [year, month] = period.split('-').map(Number);
-  const monthDate = new Date(year || 2026, (month || 9) - 1, 1);
+  const monthDate = new Date(year || new Date().getFullYear(), (month || new Date().getMonth() + 1) - 1, 1);
   const monthLabel = format(monthDate, 'MMMM yyyy', { locale: idLocale });
-  const isDefaultPeriod = period === DEFAULT_PERIOD;
+  const isDefaultPeriod = period === bulanBerjalan();
 
   // Unit + hasil inspeksi bulan terpilih dari API; kartu tahunan turunan inspeksi tersimpan.
   // Lokasi aktif memilih barisnya: unit + inspeksi lokasi lain tidak tampil.
@@ -223,10 +235,27 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
       ? { ...storedGrid, [reportMonth]: resolveReportCell(storedGrid[reportMonth], selectedUnit) }
       : storedGrid;
 
-  const inspectionDatesLabel =
-    period === DEFAULT_PERIOD
-      ? APAR_INSPECTION_DATES_SEPT_2026.map((d) => formatIndonesianDate(parseISO(d))).join(' & ')
-      : '–';
+  // Tanggal inspeksi di kop: pakai tanggal rekam nyata bulan terpilih
+  // (`createdAt` adalah tanggal inspeksi tersimpan). Data contoh September 2026
+  // hanya dipakai bila memang tidak ada rekam, karena kop kertas lama mencetak
+  // tanggal contoh itu.
+  const inspectionDatesLabel = (() => {
+    const tanggal = [
+      ...new Set(
+        inspeksiSite
+          .filter((i) => i.period.startsWith(period))
+          .map((i) => (i.createdAt ?? '').slice(0, 10))
+          .filter(Boolean),
+      ),
+    ].sort();
+    if (tanggal.length > 0) {
+      return tanggal.map((d) => formatIndonesianDate(parseISO(d))).join(' & ');
+    }
+    if (period === '2026-09') {
+      return APAR_INSPECTION_DATES_SEPT_2026.map((d) => formatIndonesianDate(parseISO(d))).join(' & ');
+    }
+    return '–';
+  })();
 
   // ─────────────────────────────────────────────────────────
   // EVENTS
@@ -483,7 +512,7 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
         onToggleCollapsed={onToggleCollapsed}
         bulan={monthDate}
         tampilkanReset={!isDefaultPeriod}
-        onResetBulan={() => setPeriod(DEFAULT_PERIOD)}
+        onResetBulan={() => setPeriod(bulanBerjalan())}
         onPilihBulan={(d) => setPeriod(format(d, 'yyyy-MM'))}
         labelTambah="Tambah Zona & Unit"
         onTambah={() => setIsAddModalOpen(true)}

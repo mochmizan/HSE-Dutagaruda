@@ -26,6 +26,16 @@ const CONDITION_KEYS = [
   { key: 'katupTuas', label: 'Katup' },
 ] as const;
 
+/**
+ * Tahun yang bisa dipilih: tahun berjalan ±1, ditambah tahun yang sedang
+ * ditampilkan. Sebelumnya dipatok `['2025', '2026']`, jadi kartu tidak bisa
+ * dibuka ke tahun lain sama sekali.
+ */
+const daftarTahun = (aktif: string): string[] => {
+  const kini = new Date().getFullYear();
+  return [...new Set([String(kini - 1), String(kini), String(kini + 1), aktif])].sort();
+};
+
 const fallbackCell = (): AparYearCell => ({
   tanggal: '',
   kondisi: { safetyPin: '', corong: '', segel: '', tekanan: '', tabung: '', selang: '', katupTuas: '' },
@@ -76,7 +86,7 @@ export const AparYearCard: React.FC<AparYearCardProps> = ({
           </p>
         </div>
         <div className="no-print flex items-center gap-1 bg-[var(--bg-sidebar)] border border-[var(--border)] rounded-[4px] p-0.5 text-xs">
-          {['2025', '2026'].map((y) => (
+          {daftarTahun(year).map((y) => (
             <button
               key={y}
               type="button"

@@ -2,6 +2,9 @@ import type { HydrantUnitItem, InspectionReport, OverallStatus } from '../../typ
 import { uraiCatatan } from './catatanHidran';
 import type { NilaiKomponenHidran } from './komponenHidran';
 
+/** Periode bulan berjalan (`YYYY-MM`) — pengganti patokan `2026-09`. */
+const periodeBerjalan = (): string => new Date().toISOString().slice(0, 7);
+
 export interface PotretDrafHidran {
   komponen: NilaiKomponenHidran;
   catatanKomponen: Record<string, string>;
@@ -65,7 +68,7 @@ export function buatLaporanHidran(
     id: `rep-${Date.now()}`,
     category: 'HYDRANT',
     date: new Date().toISOString(),
-    period: unit.period || '2026-09',
+    period: unit.period || periodeBerjalan(),
     siteId: unit.siteId,
     siteName: 'Central Warehouse Logistics',
     zoneName: unit.zoneName,
