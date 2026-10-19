@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Layers, ChevronDown, Check, Plus, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Layers, Check, AlertCircle } from 'lucide-react';
+import { UnifiedCombobox, type UnifiedComboboxItem } from '@/components/ui';
 
 export interface AparCreationItem {
   kode: string;
@@ -21,149 +22,6 @@ export interface AddZoneAparModalProps {
   onAddAparUnits: (newUnits: AparCreationItem[]) => void;
   onReassignUnitZone: (unitId: string, newZoneName: string) => void;
 }
-
-interface UnifiedComboboxItem {
-  id: string;
-  label: string;
-  sublabel?: string;
-}
-
-interface UnifiedComboboxProps {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  items: UnifiedComboboxItem[];
-  placeholder: string;
-  isNewItem: boolean;
-}
-
-const UnifiedCombobox: React.FC<UnifiedComboboxProps> = ({
-  label,
-  value,
-  onChange,
-  items,
-  placeholder,
-  isNewItem,
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const trimmedValue = value.trim();
-  const filteredItems = items.filter((item) =>
-    item.label.toLowerCase().includes(trimmedValue.toLowerCase())
-  );
-  const hasExactMatch = items.some(
-    (item) => item.label.toLowerCase() === trimmedValue.toLowerCase()
-  );
-
-  return (
-    <div ref={containerRef} className="space-y-1.5 relative">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-bold text-[var(--primary)]">{label}</label>
-        {trimmedValue && (
-          <span
-            className={`text-[10px] px-1.5 py-0.2 rounded font-medium border ${
-              isNewItem
-                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-            }`}
-          >
-            {isNewItem ? '+ Baru' : '✓ Terdaftar'}
-          </span>
-        )}
-      </div>
-
-      <div className="relative">
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          placeholder={placeholder}
-          className="w-full text-xs pl-2.5 pr-8 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] focus:outline-none focus:border-[#f2994a] tabular-nums"
-        />
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-[var(--muted)] hover:text-[var(--primary)] cursor-pointer"
-          aria-label={`Buka pilihan ${label}`}
-        >
-          <ChevronDown
-            size={14}
-            className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
-          />
-        </button>
-      </div>
-
-      {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-30 max-h-48 overflow-y-auto rounded-[4px] border border-[var(--border)] bg-[var(--bg-modal)] shadow-lg py-1 divide-y divide-[var(--border)]">
-          {trimmedValue && !hasExactMatch && (
-            <div
-              onClick={() => setIsOpen(false)}
-              className="px-2.5 py-1.5 text-xs hover:bg-[var(--bg-hover)] cursor-pointer flex items-center justify-between text-[#f2994a] font-medium"
-            >
-              <div className="flex items-center gap-1.5 truncate">
-                <Plus size={12} strokeWidth={2.5} className="flex-shrink-0" />
-                <span className="truncate">Gunakan baru: “{trimmedValue}”</span>
-              </div>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#f2994a]/10 text-[#f2994a] border border-[#f2994a]/20 flex-shrink-0">
-                Baru
-              </span>
-            </div>
-          )}
-
-          {filteredItems.length > 0 ? (
-            filteredItems.map((item) => {
-              const isSelected = item.label.toLowerCase() === trimmedValue.toLowerCase();
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => {
-                    onChange(item.label);
-                    setIsOpen(false);
-                  }}
-                  className={`px-2.5 py-1.5 text-xs hover:bg-[var(--bg-hover)] cursor-pointer flex items-center justify-between ${
-                    isSelected ? 'bg-[#f2994a]/10 text-[#f2994a] font-semibold' : 'text-[var(--primary)]'
-                  }`}
-                >
-                  <div className="flex flex-col min-w-0 pr-2">
-                    <span className="font-medium truncate tabular-nums">{item.label}</span>
-                    {item.sublabel && (
-                      <span className="text-[10px] text-[var(--muted)] truncate">{item.sublabel}</span>
-                    )}
-                  </div>
-                  {isSelected && (
-                    <Check size={12} strokeWidth={2.5} className="text-[#f2994a] flex-shrink-0" />
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            !trimmedValue && (
-              <div className="px-2.5 py-2 text-xs text-[var(--muted)] text-center">
-                Belum ada opsi terdaftar
-              </div>
-            )
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
   isOpen,
@@ -378,6 +236,8 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
             items={zoneOptions}
             placeholder="Pilih atau ketik nama zona..."
             isNewItem={isNewZone}
+            accent="#f2994a"
+            tabularNums
           />
 
           <UnifiedCombobox
@@ -387,6 +247,8 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
             items={aparOptions}
             placeholder="Pilih atau ketik kode APAR..."
             isNewItem={isNewApar}
+            accent="#f2994a"
+            tabularNums
           />
 
           <div className="grid grid-cols-2 gap-3">

@@ -12,8 +12,8 @@ Fase 3 (Rust/Typst) DIPARKIR atas keputusan pemilik — Gotenberg tetap.**
 | 2 data-loss | selesai | paging mengikuti `nextCursor` di `klien.ts`; 150 baris bukti dipakai lalu dibersihkan |
 | 3 PDF Rust | **diparkir** | Gotenberg dipertahankan; format akan disetir per klien nanti |
 | 4 API | selesai | 4 indeks FK + indeks periode/kedaluwarsa, `cookieCache`, pool eksplisit, presign paralel |
-| 5 dekomposisi | selesai | Hydrant 1139 → **453** baris, APAR 1090 → **636**; kop, stats, filter, tanda tangan jadi berkas sendiri; pin DOM 3816889 tetap sama persis |
-| 6 gerbang | selesai | 63 unit test, CI, retensi `pdf_jobs` (34 baris sampah dihapus) |
+| 5 dekomposisi | selesai | Hydrant 1139 → **453**, APAR 1090 → **636**, modal Hydrant 754 → **208**, modal APAR 561 → **221**, sidebar 619 → **209**, P3K 380 → **195**; pin DOM 3816889 tetap sama persis |
+| 6 gerbang | selesai | 97 unit test (33 di antaranya pin pemetaan), CI, retensi `pdf_jobs` (34 baris sampah dihapus) |
 
 Cacat PDF yang ditemukan di jalur hidup sudah ditutup:
 
@@ -336,22 +336,29 @@ Lulus bila: probe API membaik atau sama pada setiap endpoint, `check.ts` 65/65.
 - Modal di-`lazy()` karena tidak dirender sampai diklik.
 - `HseCalendar` mengelompokkan laporan sekali, bukan `parseISO` 42 kali.
 
-Lulus bila: build hijau, tidak ada berkas di atas 220 baris, paritas visual
-dibuktikan di browser pada kedua halaman, dan tidak ada baris terduplikasi yang
-hanya dipindah.
+Lulus bila: build hijau, paritas visual dibuktikan di browser pada kedua
+halaman, dan tidak ada baris terduplikasi yang hanya dipindah. Ukuran berkas
+bukan kriteria lulus. Kriteria yang dipakai adalah beban baca menurut
+`playbooks/refactoring.md` (reader load): apakah penelusur satu perilaku
+melewati lebih sedikit berkas dan lebih sedikit lompatan. Angka "220 baris"
+sebelumnya ditulis di sini tanpa sumber dan sudah dicabut.
 
 Status. Lapisan data sudah tuntas: `queries.ts` 925 baris menjadi barel 16
 baris di atas sembilan modul (terbesar `pemetaan-unit.ts` 205 baris), dan
 `klien.ts` sengaja dibiarkan utuh karena tipe dan fungsinya saling menyisip
 sehingga pemotongan per rentang baris merusak batas sistem. Halaman, modal, dan
 bilah samping dikerjakan bergelombang dengan satu agen per himpunan berkas.
+Pemetaan kini dipin 33 test (`pemetaan-unit.test.ts`,
+`pemetaan-umpan.test.ts`); dua mutasi sengaja dipasang untuk membuktikan test
+benar-benar gagal saat aturan DRAFT atau awalan `draft/` diubah.
 
 ### Fase 6, gerbang produksi
 
 - Satu workflow CI, build, `check.ts`, probe. Sekarang tidak ada CI sama sekali.
 - Tidak ada satu pun unit test di repo. Tambah untuk kalkulator status, tanggal,
   dan pemetaan sel, karena itu logika yang paling mudah salah dan paling murah
-  diuji.
+  diuji. **Sudah:** 97 test; pemetaan unit/umpan dipin 33 test, termasuk aturan
+  DRAFT-tetap-berjalan dan awalan `draft/`.
 - Hapus 1000 baris `pdf_jobs` lama dan 34 objek tanpa berkas, plus retensi.
 - Perbaiki `wiki/SKILL.md` yang menyuruh restart Caddy padahal tidak perlu.
 

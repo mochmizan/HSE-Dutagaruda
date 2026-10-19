@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { id as idLocale } from 'date-fns/locale';
 import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
 import { P3kInspectionModal } from './P3kInspectionModal';
+import { P3kHeader } from './P3kHeader';
+import { P3kKepala } from './P3kKepala';
+import { P3kStatistik } from './P3kStatistik';
+import { P3kTabel } from './P3kTabel';
 import { petakanGridP3k } from './petaApi';
-import { UnduhPdfButton } from '@/components/ui';
-import { TombolPerluas } from '@/features/navigation';
 import {
   useKotakP3k,
   useInspeksiP3k,
@@ -20,7 +19,6 @@ import { useKonteksLokasi } from '@/features/konteksLokasi';
 import {
   MONTH_KEYS,
   MONTH_NAMES,
-  MONTH_SHORT,
   emptyMonth,
   isMonthFilled,
   markFor,
@@ -32,15 +30,6 @@ interface P3kPageProps {
   onBack: () => void;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
-}
-
-function fmtTanggal(iso: string): string {
-  if (!iso) return '–';
-  try {
-    return format(parseISO(iso), 'dd-MMM-yy', { locale: idLocale });
-  } catch {
-    return iso;
-  }
 }
 
 /**
@@ -93,20 +82,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack, isCollapsed, onToggleC
     return { filled, kurang, kd };
   }, [grid]);
 
-  const keteranganFor = (id: number, std: number): string => {
-    const kurangMonths: string[] = [];
-    const kdMonths: string[] = [];
-    MONTH_KEYS.forEach((m, i) => {
-      const mark = markFor(id, std, grid[m]);
-      if (mark === 'kurang') kurangMonths.push(MONTH_SHORT[i]);
-      else if (mark === 'kd') kdMonths.push(MONTH_SHORT[i]);
-    });
-    const parts: string[] = [];
-    if (kdMonths.length) parts.push(`KD: ${kdMonths.join(', ')}`);
-    if (kurangMonths.length) parts.push(`Kurang: ${kurangMonths.join(', ')}`);
-    return parts.length ? parts.join(' · ') : '–';
-  };
-
   const handlePrint = () => {
     const style = document.createElement('style');
     style.id = 'p3k-print-page';
@@ -126,207 +101,31 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack, isCollapsed, onToggleC
   return (
     <main className="flex-1 flex flex-col h-screen overflow-y-auto px-6 py-4 bg-[var(--bg-main)]">
       {/* Top bar */}
-      <div className="no-print flex items-center justify-between gap-2 pb-3 mb-4 border-b border-[var(--border)]">
-        <div className="flex items-center gap-2 min-w-0">
-          {isCollapsed && <TombolPerluas onKlik={onToggleCollapsed} />}
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="Kembali"
-            className="p-1.5 rounded-[4px] text-[var(--muted)] hover:bg-[var(--bg-hover)] pressable cursor-pointer"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <h1 className="text-lg font-bold text-[var(--primary)] tracking-tight truncate">
-            Inspeksi Kotak P3K
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setYear((y) => String(Number(y) - 1))}
-              aria-label="Tahun sebelumnya"
-              className="p-1.5 rounded-[4px] text-[var(--muted)] hover:bg-[var(--bg-hover)] pressable cursor-pointer"
-            >
-              <ChevronLeft size={15} />
-            </button>
-            <span className="text-sm font-bold tabular-nums min-w-12 text-center">{year}</span>
-            <button
-              type="button"
-              onClick={() => setYear((y) => String(Number(y) + 1))}
-              aria-label="Tahun berikutnya"
-              className="p-1.5 rounded-[4px] text-[var(--muted)] hover:bg-[var(--bg-hover)] pressable cursor-pointer"
-            >
-              <ChevronRight size={15} />
-            </button>
-          </div>
-          <UnduhPdfButton category="p3k-yearly" refId={jangkarEkspor} label="Unduh PDF" namaBerkas={year} />
-          <button
-            type="button"
-            onClick={handlePrint}
-            title="Cetak lembar laporan ke printer atau simpan sebagai PDF"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#27ae60] rounded-[4px] hover:brightness-95 pressable cursor-pointer"
-          >
-            <Printer size={13} /> Cetak
-          </button>
-        </div>
-      </div>
+      <P3kHeader
+        isCollapsed={isCollapsed}
+        onToggleCollapsed={onToggleCollapsed}
+        onBack={onBack}
+        year={year}
+        onShiftYear={(delta) => setYear((y) => String(Number(y) + delta))}
+        jangkarEkspor={jangkarEkspor}
+        onPrint={handlePrint}
+      />
 
       {/* Stats */}
-      <div className="no-print grid grid-cols-3 gap-3 mb-4">
-        {[
-          { label: 'Bulan Terisi', value: `${stats.filled}/12` },
-          { label: 'Sel Di Bawah Standar', value: String(stats.kurang) },
-          { label: 'Kadaluarsa', value: String(stats.kd) },
-        ].map((s) => (
-          <div
-            key={s.label}
-            className="px-3 py-2.5 rounded-[6px] border border-[var(--border)] bg-[var(--bg-sidebar)]/60"
-          >
-            <p className="text-xl font-bold tabular-nums text-[var(--primary)]">{s.value}</p>
-            <p className="text-[10px] text-[var(--muted)] mt-0.5">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      <P3kStatistik filled={stats.filled} kurang={stats.kurang} kd={stats.kd} />
 
       {/* Paper header */}
       <div className="bg-white dark:bg-[var(--bg-main)] print:bg-white">
-        <h2 className="text-base font-bold text-center text-[var(--primary)] tracking-tight print:text-black">
-          INSPEKSI KOTAK P3K
-        </h2>
-        <div className="mt-1 px-2 py-1 text-[11px] font-semibold bg-[#dbe7f3] dark:bg-[var(--bg-sidebar)] print:bg-[#dbe7f3] print:text-black rounded-[3px] tabular-nums">
-          Periode : {year}
-        </div>
-        <div className="mt-1.5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[11px] print:text-[10px] print:text-black">
-          <span>
-            <span className="font-semibold">Unit Kerja : </span>
-            <input
-              value={unitKerja}
-              onChange={(e) => setUnitKerja(e.target.value)}
-              aria-label="Unit Kerja"
-              className="no-print w-28 bg-transparent border-b border-[var(--border)] focus:outline-none focus:border-[#27ae60] px-1"
-            />
-            <span className="hidden print:inline">{unitKerja}</span>
-          </span>
-          <span>
-            <span className="font-semibold">Lokasi Kerja : </span>
-            <input
-              value={lokasiKerja}
-              onChange={(e) => setLokasiKerja(e.target.value)}
-              aria-label="Lokasi Kerja"
-              className="no-print w-48 bg-transparent border-b border-[var(--border)] focus:outline-none focus:border-[#27ae60] px-1"
-            />
-            <span className="hidden print:inline">{lokasiKerja}</span>
-          </span>
-          <span className="sm:ml-auto text-[var(--muted)] print:text-black">
-            <span className="font-semibold">Keterangan: </span>
-            Standar ( √ ) | Di Bawah Standar ( × ) | Kadaluarsa (KD)
-          </span>
-        </div>
-        <p className="no-print text-[11px] text-[var(--muted)] mt-1.5 mb-2">
-          Klik nama bulan untuk mengisi hasil pemeriksaan bulan tersebut.
-        </p>
+        <P3kKepala
+          year={year}
+          unitKerja={unitKerja}
+          onUbahUnitKerja={setUnitKerja}
+          lokasiKerja={lokasiKerja}
+          onUbahLokasiKerja={setLokasiKerja}
+        />
 
         {/* Yearly grid */}
-        <div className="overflow-x-auto border border-[var(--border)] print:border-black bg-[var(--bg-main)] dark:bg-[var(--bg-main)] print:bg-white shadow-2xs print:shadow-none rounded-[6px] print:rounded-none">
-          <table className="w-full border-collapse text-xs print:text-[7px] min-w-[1024px] print:min-w-0">
-            <thead>
-              <tr className="border-b border-[var(--border)] print:border-black bg-[var(--bg-sidebar)]/80 print:bg-white text-[10px] print:text-[7px] font-bold text-[var(--primary)] print:text-black">
-                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">NO.</th>
-                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">ITEM</th>
-                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">JUMLAH STANDAR</th>
-                {MONTH_KEYS.map((m, i) => (
-                  <th key={m} className="py-1 px-1 text-center align-middle print:py-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveMonth(m)}
-                      title={`Isi ${MONTH_NAMES[i]} ${year}`}
-                      className="no-print inline-flex items-center gap-1 font-bold hover:text-[#27ae60] pressable cursor-pointer tabular-nums"
-                    >
-                      {MONTH_SHORT[i]}
-                      {isMonthFilled(grid[m]) && (
-                        <span className="text-[8px] text-[#27ae60] font-bold">●</span>
-                      )}
-                    </button>
-                    <span className="hidden print:inline tabular-nums">{MONTH_SHORT[i]}</span>
-                  </th>
-                ))}
-                <th className="py-1.5 px-2 text-center align-middle print:py-0.5 print:px-1">KETERANGAN</th>
-              </tr>
-            </thead>
-            <tbody>
-              {STANDARD_P3K_ITEMS.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-b border-[var(--border)]/60 print:border-black last:border-none"
-                >
-                  <td className="py-1 px-2 text-center align-middle tabular-nums text-[var(--secondary)] print:py-[1px] print:px-1">
-                    {item.id}
-                  </td>
-                  <td className="py-1 px-2 text-left align-middle text-[var(--primary)] print:py-[1px] print:px-1 print:whitespace-nowrap">
-                    {item.name}
-                  </td>
-                  <td className="py-1 px-2 text-center align-middle tabular-nums text-[var(--secondary)] print:py-[1px] print:px-1">
-                    {item.standardQty}
-                  </td>
-                  {MONTH_KEYS.map((m) => {
-                    const mark = markFor(item.id, item.standardQty, grid[m]);
-                    return (
-                      <td
-                        key={m}
-                        className={`py-1 px-1 text-center align-middle tabular-nums font-semibold print:py-[1px] ${
-                          mark === 'kurang' || mark === 'kd' ? 'bg-red-500/[0.07]' : ''
-                        }`}
-                      >
-                        {mark === 'standar' ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">√</span>
-                        ) : mark === 'kurang' ? (
-                          <span className="text-red-600 dark:text-red-400">×</span>
-                        ) : mark === 'kd' ? (
-                          <span className="text-red-600 dark:text-red-400 font-bold">KD</span>
-                        ) : (
-                          <span className="font-normal text-[var(--muted)]">–</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                  <td className="py-1 px-2 text-left align-middle text-[10px] print:text-[6px] text-[var(--secondary)] print:py-[1px] print:px-1 print:leading-tight">
-                    {keteranganFor(item.id, item.standardQty)}
-                  </td>
-                </tr>
-              ))}
-              <tr className="border-t border-[var(--border)] print:border-black bg-[var(--bg-sidebar)]/50 print:bg-white">
-                <td colSpan={3} className="py-1.5 px-2 text-center align-middle text-[10px] print:text-[7px] font-bold text-[var(--primary)] print:text-black print:py-0.5 print:px-1">
-                  TANGGAL INSPEKSI
-                </td>
-                {MONTH_KEYS.map((m) => (
-                  <td
-                    key={m}
-                    className="py-1.5 px-1 text-center align-middle text-[10px] print:text-[7px] tabular-nums text-[var(--secondary)] print:py-0.5 print:whitespace-nowrap"
-                  >
-                    {fmtTanggal(grid[m]?.tanggal ?? '')}
-                  </td>
-                ))}
-                <td className="py-1.5 px-2 text-center align-middle text-[var(--muted)] print:py-0.5">–</td>
-              </tr>
-              <tr className="border-t border-[var(--border)] print:border-black bg-[var(--bg-sidebar)]/50 print:bg-white">
-                <td colSpan={3} className="py-1.5 px-2 text-center align-middle text-[10px] print:text-[7px] font-bold text-[var(--primary)] print:text-black print:py-0.5 print:px-1">
-                  PARAF &amp; INISIAL
-                </td>
-                {MONTH_KEYS.map((m) => (
-                  <td
-                    key={m}
-                    className="py-1.5 px-1 text-center align-middle text-[10px] print:text-[7px] text-[var(--secondary)] print:py-0.5"
-                  >
-                    {grid[m]?.paraf?.trim() ? grid[m]?.paraf : '–'}
-                  </td>
-                ))}
-                <td className="py-1.5 px-2 text-center align-middle text-[var(--muted)] print:py-0.5">–</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <P3kTabel grid={grid} year={year} onPilihBulan={setActiveMonth} />
 
         <p className="mt-1.5 text-[11px] print:text-[7px] italic text-[var(--secondary)] print:text-black print:mt-0.5">
           Catatan: Apabila jumlah di bawah standar, maka harus diisi kembali sesuai dengan jumlah

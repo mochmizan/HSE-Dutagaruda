@@ -30,7 +30,12 @@ the Hono API through these hooks.
     `api/queries-patroli.ts`: mutations per category.
   - `api/queries-foto.ts`: `useUnggahFoto`, `useHapusFoto`, `useFotoInspeksi`.
   - `api/pemetaan.ts`: barrel over `pemetaan-unit.ts` (unit + year card) and
-    `pemetaan-umpan.ts` (patrol findings + dashboard feed).
+    `pemetaan-umpan.ts` (patrol findings + dashboard feed). Both are pinned by
+    `pemetaan-unit.test.ts` / `pemetaan-umpan.test.ts` (33 tests): DRAFT stays
+    `SEDANG_BERJALAN`, period filtering is `YYYY-MM`, CO2 weight is CO2-only,
+    unknown units fall back to `–`, and `draft/` photo keys render as
+    placeholders. Change a mapper only with those tests updated in the same
+    commit.
   Mutations invalidate on settle; `useUbahButirP3k` and
   `useHapusTemuanPatroli` are optimistic with rollback.
   `useBatalkanTerbitHidran` is the Hydrant batalkan-terbit command: PATCHes one

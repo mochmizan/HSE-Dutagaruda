@@ -6,3 +6,4 @@ export * from './cards';
 export * from './ConfirmModal';
 export * from './FileFotoButton';
 export * from './UnduhPdfButton';
+export * from './UnifiedCombobox';
