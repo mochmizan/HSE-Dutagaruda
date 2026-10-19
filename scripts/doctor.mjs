@@ -6,9 +6,9 @@ const cek = (nama, lulus, detail = "") => (lulus ? ok : fail).push(`${lulus ? "L
 
 const sh = async (cmd, args) => {
   const p = Bun.spawn([cmd, ...args], { stdout: "pipe", stderr: "pipe" });
-  const out = await new Response(p.stdout).text();
+  const [out, err] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]);
   await p.exited;
-  return { code: p.exitCode, out: out.trim() };
+  return { code: p.exitCode, out: out.trim(), err: err.trim() };
 };
 
 cek("bun", true, Bun.version);
@@ -49,6 +49,9 @@ cek("env-garage-kunci", kunciOk, !env ? "infra/.env hilang" : kunciOk ? "ok" : "
 
 const git = await sh("git", ["status", "--short"]);
 cek("git-bersih", git.out === "", git.out.split("\n").length + " berkas kotor");
+
+const dist = await sh("bun", ["scripts/cek-dist.mjs"]);
+cek("dist-konsisten", dist.code === 0, dist.code === 0 ? "" : (dist.err || dist.out).split("\n")[0]);
 
 console.log([...ok, ...fail].join("\n"));
 console.log(fail.length === 0 ? "DOCTOR: semua hijau." : `DOCTOR: ${fail.length} gagal.`);
