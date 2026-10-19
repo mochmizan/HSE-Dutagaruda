@@ -187,6 +187,18 @@ anything (takeover lesson: L/K items were already on disk).
   sha256; single-query feed reads stay; delete cascades. In build now.
 - Paper-scan diff for print fidelity: BLOCKED — no scan provided yet.
   Owner supplies one paper scan per category to unblock.
+- **PDF format work: PARKED (Oct 19).** Gotenberg stays; no Rust/Typst
+  migration until the owner reopens it. Owner will drive format per client,
+  not by editing templates. Direction if it resumes: three layers — (1) API
+  emits one shared `Dokumen` type instead of HTML, (2) a per-client config
+  file (`format/klien-<x>.json`: paper size, margins, orientation, font,
+  accent, visible column order + widths, labels, kop, footer, signature
+  block, photos per row), (3) one Typst renderer with zero client-specific
+  code. Honest limit: unproven that a JSON profile covers every client
+  variation; validate on 2–3 real cases before promising it.
+- **Kop name: DECIDED Oct 19 (owner).** Printing `sites.name` is intentional.
+  The seed value "Lokasi Fasilitas Utama" is a real site name, not a
+  placeholder to replace. Do not "fix" this in the print template.
 
 ## Team (poteto-agent roster, reuse via sessionID)
 
@@ -263,3 +275,54 @@ anything (takeover lesson: L/K items were already on disk).
 - Watch next: web dist must be rebuilt + `restart caddy` after ANY web
   edit or reviewers see stale UI; api image bakes a COPY of apps/api
   (rebuild after src edits, restart is not enough).
+
+## Debrief (Oct 19 — refactor kinerja; plan deleted after execution)
+
+The plan file `wiki/plans/20261019-kinerja-rust.md` is **deleted**. This
+debrief is now the durable record; the measured artifacts stay in
+`wiki/artifacts/20261019-kinerja/` (git-ignored, kept by design).
+
+- Fase 0 pin: `baseline-ui.json` + `scripts/bench/pin-ui.ts`. It is a
+  library driven by hand from the browser, NOT a CI gate, and
+  `scripts/bench/README.md` (which the script points at) does not exist.
+- Fase 1 infra: Caddy `encode zstd gzip` — web cold load 421 KB raw →
+  123 KB on the wire (71 %). Root build now really builds web; package
+  `preview` renamed `@viaannn/web`. `dist-konsisten` doctor check.
+- Fase 2: `ambilSemua` follows `nextCursor`; patrol list embeds
+  `findings` (N+1 removed); SQL filter for inspection lists.
+- Fase 4: FK + filter/expiry indexes (verified in Postgres), redundant
+  org check removed, `cookieCache` 300 s, explicit postgres-js pool
+  (`DB_POOL_MAX` 10), `presignedPhotoRows` via `Promise.all`.
+- Fase 5: `queries.ts` 925 → 16-line barrel over 9 modules. Pages:
+  Hydrant 1139 → 453, APAR 1090 → 636. Modals: Hydrant 754 → 208,
+  APAR 561 → 221. Sidebar 619 → 209, P3K 380 → 195. DOM parity vs
+  `3816889` proven in a browser. `klien.ts` (413) stays whole on
+  purpose: types and functions interleave, range-slicing breaks the
+  system boundary.
+- Fase 6: CI workflow, 97 unit tests (was 63). 33 pin the mappers —
+  DRAFT stays `SEDANG_BERJALAN`, period filter is `YYYY-MM`, CO2 weight
+  is CO2-only, unknown unit → `–`, `draft/` photo key → placeholder.
+  `apps/web/tsconfig.json` gained `baseUrl`/`paths` so `bun test` can
+  resolve `@/*`; it was a solution-only config before.
+- PDF defects closed on the live path: Hydrant monthly 4.3 MB → 41 KB
+  / 1 page (cause: export query missing the `photos.temuan` filter);
+  APAR monthly 34 KB / 2 pages; APAR card 49 KB / 1 page; Patrol 16 KB;
+  P3K prints `TANGGAL INSPEKSI` + `PARAF PETUGAS`.
+- RAM: Gotenberg idle 371 MiB → 12.25 MiB (−96.7 %), Chromium idle
+  processes 7 → 0, `/tmp` 286 MB → 68 KB, whole stack ~180 MiB.
+- Deliberately NOT done, and why: shared primitives `FilterTabs`,
+  `ComponentChips`, `useHapusCakupan` never existed as duplicates, so
+  there was nothing to extract; `lazy()` on modals was dropped (no
+  measurement justified it); the `queries.ts` barrel was kept so the 15
+  existing call sites did not churn. The "no file above 220 lines" gate
+  in the plan was invented with no source and is withdrawn — the real
+  criterion is reader load, per `playbooks/refactoring.md`.
+- Still owed: automate the DOM pin in CI (needs a browser runner); add
+  `scripts/bench/README.md` or drop the pointer; `toPeriodIso` returns
+  `"NaN-NaN-01T…"` on invalid input in both `dates.ts` (no callers);
+  `apps/api/src/routes/inspections.ts` tenant scoping has no live-DB
+  test; no P3K/Patrol live fixtures.
+- `pdf_jobs` retensi exists (`apps/api/src/retensi-pdf.ts`, dry-run by
+  default, `--hapus` to apply; `done` > 30 days, `failed`/`queued` >
+  24 h). It has not been run yet — 1067 rows still present, oldest
+  6 days, so nothing is due under the 30-day rule.
