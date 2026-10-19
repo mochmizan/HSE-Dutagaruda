@@ -18,9 +18,19 @@ the Hono API through these hooks.
   trusts these types. Carries photo
   (`unggahFoto` multipart via `livePostForm`, `hapusFoto`) and PDF export
   (`eksporPdf`, `ambilPdfJob`) contracts.
-- `api/queries.ts`: TanStack Query hooks (`useSesi`-style naming in
-  Indonesian: `useUnitHidran`, `useSimpanInspeksiApar`, …), query keys under
-  `kunci`, mappers `petakan*` (API rows → UI models in `types/hse.ts`).
+- `api/queries.ts`: barrel only. The TanStack Query hooks live in per-domain
+  modules so no single file grows past ~200 lines. Every existing import from
+  `@/services/api/queries` still resolves.
+  - `api/queries-dasar.ts`: `Period`, `kunci` (query keys), `gagal`, PDF export
+    (`jalankanEkspor`, `unduhBerkas`), and the two shared helpers
+    `hapusZonaBilaKosong` / `idZonaAtauBuat`.
+  - `api/queries-baca.ts`: read queries (lokasi, zona, unit, inspeksi, umpan)
+    plus lokasi mutations.
+  - `api/queries-hidran.ts`, `api/queries-apar.ts`, `api/queries-p3k.ts`,
+    `api/queries-patroli.ts`: mutations per category.
+  - `api/queries-foto.ts`: `useUnggahFoto`, `useHapusFoto`, `useFotoInspeksi`.
+  - `api/pemetaan.ts`: barrel over `pemetaan-unit.ts` (unit + year card) and
+    `pemetaan-umpan.ts` (patrol findings + dashboard feed).
   Mutations invalidate on settle; `useUbahButirP3k` and
   `useHapusTemuanPatroli` are optimistic with rollback.
   `useBatalkanTerbitHidran` is the Hydrant batalkan-terbit command: PATCHes one
@@ -55,7 +65,9 @@ the Hono API through these hooks.
 ## Work Guidance
 
 - No ad-hoc `fetch()` in components; add endpoints to `klien.ts`, hooks to
-  `queries.ts`.
+  the matching `queries-*.ts` module (they are re-exported by `queries.ts`).
+- Keep `queries.ts`, `pemetaan.ts`, and `klien.ts` barrels thin. New hooks go
+  in a domain module, never back into the barrel.
 - New mutations follow the pattern: `onSettled` invalidate the touched keys
   (including `['umpan']` when calendar data changes); optimistic only where
   rollback is trivial.
