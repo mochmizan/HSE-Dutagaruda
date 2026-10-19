@@ -12,7 +12,7 @@ Fase 3 (Rust/Typst) DIPARKIR atas keputusan pemilik — Gotenberg tetap.**
 | 2 data-loss | selesai | paging mengikuti `nextCursor` di `klien.ts`; 150 baris bukti dipakai lalu dibersihkan |
 | 3 PDF Rust | **diparkir** | Gotenberg dipertahankan; format akan disetir per klien nanti |
 | 4 API | selesai | 4 indeks FK + indeks periode/kedaluwarsa, `cookieCache`, pool eksplisit, presign paralel |
-| 5 dekomposisi | selesai | Hydrant 1139 → 705 baris, APAR 1090 → 912; paritas tabel diverifikasi di browser |
+| 5 dekomposisi | selesai | Hydrant 1139 → **453** baris, APAR 1090 → **636**; kop, stats, filter, tanda tangan jadi berkas sendiri; pin DOM 3816889 tetap sama persis |
 | 6 gerbang | selesai | 63 unit test, CI, retensi `pdf_jobs` (34 baris sampah dihapus) |
 
 Cacat PDF yang ditemukan di jalur hidup sudah ditutup:
