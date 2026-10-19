@@ -104,7 +104,10 @@ export const hydrantUnits = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("hydrant_units_company_id_idx").on(t.companyId)],
+  (t) => [
+    index("hydrant_units_company_id_idx").on(t.companyId),
+    index("hydrant_units_site_id_idx").on(t.siteId),
+  ],
 );
 
 export const aparUnits = pgTable(
@@ -129,7 +132,11 @@ export const aparUnits = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("apar_units_company_id_idx").on(t.companyId)],
+  (t) => [
+    index("apar_units_company_id_idx").on(t.companyId),
+    index("apar_units_site_id_idx").on(t.siteId),
+    index("apar_units_company_expired_idx").on(t.companyId, t.expiredDate),
+  ],
 );
 
 export const p3kBoxes = pgTable(
@@ -147,7 +154,10 @@ export const p3kBoxes = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("p3k_boxes_company_id_idx").on(t.companyId)],
+  (t) => [
+    index("p3k_boxes_company_id_idx").on(t.companyId),
+    index("p3k_boxes_site_id_idx").on(t.siteId),
+  ],
 );
 
 export const hydrantInspections = pgTable(
@@ -178,6 +188,7 @@ export const hydrantInspections = pgTable(
   },
   (t) => [
     index("hydrant_inspections_company_id_idx").on(t.companyId),
+    index("hydrant_inspections_company_period_idx").on(t.companyId, t.period),
     unique("hydrant_inspections_unit_period_unique").on(t.unitId, t.period),
   ],
 );
@@ -212,6 +223,7 @@ export const aparInspections = pgTable(
   },
   (t) => [
     index("apar_inspections_company_id_idx").on(t.companyId),
+    index("apar_inspections_company_period_idx").on(t.companyId, t.period),
     unique("apar_inspections_unit_period_unique").on(t.unitId, t.period),
   ],
 );
@@ -282,7 +294,10 @@ export const safetyPatrolReports = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("safety_patrol_reports_company_id_idx").on(t.companyId)],
+  (t) => [
+    index("safety_patrol_reports_company_id_idx").on(t.companyId),
+    index("safety_patrol_reports_site_id_idx").on(t.siteId),
+  ],
 );
 
 export const safetyPatrolFindings = pgTable(

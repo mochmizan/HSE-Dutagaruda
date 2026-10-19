@@ -43,6 +43,13 @@
       "when": 1792371461436,
       "tag": "0005_normal_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792371549648,
+      "tag": "0006_mysterious_dragon_lord",
+      "breakpoints": true
     }
   ]
 }
