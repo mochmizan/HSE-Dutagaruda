@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useDismiss, closeOnBackdrop } from './useDismiss';
 
@@ -13,6 +14,19 @@ interface ConfirmModalProps {
   onConfirm: () => void;
 }
 
+/**
+ * Konfirmasi di atas modal lain.
+ *
+ * Wajib lewat portal ke `document.body`. Panel induk memakai `.emil-modal`,
+ * yang menganimasikan `transform: scale(1)`; elemen bertransformasi menjadi
+ * containing block untuk `position: fixed`, jadi tanpa portal backdrop
+ * konfirmasi ini menyusut mengikuti panel induk (bukan viewport) dan muncul
+ * sebagai kotak abu-abu yang salah tempat.
+ *
+ * `escKey="escape-only"`: Esc hanya menutup lapisan ini, bukan modal induk.
+ * Tanpa itu dua listener jendela menyala bersamaan dan satu Esc menghapus
+ * konfirmasi sekaligus formulir di belakangnya.
+ */
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   title,
@@ -22,11 +36,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  useDismiss(isOpen, onClose);
+  useDismiss(isOpen, onClose, 'escape-only');
   if (!isOpen) return null;
-  return (
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs select-none"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs select-none"
       onMouseDown={(e) => closeOnBackdrop(e, onClose)}
     >
       <div
@@ -68,6 +83,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
