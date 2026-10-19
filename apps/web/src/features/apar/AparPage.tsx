@@ -24,11 +24,10 @@ import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
 import { PrintButton, UnduhPdfButton, ViewToggle } from '@/components/ui';
 import {
-  COMPONENT_LABELS,
-  ComponentChip,
-  EligibilityBadge,
   unitHasIssue,
 } from './AparBadges';
+import { AparTable } from './AparTable';
+import { AparCards } from './AparCards';
 import {
   petakanUnitApar,
   petakanKartuApar,
@@ -79,20 +78,7 @@ const formatNoList = (kodes: string[]): string => {
   return `${kodes.slice(0, -1).join(', ')}, dan ${kodes[kodes.length - 1]}`;
 };
 
-/** Tampilan gabungan: draft menang atas laporan terbit; nilai undefined dilewati. */
-const getEffectiveDetails = (unit: AparUnitItem) => {
-  const rep = unit.completedReport?.aparDetails as Record<string, string | undefined> | undefined;
-  const draft = unit.draftDetails as Record<string, string | undefined> | undefined;
-  if (!rep && !draft) return undefined;
-  const merged: Record<string, string | undefined> = { ...rep };
-  for (const [k, v] of Object.entries(draft ?? {})) {
-    if (v !== undefined) merged[k] = v;
-  }
-  return merged;
-};
-
 export type { AparCardsState } from '../../lib/aparSync';
-
 interface AparPageProps {
   onBack: () => void;
   /** Permintaan sunting dari dasbor: buka modal inspeksi rekam dengan id ini. */
@@ -169,13 +155,16 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
     const idUnit = new Set(unitSite.map((u) => u.id));
     return (inspeksiQuery.data ?? []).filter((i) => idUnit.has(i.unitId));
   }, [inspeksiQuery.data, unitSite]);
-  const units = petakanUnitApar(
-    unitSite,
-    inspeksiSite,
-    lokasi.zonaIdKeNama,
-    period,
+  const units = useMemo(
+    () => petakanUnitApar(unitSite, inspeksiSite, lokasi.zonaIdKeNama, period),
+    [unitSite, inspeksiSite, lokasi.zonaIdKeNama, period],
   );
-  const cards: AparCardsState = petakanKartuApar(unitSite, inspeksiSite);
+  // Kartu tahunan menghitung 12 bulan untuk setiap unit. Tanpa memo, ini
+  // berjalan pada setiap ketikan di kotak pencarian dan setiap render ulang.
+  const cards: AparCardsState = useMemo(
+    () => petakanKartuApar(unitSite, inspeksiSite),
+    [unitSite, inspeksiSite],
+  );
 
   // Bersihkan kelas cetak setiap dialog cetak ditutup
   useEffect(() => {
@@ -759,121 +748,9 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
             )}
           </div>
         ) : viewMode === 'TABLE' ? (
-          <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
-            <table className="apar-report-table w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
-              <thead>
-                <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-                  <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
-                  <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Kode APAR</th>
-                  <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Zona</th>
-                  <th className="py-2.5 px-3 min-w-[110px] text-center align-middle">Jenis / Ukuran</th>
-                  <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Periode Expired</th>
-                  <th className="py-2.5 px-3 min-w-[264px] text-center align-middle">Verifikasi 7 Komponen</th>
-                  <th className="py-2.5 px-3 min-w-[140px] text-center align-middle">Status Kelayakan</th>
-                  <th className="py-2.5 px-3 min-w-[170px] text-center align-middle">Petugas &amp; Tanggal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)] text-xs">
-                {filteredUnits.map((unit, idx) => {
-                  const details = getEffectiveDetails(unit) as Record<string, string | undefined> | undefined;
-                  const isCompleted = unit.status === 'SELESAI';
-                  const remaining = daysToExpiry(unit.expiredDate);
-                  return (
-                    <tr
-                      key={unit.id}
-                      onClick={() => handleOpenInspection(unit)}
-                      title="Klik baris untuk melihat detail atau memperbarui hasil inspeksi"
-                      className={`transition-colors cursor-pointer ${
-                        remaining < 0
-                          ? 'bg-gradient-to-r from-red-500/[0.12] via-red-500/[0.06] to-red-500/[0.02] dark:from-red-500/[0.18] dark:via-red-500/[0.09] dark:to-red-500/[0.04] hover:from-red-500/[0.18] hover:to-red-500/[0.08]'
-                          : isCompleted
-                          ? 'bg-gradient-to-r from-emerald-500/[0.12] via-emerald-500/[0.06] to-emerald-500/[0.02] dark:from-emerald-500/[0.18] dark:via-emerald-500/[0.09] dark:to-emerald-500/[0.04] hover:from-emerald-500/[0.18] hover:to-emerald-500/[0.08]'
-                          : 'hover:bg-[var(--bg-hover)]/60'
-                      }`}
-                    >
-                      <td className="py-2.5 px-3 text-center align-middle font-mono text-[var(--muted)] tabular-nums">{idx + 1}</td>
-                      <td className="py-2.5 px-3 text-center align-middle font-semibold text-[var(--primary)] font-mono tabular-nums">{unit.kode}</td>
-                      <td className="py-2.5 px-3 text-center align-middle font-semibold text-[var(--primary)]">{unit.zoneName}</td>
-                      <td className="py-2.5 px-3 text-center align-middle text-[var(--secondary)]">
-                        {unit.jenis} • {unit.ukuran}
-                      </td>
-                      <td className={`py-2.5 px-3 text-center align-middle tabular-nums ${remaining <= 90 ? 'text-amber-600 dark:text-amber-400 font-semibold' : 'text-[var(--secondary)]'}`}>
-                        {formatIndonesianDate(parseISO(unit.expiredDate))}
-                      </td>
-                      <td className="py-2.5 px-3 text-left align-middle">
-                        <div className="apar-chip-wrap flex items-center justify-start gap-1 flex-wrap">
-                          {COMPONENT_LABELS.map((c) => (
-                            <ComponentChip key={c.key} label={c.label} status={details?.[c.key]} />
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-center align-middle"><EligibilityBadge unit={unit} /></td>
-                      <td className="py-2.5 px-3 text-center align-middle text-[11px] text-[var(--secondary)]">
-                        <div className="leading-tight flex flex-col items-center justify-center">
-                          <p className="font-medium text-[var(--primary)] truncate max-w-[160px]">{unit.inspectorName || '–'}</p>
-                          <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 tabular-nums">
-                            {unit.lastInspectionDate
-                              ? format(parseISO(unit.lastInspectionDate), 'dd MMM yyyy', { locale: idLocale })
-                              : unit.scheduledDate || 'Bulan Ini'}
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <AparTable units={filteredUnits} onBuka={handleOpenInspection} />
         ) : (
-          <div className="apar-card-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredUnits.map((unit) => {
-              const details = getEffectiveDetails(unit) as Record<string, string | undefined> | undefined;
-              const isCompleted = unit.status === 'SELESAI';
-              const isOnProgress = unit.status === 'SEDANG_BERJALAN';
-              return (
-                <div
-                  key={unit.id}
-                  className={`p-3.5 rounded-[6px] border bg-[var(--bg-main)] hover:shadow-xs transition-all flex flex-col justify-between ${
-                    isOnProgress ? 'border-amber-500/40' : isCompleted ? 'border-emerald-500/30' : 'border-[var(--border)]'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="text-sm font-bold text-[var(--primary)] tracking-tight font-mono tabular-nums">
-                          APAR {unit.kode}
-                        </h3>
-                        <span className="text-[10px] text-[var(--secondary)]">
-                          {unit.zoneName} • {unit.jenis} {unit.ukuran}
-                        </span>
-                      </div>
-                      <EligibilityBadge unit={unit} />
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-[var(--border)]">
-                      <div className="flex flex-wrap gap-1">
-                        {COMPONENT_LABELS.map((c) => (
-                          <ComponentChip key={c.key} label={c.label} status={details?.[c.key]} />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-[var(--muted)] font-mono tabular-nums">
-                      Exp. {format(parseISO(unit.expiredDate), 'dd MMM yyyy', { locale: idLocale })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectUnit(unit.kode)}
-                      className="no-print px-3 py-1 text-xs font-semibold rounded-[4px] text-white shadow-xs cursor-pointer pressable"
-                      style={{ backgroundColor: APAR_ACCENT }}
-                    >
-                      Buka Kartu
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <AparCards units={filteredUnits} onPilihKartu={handleSelectUnit} aksen={APAR_ACCENT} />
         )}
 
         </div>

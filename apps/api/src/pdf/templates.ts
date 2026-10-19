@@ -77,8 +77,16 @@ td.note { font-style:italic; text-align:left; }
 .p3k .sign td { font-size:7pt; }
 .p3k .sign .space { height:36px; }
 .p3k .foot { margin-top:5px; font-size:6.5pt; }
+.p3k-paraf { margin-top:6px; }
+.p3k-paraf th { text-transform:uppercase; }
+.p3k-paraf-cell { height:26px; }
 .foot { margin-top:10px; font-size:7pt; color:#6b7280; text-align:right; }
 .empty { margin:10px 0; font-size:8pt; color:#6b7280; font-style:italic; }
+.page-break { break-before:page; page-break-before:always; }
+.catatan-manual { border:1px solid #9ca3af; border-radius:4px; padding:8px 10px; min-height:110px; }
+.catatan-label { margin:0 0 6px 0; font-weight:700; font-size:8pt; }
+.catatan-lines { display:flex; flex-direction:column; gap:16px; }
+.catatan-lines span { display:block; border-bottom:1px dotted #9ca3af; height:0; }
 </style>
 </head>
 <body>
@@ -268,8 +276,14 @@ export function aparMonthly(data: AparMonthlyData): string {
   <thead><tr><th style="width:26px">No.</th><th style="width:70px">Kode</th><th style="width:110px">Zona / Jenis</th><th>Verifikasi 7 Komponen</th><th style="width:80px">Status</th><th style="width:150px">Catatan / Tindak Lanjut</th></tr></thead>
   <tbody>${rows}</tbody>
 </table>
+<div class="page-break"></div>
 <h2 class="sec">B. Kadaluwarsa APAR</h2>
 ${expiring}
+<h2 class="sec">C. Catatan Tambahan</h2>
+<div class="catatan-manual">
+  <p class="catatan-label">Catatan :</p>
+  <div class="catatan-lines"><span></span><span></span><span></span><span></span></div>
+</div>
 ${signatures()}
 <p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · ${data.rows.length} unit</p>`,
   });
@@ -328,6 +342,8 @@ export interface P3kYearlyData {
   siteName: string;
   tahun: number;
   items: { name: string; standardQty: number; perMonth: (Status | null)[] }[];
+  /** Tanggal inspeksi terakhir pada tahun ini, bila ada rekam. */
+  inspectionDate?: string | null;
 }
 
 export function p3kYearly(data: P3kYearlyData): string {
@@ -359,6 +375,18 @@ export function p3kYearly(data: P3kYearlyData): string {
 <table class="grid">
   <thead><tr><th style="width:26px">No.</th><th style="text-align:left">Nama Barang</th><th style="width:52px">Standar</th>${monthNames.map((m) => `<th style="width:34px">${m}</th>`).join("")}</tr></thead>
   <tbody>${rows}</tbody>
+</table>
+<table class="grid p3k-paraf">
+  <tbody>
+    <tr>
+      <th style="width:130px; text-align:left">TANGGAL INSPEKSI</th>
+      <td class="left num">${esc(data.inspectionDate ? formatIndonesianDate(data.inspectionDate) : "…………………………")}</td>
+    </tr>
+    <tr>
+      <th style="text-align:left">PARAF PETUGAS</th>
+      <td class="left p3k-paraf-cell">…………………………</td>
+    </tr>
+  </tbody>
 </table>
 ${signatures()}
 <p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · Tanda: ✓ standar · ✗ di bawah standar · K kedaluwarsa</p></div>`,

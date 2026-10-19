@@ -42,7 +42,6 @@ interface HydrantInspectionModalProps {
   menghapusUnit?: boolean;
 }
 
-const AKSIEN_HYDRANT = '#eb5757';
 const KETERANGAN_FOTO = 'Bukti inspeksi';
 
 /** Label tampilan tiap komponen untuk baris catatan gabungan. */
@@ -203,6 +202,28 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
     }
   }, [boxHydrant, fireHose, hoseCoupling, hoseRack, nozzle, valvePillar, isOverridden]);
 
+  // Esc + kunci scroll badan saat terbuka. Kontrak features/AGENTS.md mewajibkan
+  // Esc menutup modal; versi sebelumnya hanya punya backdrop click, sehingga
+  // papan ketik tidak bisa keluar dari formulir Hydrant.
+  //
+  // WAJIB di atas `if (!isOpen || !unit) return null` di bawah: efek ini harus
+  // dipanggil pada setiap render, sama seperti hook lain. Menaruhnya setelah
+  // early return mengubah jumlah hook antar-render dan menjatuhkan halaman
+  // dengan React error #310.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !unit) return null;
 
   /** Rekam yang sedang tampil; `terbit` hanya benar bila rekam ini ada. */
@@ -249,23 +270,6 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
       setMenerbitkan(false);
     }
   };
-
-  // Esc + kunci scroll badan saat terbuka. Kontrak features/AGENTS.md mewajibkan
-  // Esc menutup modal; versi sebelumnya hanya punya backdrop click, sehingga
-  // papan ketik tidak bisa keluar dari formulir Hydrant.
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [isOpen, onClose]);
 
   return (
     <div

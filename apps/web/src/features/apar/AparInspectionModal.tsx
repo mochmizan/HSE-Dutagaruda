@@ -51,8 +51,6 @@ const COMPONENT_FIELDS: { key: keyof AparDraft & string; label: string; hint: st
   { key: 'katupTuas', label: '7. Katup/Tuas', hint: 'Tuas Penekan' },
 ];
 
-const APAR_ACCENT = '#f2994a';
-
 const OPTIONS: AparComponentStatus[] = ['BAIK', 'TIDAK_BAIK', 'NA'];
 
 /** Label tanpa nomor urut untuk baris catatan gabungan. */

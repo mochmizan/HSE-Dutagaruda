@@ -300,6 +300,8 @@ async function loadP3kYearly(refId: string, owned: string): Promise<P3kYearlyDat
     boxName: a.boxName,
     siteName: a.siteName,
     tahun: Number(year),
+    // Baris TANGGAL INSPEKSI di kertas: tanggal rekam terakhir pada tahun itu.
+    inspectionDate: toPeriodKey(a.period),
     items: STANDARD_P3K_ITEMS.filter((cat) => perMonth.has(cat.name)).map((cat) => ({
       name: cat.name,
       standardQty: standardQty.get(cat.name) ?? cat.standardQty,

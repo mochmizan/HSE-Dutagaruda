@@ -1,28 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Flame,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
   Plus,
   Search,
-  ChevronRight,
   ChevronLeft,
   ChevronDown,
-  ExternalLink,
+  ChevronRight,
   Printer,
-  Check,
-  X,
-  Camera,
 } from 'lucide-react';
-import { format, addMonths, subMonths, parseISO, isValid } from 'date-fns';
+import { format, addMonths, subMonths } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { HydrantUnitItem, InspectionReport } from '../../types/hse';
 import { HydrantInspectionModal } from './HydrantInspectionModal';
+import { HydrantTable } from './HydrantTable';
+import { HydrantCards } from './HydrantCards';
+import { HydrantFindings } from './HydrantFindings';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';
 import { HydrantFindingItem } from './types';
-import { PhotoCard, UnduhPdfButton, ViewToggle } from '@/components/ui';
+import { UnduhPdfButton, ViewToggle } from '@/components/ui';
 import {
   petakanUnitHidran,
   useUnitHidran,
@@ -41,9 +37,11 @@ import { useKonteksLokasi } from '@/features/konteksLokasi';
 import { TombolPerluas } from '@/features/navigation';
 import type { ApiInspeksiHidran } from '@/services/api/klien';
 
+/** Aksen halaman Hydrant, satu tempat. */
+const AKSEN = '#2f80ed';
+
 interface HydrantPageProps {
   onBack: () => void;
-  onOpenReportDetail?: (report: InspectionReport) => void;
   /** Permintaan sunting dari dasbor: buka modal inspeksi rekam dengan id ini. */
   suntingRefId?: { kategori: string | null; refId: string } | null;
   onSuntingSelesai?: () => void;
@@ -52,7 +50,6 @@ interface HydrantPageProps {
 }
 
 export const HydrantPage: React.FC<HydrantPageProps> = ({
-  onOpenReportDetail,
   suntingRefId,
   onSuntingSelesai,
   isCollapsed,
@@ -684,394 +681,18 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             </div>
           </div>
         ) : viewMode === 'TABLE' ? (
-          /* ========================================================================= */
-          /* TABLE LAYOUT: Print-ready, compact, comprehensive industrial inspection sheet */
-          /* ========================================================================= */
-          <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
-            <table className="w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
-              <thead>
-                <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-                  <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
-                  <th className="py-2.5 px-3 min-w-[90px] text-center align-middle">Kode Unit</th>
-                  <th className="py-2.5 px-3 min-w-[210px] text-center align-middle">Lokasi & Zona</th>
-                  <th className="py-2.5 px-3 min-w-[264px] text-center align-middle">
-                    <div className="flex items-center justify-center gap-1 text-center">
-                      <span>Verifikasi 6 Komponen</span>
-                    </div>
-                  </th>
-                  <th className="py-2.5 px-3 min-w-[140px] text-center align-middle">Status Kelayakan</th>
-                  <th className="py-2.5 px-3 min-w-[200px] text-center align-middle">Petugas & Tanggal</th>
-                  <th className="py-2.5 px-3 min-w-[280px] text-center align-middle">Catatan / Temuan</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border)] text-xs">
-                {filteredUnits.map((unit, idx) => {
-                  const isCompleted = unit.status === 'SELESAI';
-                  const isOnProgress = unit.status === 'SEDANG_BERJALAN';
-
-                  // Component status lookup from completed report or draft
-                  const details = unit.completedReport?.hydrantDetails || unit.draftDetails;
-                  const box = details?.boxHydrant;
-                  const hose = details?.fireHose;
-                  const coupling = details?.hoseCoupling;
-                  const rack = details?.hoseRack;
-                  const nozzle = details?.nozzle;
-                  const valve = details?.valvePillar;
-                  const isUnitTidakLayak =
-                    unit.completedReport?.overallStatus === 'TIDAK_LAYAK' ||
-                    unit.draftDetails?.overallStatus === 'TIDAK_LAYAK' ||
-                    [box, hose, coupling, rack, nozzle, valve].some(
-                      (s) => s === 'TIDAK_LAYAK' || s === 'HILANG'
-                    );
-
-                  // Real notes lookup from completed report or draft details (no hardcoded placeholder)
-                  const notesText =
-                    unit.completedReport?.summaryNotes ||
-                    unit.draftDetails?.notes ||
-                    '';
-
-                  return (
-                    <tr
-                      key={unit.id}
-                      onClick={() => setActiveInspectionUnit(unit)}
-                      title="Klik baris untuk melihat detail atau memperbarui hasil inspeksi"
-                      className={`transition-colors cursor-pointer ${
-                        isUnitTidakLayak
-                          ? 'bg-gradient-to-r from-[#eb5757]/[0.12] via-[#eb5757]/[0.06] to-[#eb5757]/[0.02] dark:from-[#eb5757]/[0.18] dark:via-[#eb5757]/[0.09] dark:to-[#eb5757]/[0.04] hover:from-[#eb5757]/[0.18] hover:to-[#eb5757]/[0.08]'
-                          : isCompleted
-                          ? 'bg-gradient-to-r from-emerald-500/[0.12] via-emerald-500/[0.06] to-emerald-500/[0.02] dark:from-emerald-500/[0.18] dark:via-emerald-500/[0.09] dark:to-emerald-500/[0.04] hover:from-emerald-500/[0.18] hover:to-emerald-500/[0.08]'
-                          : isOnProgress
-                          ? 'bg-[#eb5757]/[0.02] hover:bg-[var(--bg-hover)]/60'
-                          : 'hover:bg-[var(--bg-hover)]/60'
-                      }`}
-                    >
-                      {/* 1. Index No. */}
-                      <td className="py-2.5 px-3 text-center align-middle font-mono text-[var(--muted)] tabular-nums">
-                        {idx + 1}
-                      </td>
-
-                      {/* 2. Kode Unit (Text Only) */}
-                      <td className="py-2.5 px-3 text-center align-middle font-semibold text-[var(--primary)] font-mono">
-                        <span>{unit.kode}</span>
-                      </td>
-
-                      {/* 3. Lokasi & Zona */}
-                      <td className="py-2.5 px-3 text-center align-middle font-semibold text-[var(--primary)]">
-                        <span>{unit.zoneName}</span>
-                      </td>
-
-                      {/* 4. 6 Komponen Checklist */}
-                      <td className="py-2.5 px-3 text-left align-middle">
-                        <div className="flex items-center justify-start gap-1 flex-wrap">
-                          {[
-                            { label: 'Box Hydrant', status: box },
-                            { label: 'Fire Hose', status: hose },
-                            { label: 'Hose Coupling', status: coupling },
-                            { label: 'Hose Rack', status: rack },
-                            { label: 'Nozzle', status: nozzle },
-                            { label: 'Valve/Pillar Hydrant', status: valve },
-                          ].map((item) => {
-                            const isOk = item.status === 'LAYAK';
-                            const isNotLayak = item.status === 'TIDAK_LAYAK' || item.status === 'HILANG';
-                            const isChecked = Boolean(item.status);
-
-                            return (
-                              <span
-                                key={item.label}
-                                title={`${item.label}: ${item.status || 'Belum diperiksa'}`}
-                                className={`px-1.5 py-0.5 rounded-[3px] text-[10px] font-mono border inline-flex items-center gap-0.5 ${
-                                  isOk
-                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold'
-                                    : isNotLayak
-                                    ? 'bg-red-500/20 border-red-500/40 text-red-600 dark:text-red-400 font-bold'
-                                    : isChecked
-                                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
-                                    : 'bg-[var(--bg-hover)] border-[var(--border)] text-[var(--muted)]'
-                                }`}
-                              >
-                                <span>{item.label}</span>
-                                {isOk ? (
-                                  <Check size={9} strokeWidth={2.5} />
-                                ) : isNotLayak ? (
-                                  <X size={10} strokeWidth={2.5} className="text-red-600 dark:text-red-400" />
-                                ) : (
-                                  <span className="text-[8px] text-[var(--muted)]">•</span>
-                                )}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </td>
-
-                      {/* 5. Status Kelayakan */}
-                      <td className="py-2.5 px-3 text-center align-middle">
-                        {isUnitTidakLayak ? (
-                          <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
-                            <X size={11} strokeWidth={2.5} /> TIDAK LAYAK
-                          </span>
-                        ) : isCompleted ? (
-                          <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            <CheckCircle2 size={11} /> LAYAK
-                          </span>
-                        ) : isOnProgress ? (
-                          <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                            <Clock size={11} /> Berjalan
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-medium bg-[var(--bg-hover)] text-[var(--muted)] border border-[var(--border)]">
-                            <AlertCircle size={11} /> Belum Dimulai
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 6. Petugas & Tanggal */}
-                      <td className="py-2.5 px-3 text-center align-middle text-[11px] text-[var(--secondary)]">
-                        <div className="leading-tight text-center flex flex-col items-center justify-center">
-                          <p className="font-medium text-[var(--primary)] truncate max-w-[190px] text-center">
-                            {unit.inspectorName || 'Alex Chen (Staff)'}
-                          </p>
-                          <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 text-center">
-                            {(() => {
-                        if (!isCompleted || !unit.completedReport) return unit.scheduledDate || 'Bulan Ini';
-                        const t = parseISO(unit.completedReport.date);
-                        return isValid(t) ? format(t, 'dd MMM yyyy', { locale: idLocale }) : unit.scheduledDate || 'Bulan Ini';
-                      })()}
-                          </p>
-                        </div>
-                      </td>
-
-                      {/* 7. Catatan / Temuan (Shows actual notes, never placeholder) */}
-                      <td className="py-2.5 px-3 text-center align-middle text-[11px] text-[var(--secondary)]">
-                        <div className="flex items-start justify-center text-left">
-                          {notesText ? (
-                            <span
-                              className="italic line-clamp-3 max-w-[320px] text-[var(--primary)] inline-block"
-                              title={notesText}
-                            >
-                              {notesText.split('\n').filter(Boolean).map((baris, idx) => (
-                                <span key={idx} className="block leading-snug">
-                                  {baris}
-                                </span>
-                              ))}
-                            </span>
-                          ) : (
-                            <span className="text-[var(--muted)] text-[10px] text-center inline-block">
-                              –
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <HydrantTable units={filteredUnits} onBuka={setActiveInspectionUnit} />
         ) : (
-          /* ========================================================================= */
-          /* CARD GRID LAYOUT (Alternative view mode) */
-          /* ========================================================================= */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredUnits.map((unit) => {
-              const isCompleted = unit.status === 'SELESAI';
-              const isOnProgress = unit.status === 'SEDANG_BERJALAN';
-
-              // Component status lookup
-              const details = unit.completedReport?.hydrantDetails || unit.draftDetails;
-              const box = details?.boxHydrant;
-              const hose = details?.fireHose;
-              const coupling = details?.hoseCoupling;
-              const rack = details?.hoseRack;
-              const nozzle = details?.nozzle;
-              const valve = details?.valvePillar;
-              const isUnitTidakLayak =
-                unit.completedReport?.overallStatus === 'TIDAK_LAYAK' ||
-                unit.draftDetails?.overallStatus === 'TIDAK_LAYAK' ||
-                [box, hose, coupling, rack, nozzle, valve].some(
-                  (s) => s === 'TIDAK_LAYAK' || s === 'HILANG'
-                );
-
-              return (
-                <div
-                  key={unit.id}
-                  className={`p-3.5 rounded-[6px] border bg-[var(--bg-main)] hover:shadow-xs transition-all flex flex-col justify-between ${
-                    isUnitTidakLayak
-                      ? 'border-red-500/40 bg-gradient-to-r from-red-500/[0.04] to-transparent'
-                      : isOnProgress
-                      ? 'border-[#eb5757]/40 bg-gradient-to-r from-[#eb5757]/[0.03] to-transparent'
-                      : isCompleted
-                      ? 'border-emerald-500/30'
-                      : 'border-[var(--border)]'
-                  }`}
-                >
-                  <div>
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="text-sm font-bold text-[var(--primary)] tracking-tight font-mono">
-                          {unit.kode}
-                        </h3>
-                        <span className="text-[10px] text-[var(--secondary)]">
-                          {unit.zoneName}
-                        </span>
-                      </div>
-
-                      {/* Status */}
-                      {isUnitTidakLayak ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
-                          <X size={11} strokeWidth={2.5} /> TIDAK LAYAK
-                        </span>
-                      ) : isCompleted ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 size={11} /> LAYAK
-                        </span>
-                      ) : isOnProgress ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                          <Clock size={11} /> Berjalan
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[10px] font-medium bg-[var(--bg-hover)] text-[var(--muted)]">
-                          Belum Dimulai
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 6 Components mini chips */}
-                    <div className="mt-3 pt-2 border-t border-[var(--border)]">
-                      <div className="flex flex-wrap gap-1">
-                        {[
-                          { label: 'Box Hydrant', status: box },
-                          { label: 'Fire Hose', status: hose },
-                          { label: 'Hose Coupling', status: coupling },
-                          { label: 'Hose Rack', status: rack },
-                          { label: 'Nozzle', status: nozzle },
-                          { label: 'Valve/Pillar Hydrant', status: valve },
-                        ].map((item) => {
-                          const isOk = item.status === 'LAYAK' || (isCompleted && !item.status && !isUnitTidakLayak);
-                          const isNotLayak = item.status === 'TIDAK_LAYAK' || item.status === 'HILANG';
-                          const isChecked = Boolean(item.status) || isCompleted;
-
-                          return (
-                            <span
-                              key={item.label}
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono flex items-center gap-1 border ${
-                                isOk
-                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold'
-                                  : isNotLayak
-                                  ? 'bg-red-500/20 border-red-500/40 text-red-600 dark:text-red-400 font-bold'
-                                  : isChecked
-                                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
-                                  : 'bg-[var(--bg-hover)] border-dashed border-[var(--border)] text-[var(--muted)]'
-                              }`}
-                            >
-                              {isOk ? (
-                                <Check size={9} strokeWidth={2.5} />
-                              ) : isNotLayak ? (
-                                <X size={10} strokeWidth={2.5} className="text-red-600 dark:text-red-400" />
-                              ) : (
-                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
-                              )}
-                              <span>{item.label}</span>
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer & Action */}
-                  <div className="mt-3 pt-2.5 border-t border-[var(--border)] flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-[var(--muted)] font-mono">
-                      {(() => {
-                        if (!isCompleted || !unit.completedReport) return unit.scheduledDate || 'Bulan Ini';
-                        const t = parseISO(unit.completedReport.date);
-                        return isValid(t) ? format(t, 'dd MMM yyyy', { locale: idLocale }) : unit.scheduledDate || 'Bulan Ini';
-                      })()}
-                    </span>
-
-                    {isCompleted ? (
-                      <button
-                        type="button"
-                        onClick={() => setActiveInspectionUnit(unit)}
-                        title="Buka form inspeksi bulan ini"
-                        className="px-2.5 py-1 text-xs font-semibold rounded-[4px] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer flex items-center gap-1 pressable"
-                      >
-                        <span>Lihat Laporan</span>
-                        <ExternalLink size={11} />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setActiveInspectionUnit(unit)}
-                        className="px-3 py-1 text-xs font-semibold rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white shadow-xs cursor-pointer flex items-center gap-1 pressable disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <span>{isOnProgress ? 'Lanjutkan' : 'Mulai Inspeksi'}</span>
-                        <ChevronRight size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <HydrantCards units={filteredUnits} onBuka={setActiveInspectionUnit} aksen={AKSEN} />
         )}
       </div>
 
-      {/* ========================================================================= */}
-      {/* SECTION B: CATATAN HASIL TEMUAN */}
-      {/* ========================================================================= */}
-      <div className="my-8 border-t border-[var(--border)] print:border-t print:border-black print:my-6 print:break-before-page" />
-
-      <div className="space-y-4">
-        {/* Section Header */}
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-bold text-[var(--primary)] tracking-tight print:text-black print:text-sm">
-              B. Catatan Hasil temuan
-            </h2>
-            <p className="no-print text-xs text-[var(--muted)] mt-0.5">
-              Dokumentasi foto dan catatan fisik ketidaksesuaian unit hydrant di lapangan
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsAddFindingModalOpen(true)}
-            className="no-print px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Camera size={13} strokeWidth={2.2} />
-            <span>Tambah Temuan</span>
-          </button>
-        </div>
-
-        {/* Finding Cards Grid (no table, card only - 75% scaled size) */}
-        {findings.length === 0 ? (
-          <div className="p-8 rounded-[6px] border border-dashed border-[var(--border)] text-center text-xs text-[var(--muted)] space-y-2">
-            <Camera size={24} className="mx-auto text-[var(--muted)] opacity-60" />
-            <p className="font-semibold text-[var(--secondary)]">Belum ada catatan hasil temuan</p>
-            <p className="text-[11px]">
-              Klik tombol "+ Tambah Temuan" untuk menambahkan dokumentasi foto temuan fisik.
-            </p>
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto w-full px-2 sm:px-4">
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 gap-y-10 sm:gap-y-12 print:max-w-none print:grid-cols-2 print:gap-x-24 print:gap-y-10"
-              style={{ columnGap: 'clamp(3.5rem, 7vw, 6.5rem)' }}
-            >
-              {findings.map((finding) => (
-                <PhotoCard
-                  key={finding.id}
-                  imageUrl={finding.imageUrl}
-                  caption={finding.description}
-                  onDelete={() => handleDeleteFinding(finding.id)}
-                  deleteTitle="Hapus temuan"
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      <HydrantFindings
+        findings={findings}
+        onTambah={() => setIsAddFindingModalOpen(true)}
+        onHapus={handleDeleteFinding}
+        aksen={AKSEN}
+      />
 
       {/* Formal Printable Document Signature Footer (Visible only when printed) */}
       <div className="hidden print:block pt-8 mt-8 border-t border-black print:break-inside-avoid">
