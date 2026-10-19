@@ -24,6 +24,14 @@
     file_server
   }
 
+  # Gambar publik non-hash (kop laporan). URL-nya statis, jadi `immutable` akan
+  # menahan logo lama setahun di peramban saat berkas diganti. Tujuh hari cukup
+  # untuk menghapus permintaan berulang tanpa mengunci penggantian.
+  handle /findings/* {
+    header Cache-Control "public, max-age=604800"
+    file_server
+  }
+
   # Shell SPA selalu divalidasi ulang. Tanpa ini peramban memakai index.html
   # lama (heuristik ETag/Last-Modified) bersama bundel lama, sehingga perubahan
   # yang sudah ter-build tidak sampai ke peninjau (Okt 18: tombol Edit "tidak
