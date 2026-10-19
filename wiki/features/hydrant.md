@@ -1,6 +1,8 @@
 # Inspeksi Hydrant
 
-Halaman pola master (aksen `#eb5757`): pengalih bulan + 2 statistik + tabs +
+Halaman pola master (aksen `#eb5757`): pengalih bulan (tombol `Bulan Ini`
+di kiri pengalih, tampil hanya saat tidak di bulan berjalan) + 2 statistik +
+tabs +
 tabel/kartu unit, klik baris membuka modal inspeksi 6 komponen, Section B
 temuan foto di bawah, cetak A4 portrait (tabel + temuan + tanda tangan 3
 kolom).
@@ -8,18 +10,89 @@ kolom).
 ## Sub-features
 
 - `hydrant-open` membuka modal inspeksi dari klik baris tabel.
-- `hydrant-save` menyimpan draf 6 komponen + foto + catatan + override.
+- `hydrant-save` menyimpan 6 komponen + foto + catatan + override lewat
+  `Terbitkan` (biru `#2f80ed`; sebelumnya tombol merah `Selesaikan &
+  Terbitkan Laporan`, tombol `Simpan Sebagai Draft` dihapus Okt 17).
+  Istilah select komponen: `STANDAR` / `TIDAK STANDAR` / `HILANG` (nilai
+  API tetap `LAYAK` / `TIDAK_LAYAK` / `HILANG` — jangan samakan teks
+  dengan nilai). Kontrak catatan (Okt 17, revisi terbit-reaksi): blok
+  foto paling ATAS di form = SATU kartu selebar satu kolom (`grid
+  grid-cols-2` berisi kartu itu saja): label + tombol unggah di baris
+  atas, pratinjau foto BERTUMPUK di bawahnya (`w-full h-auto
+  object-contain`, tanpa kotak rasio/`object-cover`), placeholder
+  bergaris putus `Belum ada foto` saat kosong, tiap kartu komponen SELALU
+  memuat kotak komentar — terkunci
+  (`Komponen standar — tanpa catatan`) saat status `LAYAK`, bisa diisi
+  saat `TIDAK STANDAR` / `HILANG` (termasuk `HILANG` sendirian),
+  label catatan bebas jadi `Catatan Temuan
+  Tambahan` diikuti textarea `Tindakan Rekomendasi / Tindak Lanjut
+  (opsional)`; terbit menyatukan komentar komponen + tambahan + tindak
+  lanjut ke satu `notes` sebagai baris berlabel (`Box Hydrant: …`,
+  `Catatan: …`, `Tindak Lanjut: …` via `susunCatatan`), dibuka-ulang
+  diurai balik (`uraiCatatan`). Kolom Catatan tabel merender gabungan itu
+  sebagai daftar baris-per-baris (split `\n`), bukan kalimat berkuotasi.
+- `hydrant-terbit-state` — terbit = sifat REKAM TERPERSISTENSI, bukan state
+  lokal modal: kolom `hydrant_inspections.approval_status`
+  (`DRAFT|DIAJUKAN|DIKETAHUI|DISETUJUI`); baris terbit bila
+  `approvalStatus !== 'DRAFT'`. Klik `Terbitkan` menulis `DIAJUKAN`; baris
+  jangkar unggah foto (tanpa terbit) tetap `DRAFT`. Penanda `terbit` di modal
+  hanya punya SATU penulis — efek `[isOpen, inspeksi?.id,
+  inspeksi?.approvalStatus]` — jadi ia cerminan rekam, bukan dugaan lokal:
+  penerbitan yang gagal tak menyisakan potret `Terbit` palsu, dan `Edit` yang
+  gagal tak menyisakan form terbuka di atas rekam terbit. Karena itu tutup +
+  buka-ulang modal unit terbit tetap baca-saja (`fieldset` dinonaktifkan;
+  unggah/hapus foto disembunyikan; badge `Terbit` di header) — baris `DRAFT`
+  tetap terbuka dalam modus sunting.
+  Tombol utama berganti `Edit` yang berarti BATALKAN TERBIT:
+  `useBatalkanTerbitHidran` menulis SATU medan (`approvalStatus: 'DRAFT'`) pada
+  id yang sedang tampil — satu medan supaya cache lama tak menimpa kolom lain —
+  dan menulis baris balasan server ke cache, sehingga baris keluar dari tab
+  `Selesai Diperiksa`: `petakanUnitHidran` (`services/api/queries.ts`)
+  memetakan `DRAFT` ke `SEDANG_BERJALAN` (tab On Progress, tombol kartu
+  `Lanjutkan`) dan `!= DRAFT` ke `SELESAI`. Terbitkan ulang memakai id rekam
+  yang sama. Kedua arah ditunggu: selama proses tombol berbunyi `Membatalkan…`
+  / `Menerbitkan…` dan nonaktif, dan potret tidak berubah sebelum server
+  menjawab; bila tulisan gagal, potret bertahan dan pesannya lewat alert
+  mutasi. Saat mode terbit, kontrol unggah foto
+  hilang dari kartu `Bukti Inspeksi`; modal tanpa `Batal`.
+  Unggah foto tidak menunggu terbit: bila belum ada
+  rekam bulan+unit, unggahan membuat baris inspeksi jangkar lalu menempel
+  fotonya, dan baris jangkar itu tetap `DRAFT` (ikut terbaca sedang
+  berjalan, bukan selesai).
+- `hydrant-delete-scope` (Okt 18, revisi "double hapus"): satu tombol `Hapus`
+  yang artinya bergeser menurut ada/tidaknya rekam bulan diganti DUA label
+  tetap — baris tabel adalah UNIT, rekam inspeksi hanya anaknya per bulan,
+  jadi hapus tidak menunggu batal-terbit. `Hapus unit` (selalu ada, termasuk
+  saat terbit) menghapus unit + seluruh rekam + seluruh foto, lalu menutup
+  modal; `Kosongkan bulan ini` (hanya bila ada rekam bulan tampil)
+  menghapus rekam bulan itu + fotonya, unit tetap ada dan kembali
+  "Belum Dimulai". Keduanya lewat `ConfirmModal` dengan tombol
+  `Batal` + `Ya, hapus` — judul/pesan menyebut cakupannya
+  (`Hapus Unit` / `Kosongkan Inspeksi Bulan Ini`). `Edit` tetap murni
+  non-destruktif: hanya batalkan terbit, tak pernah menghapus. Zona yang
+  kosong (tak ada unit tersisa) ikut dihapus oleh hook, bukan laman.
+- `hydrant-foto-jenis` (Okt 18): kolom `photos.temuan` (boolean, default
+  `false`; migrasi `0004_natural_franklin_richards.sql`) memisah dua
+  dokumentasi pada satu rekam. Unggahan kartu `Bukti Inspeksi` menulis
+  `temuan=false` dan TIDAK tampil di Section B; `Tambah Temuan` menulis
+  `temuan=true` dan HANYA itu yang tampil di Section B (`findings =
+  foto.filter(f => f.temuan)`). Daftar foto bukti di modal dibaca dari API
+  (`useFotoInspeksi(inspeksiAktif)`, saring `!temuan`) — bukan state sesi —
+  jadi foto tidak hilang saat modal ditutup atau halaman dimuat ulang.
 - `hydrant-add-unit` mendaftarkan zona + kode unit non-sekuensial via modal.
 - `hydrant-finding` menambah temuan Section B (foto wajib + caption).
-- `hydrant-print` mengunduh PDF A4 via `POST /api/export/hydrant/:refId`.
-- `hydrant-delete-month` menghapus permanen rekam bulan ini (beserta foto)
-  via tombol `Hapus` di modal + langkah konfirmasi `ConfirmModal`. Tombol
-  tampil untuk setiap rekam tersimpan (draf tersimpan maupun terbit);
-  modal draf menutup setelah simpan berhasil agar buka-ulang membaca
-  daftar pasca-simpan. Bulan tanpa rekam: `Hapus` menghapus UNIT sebaris
-  seluruh datanya (`hydrant-delete-unit`); zona yang kosong (tak ada unit
-  tersisa) ikut dihapus. Kartu statistik memakai gradien (emerald pada
-  kartu Selesai).
+- `hydrant-print` mengunduh PDF A4 via `POST /api/export/hydrant-monthly/
+  :refId` (kategori `hydrant-monthly`, bukan `hydrant`) → polling
+  `GET /api/pdf-jobs/:id` (terverifikasi live Okt 17: 201 → done +
+  downloadUrl).
+- `hydrant-delete-month` → diganti `hydrant-delete-scope` (Okt 18, di atas):
+  tidak ada lagi satu tombol `Hapus` yang berganti arti; hapus rekam bulan
+  = `Kosongkan bulan ini`, hapus baris = `Hapus unit` (tersedia juga saat
+  terbit). Kartu statistik memakai gradien (emerald pada kartu Selesai).
+- Tabel utama memakai garis grid penuh (border tiap sel via arbitrary
+  variant `[&_th]:border … [&_td]:border …` pada `<table>`, token
+  `--border`, `border-collapse` menggabung jadi garis tunggal) — Okt 18,
+  sama di tabel utama APAR.
 
 ## How to get to it (user POV)
 
@@ -27,9 +100,10 @@ kolom).
 - Klik satu baris tabel unit → modal `Formulir Pemeriksaan`.
 - Tombol tambah unit/zona di atas tabel (find-or-create zona duplikat).
 - Form `Tambah` Section B di bawah tabel (grid `PhotoCard` 2 kolom).
-- Tombol `Hapus` di modal inspeksi rekam tersimpan (draf tersimpan maupun
-  terbit; bulan tanpa rekam = hapus UNIT sebaris datanya) — laporan final
-  saat simpan, tanpa alur persetujuan.
+- Hapus di modal inspeksi: `Hapus unit` (selalu ada, termasuk saat terbit)
+  dan `Kosongkan bulan ini` (bila ada rekam bulan tampil) — keduanya
+  `Ya, hapus` setelah konfirmasi; laporan final saat simpan, tanpa alur
+  persetujuan.
 - Tombol `Unduh PDF` di halaman/modal.
 
 ## Driving it with HTTP + browser
@@ -58,9 +132,11 @@ Preconditions:
 - **Modal browser.** Di halaman `Inspeksi Hydrant`, klik baris pertama
   (find+click dalam SATU evaluate). Teks body memuat `Formulir
   Pemeriksaan`. Tutup via `Esc`.
-- **Draf browser.** Di modal, ubah satu select komponen + catat. Simpan.
-  Buka ulang modal: nilai tersimpan (tampilan kedua). Foto: slot `Bukti
-  inspeksi` mengunggah ke `/api/uploads` dan bertahan di daftar foto sesi.
+- **Terbit browser.** Di modal, ubah satu select komponen + kotak
+  komentarnya + catatan, lalu `Terbitkan` (tombol simpan draf dan
+  `Batal` sudah tidak ada). Buka ulang modal: nilai tersimpan
+  (tampilan kedua). Foto: slot `Bukti inspeksi` mengunggah ke
+  `/api/uploads` dan bertahan di daftar foto sesi.
 - **Bukti.** Simpan `units.json`, `inspections.json`, snapshot teks-body
   modal terbuka, dan `PROOF.md` (ID fitur `hydrant-open`, entry yang
   dipakai) di `wiki/artifacts/<run-id>/hydrant/`.
@@ -68,11 +144,37 @@ Preconditions:
 ## Gotchas
 
 - Kartu statistik tinggal 2 (Total + Selesai Diperiksa; kartu Progress dan
-  Kemajuan dihapus total Okt 17): rata tanpa gradient/background, border +
-  teks berwarna saja. Emoji ikon kartu (🏢) UTF-8 langsung — pernah rusak
-  jadi mojibake `ðŸ¢` (penulis non-UTF-8); sapu `ð` bila muncul lagi.
+  Kemajuan dihapus total Okt 17): kartu Total polos (border + teks
+  berwarna saja), kartu Selesai Diperiksa bergradien emerald halus —
+  jangan asert keduanya tanpa gradien. Emoji ikon kartu UTF-8 langsung —
+  pernah rusak jadi mojibake (penulis non-UTF-8); sapu karakter asal ð bila muncul lagi.
+- Mojibake double-encode (`â€¢` `â€œ` `â€“`) pernah lolos ke tabel
+  Verifikasi 6 Komponen (chip `Hose Rackâ€¢`, catatan, dash). Sapu tiga
+  inilah bila muncul lagi — tulis karakter UTF-8 langsung (• “ ” –).
+- Kotak □ di sel Catatan = karakter kontrol U+009D yang menyusup di sumber
+  JSX tepat sesudah map baris catatan (HydrantPage L855, Okt 18) — disapu
+  habis (satu-satunya di kedua halaman); sel kini hanya merender baris
+  `split('\n')`. Jangan tempel teks dari luar ke JSX tanpa sapu kontrol
+  (`sapu-kontrol.js` di `%TEMP%\opencode` untuk audit).
+- Aksen biru `#2f80ed` seragam lintas kategori untuk aksi utama (tidak
+  mengikuti aksen halaman): `Tambah Zona & Unit`, `Tambah Temuan`, `+ Tambah Unit
+  Baru` + `Tampilkan Semua Unit` (kosong), `Lanjutkan`/`Mulai Inspeksi`
+  kartu, select + chevron pengalih bulan, `Terbitkan`, `Edit`. Tab
+  aktif memakai pil putih tipis (`bg-white text-[var(--primary)]`,
+  ketiga tab seragam, plus `dark:bg-[var(--bg-hover)]` — pil putih polos
+  menenggelamkan teks pada mode gelap); badge jumlah tab TIDAK berubah
+  warna saat tab
+  aktif (`Sedang Berjalan` tetap amber-500/15, `Selesai Diperiksa`
+  tetap emerald-500/15, `Semua Unit` netral) — jangan pernah putihkan
+  badge; `Semua Unit` tetap merah `#eb5757`, `Selesai Diperiksa` tetap
+  hijau. Pengalih `Tabel`/`Kartu` pakai komponen shared `ViewToggle`
+  (`ui/Switchers.tsx`) — pil putih aktif seragam + varian dark, tanpa
+  salinan inline per halaman (APAR sama).
 - Bulan default halaman = bulan berjalan nyata (pernah hardcode September —
   jangan asert nama bulan statis).
+- Subjudul modal inspeksi masih hardcode `Periode: September 2026` (tidak
+  ikut bulan aktif halaman) — jangan asert teks `September` di modal;
+  observasi produk dicatat Okt 17 (perbaikannya di luar lingkup wiki).
 - Klik baris mati pada baris completed tanpa fallback modal = regresi
   (pernah terjadi; fallback ke modal wajib ada).
 - Duplikat bulan: `POST` inspeksi dua kali untuk unit+period sama → 409 +

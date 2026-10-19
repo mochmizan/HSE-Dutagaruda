@@ -62,6 +62,15 @@ export function useUbahLokasi() {
   });
 }
 
+export function useHapusLokasi() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => k.hapusLokasi(id),
+    onSettled: () => void qc.invalidateQueries({ queryKey: kunci.lokasi }),
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 export function useZona() {
   return useQuery({
     queryKey: kunci.zona,
@@ -230,6 +239,28 @@ export function useSimpanInspeksiHidran() {
   });
 }
 
+/** Batalkan terbit rekam yang terbit. Satu medan saja (`approval_status` →
+ *  `DRAFT`) supaya komponen/notes dari cache lama tak menimpa perubahan orang
+ *  lain, dan baris di cache ditulis dari balasan server. Modal membuka form dari
+ *  rekam itu, bukan dari dugaan lokal, jadi refetch latar tak bisa membuka
+ *  rekam yang masih terbit. */
+export function useBatalkanTerbitHidran() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => k.ubahInspeksiHidran(id, { approvalStatus: 'DRAFT' }),
+    onSuccess: (row) => {
+      qc.setQueryData<k.ApiInspeksiHidran[]>(kunci.inspeksiHidran, (lama) =>
+        lama?.map((i) => (i.id === row.id ? row : i)),
+      );
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiHidran });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 /** Hapus inspeksi hidran bulan: foto anak dibersihkan dulu (API menolak dengan
  * 409 bila foto masih lekat), lalu rekam inspeksinya. */
 export function useHapusInspeksiHidran() {
@@ -349,6 +380,26 @@ export function useSimpanInspeksiApar() {
   return useMutation({
     mutationFn: async ({ id, ...body }: SimpanAparArgs) =>
       id ? k.ubahInspeksiApar(id, body) : k.buatInspeksiApar(body),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
+/** Batalkan terbit APAR: satu medan (`approval_status` → DRAFT), lalu baris di
+ *  cache ditulis dari balasan server. Modal membaca mode baca-saja dari rekam,
+ *  bukan dari dugaan lokal. */
+export function useBatalkanTerbitApar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => k.ubahInspeksiApar(id, { approvalStatus: 'DRAFT' }),
+    onSuccess: (row) => {
+      qc.setQueryData<k.ApiInspeksiApar[]>(kunci.inspeksiApar, (lama) =>
+        lama?.map((i) => (i.id === row.id ? row : i)),
+      );
+    },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: kunci.inspeksiApar });
       void qc.invalidateQueries({ queryKey: ['umpan'] });
@@ -529,6 +580,8 @@ export interface FotoTampil {
   id: string;
   url: string;
   caption: string;
+  /** `true` = catatan hasil temuan (Section B); `false` = bukti inspeksi. */
+  temuan: boolean;
 }
 
 export function useUnggahFoto() {
@@ -539,7 +592,8 @@ export function useUnggahFoto() {
       inspectionId: string;
       file: File;
       caption?: string;
-    }) => k.unggahFoto(args.kind, args.inspectionId, args.file, args.caption),
+      temuan?: boolean;
+    }) => k.unggahFoto(args.kind, args.inspectionId, args.file, args.caption, args.temuan),
     onSuccess: (_foto, args) => invalidateFoto(qc, args.inspectionId),
     onError: (err) => window.alert(gagal(err)),
   });
@@ -554,14 +608,23 @@ export function useHapusFoto() {
   });
 }
 
-/** Daftar foto satu inspeksi (kontrak menunggu endpoint GET /api/photos dari pekerja J). */
-export function useFotoInspeksi(inspectionId: string | null) {
+/** Daftar foto satu inspeksi. `temuan` membedakan catatan hasil temuan dari
+ *  bukti inspeksi; satu rekam bisa punya keduanya. */
+export function useFotoInspeksi(
+  inspectionId: string | null,
+  kind: 'hydrant' | 'apar' = 'hydrant',
+) {
   return useQuery({
-    queryKey: ['foto-inspeksi', inspectionId],
+    queryKey: ['foto-inspeksi', kind, inspectionId],
     enabled: inspectionId != null,
     queryFn: async () => {
-      const res = await k.ambilFotoInspeksi('hydrant', inspectionId as string);
-      return res.items.map((f) => ({ id: f.id, url: livePhotoUrl(f.id), caption: f.caption ?? '' }));
+      const res = await k.ambilFotoInspeksi(kind, inspectionId as string);
+      return res.items.map((f) => ({
+        id: f.id,
+        url: livePhotoUrl(f.id),
+        caption: f.caption ?? '',
+        temuan: f.temuan,
+      }));
     },
   });
 }
@@ -632,9 +695,11 @@ export function useHapusTemuanPatroli() {
 
 // ── Mutasi foto inspeksi ──
 
-/** Mutasi foto (unggah/hapus) juga membarui daftar foto per inspeksi. */
-function invalidateFoto(qc: ReturnType<typeof useQueryClient>, inspectionId?: string) {
-  if (inspectionId) void qc.invalidateQueries({ queryKey: ['foto-inspeksi', inspectionId] });
+/** Mutasi foto (unggah/hapus) juga membarui daftar foto per inspeksi.
+ *  Kunci daftar adalah `['foto-inspeksi', kind, inspectionId]`, jadi segarkan
+ *  seluruh prefiks — bukan satu bentuk kunci tertentu. */
+function invalidateFoto(qc: ReturnType<typeof useQueryClient>, _inspectionId?: string) {
+  void qc.invalidateQueries({ queryKey: ['foto-inspeksi'] });
 }
 
 // ── Pemetaan baris API → model UI ──
@@ -666,13 +731,18 @@ export function petakanUnitHidran(
         scheduledDate: 'Bulan Ini',
       };
     }
+    // Terbit = selesai. Rekam yang masih `DRAFT` (jangkar unggah foto, atau
+    // rekam terbit yang ditekan `Edit`) belum final, jadi tetap "sedang
+    // berjalan" sampai diterbitkan ulang.
+    const status: HydrantUnitItem['status'] =
+      insp.approvalStatus === 'DRAFT' ? 'SEDANG_BERJALAN' : 'SELESAI';
     return {
       id: u.id,
       kode: u.kode,
       siteId: u.siteId,
       zoneId: u.zoneId,
       zoneName: zonaNama(u.zoneId),
-      status: 'SELESAI' as const,
+      status,
       period,
       inspectorName: namaPetugas,
       componentsCheckedCount: 6,
@@ -745,9 +815,14 @@ export function petakanUnitApar(
         draftDetails: {},
       };
     }
+    // Terbit = selesai. Rekam `DRAFT` (Simpan Draft, atau rekam terbit yang
+    // ditekan `Edit`) belum final, jadi tetap "sedang berjalan" sampai
+    // diterbitkan ulang.
+    const status: AparUnitItem['status'] =
+      insp.approvalStatus === 'DRAFT' ? 'SEDANG_BERJALAN' : 'SELESAI';
     return {
       ...dasar,
-      status: 'SELESAI' as const,
+      status,
       componentsCheckedCount: 7,
       lastInspectionDate: insp.createdAt,
       draftDetails: {

@@ -164,27 +164,21 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
         </div>
 
         <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
-          <button
-            type="button"
-            onClick={onClear}
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer"
-          >
-            <Trash2 size={12} /> Hapus Bulan Ini
-          </button>
+          <div />
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 text-xs font-medium text-[var(--secondary)] border border-[var(--border)] rounded-[4px] hover:bg-[var(--bg-hover)] pressable cursor-pointer"
+              onClick={onClear}
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer"
             >
-              Batal
+              <Trash2 size={12} /> Hapus Bulan Ini
             </button>
             <button
               type="button"
               onClick={() => onSave(draft)}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-[#27ae60] rounded-[4px] hover:brightness-95 pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#2f80ed] hover:bg-[#2b77d4] rounded-[4px] shadow-xs pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Simpan
+              Terbitkan
             </button>
           </div>
         </div>

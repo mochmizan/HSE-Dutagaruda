@@ -1,4 +1,6 @@
 :80 {
+  root * /srv/web
+
   handle /api/* {
     reverse_proxy api:3001
   }
@@ -7,8 +9,22 @@
       header_up Host garage:3900
     }
   }
+
+  # Aset ber-hash milik satu build: aman di-cache lama, dan TIDAK boleh jatuh ke
+  # shell. `try_files` umum dulu membuat /assets/<hash-lama>.js dijawab
+  # index.html + header immutable setahun, yaitu HTML tersimpan setahun di URL
+  # aset. Blok terpisah = 404 yang benar, dan tetap tak bisa di-cache.
+  handle /assets/* {
+    header Cache-Control "public, max-age=31536000, immutable"
+    file_server
+  }
+
+  # Shell SPA selalu divalidasi ulang. Tanpa ini peramban memakai index.html
+  # lama (heuristik ETag/Last-Modified) bersama bundel lama, sehingga perubahan
+  # yang sudah ter-build tidak sampai ke peninjau (Okt 18: tombol Edit "tidak
+  # bekerja" karena tab menjalankan bundle sebelum perubahan).
   handle {
-    root * /srv/web
+    header Cache-Control "no-cache"
     try_files {path} /index.html
     file_server
   }

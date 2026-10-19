@@ -1,14 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft,
-  Briefcase,
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   Search,
-  Table as TableIcon,
-  LayoutGrid,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -26,8 +22,7 @@ import {
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
 import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
-import { PrintButton, UnduhPdfButton } from '@/components/ui';
-import { livePhotoUrl } from '@/services/api/liveClient';
+import { PrintButton, UnduhPdfButton, ViewToggle } from '@/components/ui';
 import {
   COMPONENT_LABELS,
   ComponentChip,
@@ -40,15 +35,17 @@ import {
   useUnitApar,
   useInspeksiApar,
   useSimpanInspeksiApar,
+  useBatalkanTerbitApar,
   useHapusInspeksiApar,
   useHapusUnitApar,
   useBuatUnitApar,
   useUbahUnitApar,
   useUnggahFoto,
   useHapusFoto,
-  type FotoTampil,
+  useFotoInspeksi,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import { TombolPerluas } from '@/features/navigation';
 import type { ApiInspeksiApar } from '@/services/api/klien';
 
 // ─────────────────────────────────────────────────────────────
@@ -101,13 +98,16 @@ interface AparPageProps {
   /** Permintaan sunting dari dasbor: buka modal inspeksi rekam dengan id ini. */
   suntingRefId?: { kategori: string | null; refId: string } | null;
   onSuntingSelesai?: () => void;
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
-export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSuntingSelesai }) => {
+export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSelesai, isCollapsed, onToggleCollapsed }) => {
   const lokasi = useKonteksLokasi();
   const unitQuery = useUnitApar();
   const inspeksiQuery = useInspeksiApar();
   const simpanInspeksi = useSimpanInspeksiApar();
+  const batalkanTerbit = useBatalkanTerbitApar();
   const hapusInspeksi = useHapusInspeksiApar();
   const hapusUnit = useHapusUnitApar();
   const buatUnit = useBuatUnitApar();
@@ -127,7 +127,8 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
   const [cardYear, setCardYear] = useState<string>('2026');
 
   // Foto dokumentasi per inspeksi (id baris inspeksi → daftar foto sesi).
-  const [fotoApar, setFotoApar] = useState<Record<string, FotoTampil[]>>({});
+  // Foto dokumentasi dibaca dari API (lihat `fotoAktif`), bukan disimpan per
+  // sesi: tutup/buka ulang modal atau muat ulang halaman tetap menampilkan foto.
   const unggahFoto = useUnggahFoto();
   const hapusFoto = useHapusFoto();
 
@@ -298,36 +299,38 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
       katupTuas: draft.katupTuas,
     });
 
-  // ── Satu arah: modal inspeksi menyimpan ke API; tabel + kartu mengikuti hasil query ──
-
-  const kirimInspeksi = (
+  // Satu arah: modal inspeksi menyimpan ke API; tabel + kartu mengikuti hasil query.
+  // `approvalStatus` eksplisit — `Simpan Draft` menulis DRAFT, `Terbitkan`
+  // menulis DIAJUKAN — dan promise-nya dikembalikan agar pemanggil bisa menunggu
+  // tulisan sebelum menutup popup.
+  const kirimInspeksi = async (
     unit: AparUnitItem,
     draft: NonNullable<AparUnitItem['draftDetails']>,
     overall: OverallStatus | undefined,
     overridden: boolean,
+    approvalStatus: 'DRAFT' | 'DIAJUKAN',
     onTersimpan?: () => void,
   ) => {
     const existing = inspeksiSite.find(
       (i) => i.unitId === unit.id && i.period.startsWith(period),
     );
-    simpanInspeksi.mutate(
-      {
-        id: existing?.id,
-        unitId: unit.id,
-        month: period,
-        safetyPin: draft.safetyPin ?? 'NA',
-        corong: draft.corong ?? 'NA',
-        segel: draft.segel ?? 'NA',
-        tekanan: draft.tekanan ?? 'NA',
-        tabung: draft.tabung ?? 'NA',
-        selang: draft.selang ?? 'NA',
-        katupTuas: draft.katupTuas ?? 'NA',
-        overallStatus: overall,
-        overallOverridden: overridden,
-        notes: draft.notes,
-      },
-      { onSuccess: () => onTersimpan?.() },
-    );
+    await simpanInspeksi.mutateAsync({
+      id: existing?.id,
+      unitId: unit.id,
+      month: period,
+      safetyPin: draft.safetyPin ?? 'NA',
+      corong: draft.corong ?? 'NA',
+      segel: draft.segel ?? 'NA',
+      tekanan: draft.tekanan ?? 'NA',
+      tabung: draft.tabung ?? 'NA',
+      selang: draft.selang ?? 'NA',
+      katupTuas: draft.katupTuas ?? 'NA',
+      overallStatus: overall,
+      overallOverridden: overridden,
+      approvalStatus,
+      notes: draft.notes,
+    });
+    onTersimpan?.();
   };
 
   const handleSaveInspectionDraft = (unitId: string, draft: NonNullable<AparUnitItem['draftDetails']>) => {
@@ -347,19 +350,24 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
             katupTuas: draft.katupTuas ?? 'NA',
           })
         : undefined);
-    // Tutup saat mutasi berhasil agar buka-ulang selalu membaca daftar pasca-simpan.
-    kirimInspeksi(unit, draft, overall, Boolean(draft.overallStatus), () =>
+    // Draft tetap `DRAFT`, jadi baris tidak pindah ke "Selesai Diperiksa" dan
+    // popup buka-ulang tetap bisa disunting. Tutup saat tulisan berhasil.
+    void kirimInspeksi(unit, draft, overall, Boolean(draft.overallStatus), 'DRAFT', () =>
       setActiveInspectionUnit(null),
-    );
+    ).catch(() => {
+      // onError mutasi sudah melaporkan pesannya; modal tetap terbuka.
+    });
   };
 
   // ── Selesaikan dari modal → simpan ke API + tampil rekam hasil ──
-  const handleCompleteInspection = (
+  const handleCompleteInspection = async (
     unit: AparUnitItem,
     draft: NonNullable<AparUnitItem['draftDetails']>,
     overall: OverallStatus
-  ) => {
-    kirimInspeksi(unit, draft, overall, true);
+  ): Promise<void> => {
+    // Terbit ditunggu: rekam harus `DIAJUKAN` sebelum modal ditutup dan laporan
+    // ditampilkan. Tulisan gagal = promise menolak, modal tetap terbuka.
+    await kirimInspeksi(unit, draft, overall, true, 'DIAJUKAN');
     setSelectedKode(unit.kode);
     const berikut: InspectionReport = {
       id: `rep-apar-${unit.id}`,
@@ -399,17 +407,20 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
       ) ?? null
     : null;
 
-  // Hapus rekam inspeksi bulan ini: hook membersihkan foto dokumentasi dulu (cegah 409),
-  // laman sekadar menyingkirkan daftar foto sesi + menutup modal.
+  // Foto dokumentasi unit yang sedang dibuka, dibaca dari API (bukan state sesi).
+  const fotoAktif = useFotoInspeksi(inspeksiAktif?.id ?? null, 'apar');
+
+  // Batalkan terbit (tombol `Edit`): satu medan `approval_status` → DRAFT,
+  // ditunggu pemanggil supaya potret mengikuti rekam.
+  const handleBatalkanTerbit = async (inspectionId: string): Promise<void> => {
+    await batalkanTerbit.mutateAsync(inspectionId);
+  };
+
+  // Hapus rekam inspeksi bulan ini: hook membersihkan foto dokumentasi dulu
+  // (cegah 409), laman sekadar menutup modal.
   const handleHapusBulan = () => {
     if (!inspeksiAktif) return;
-    const inspectionId = inspeksiAktif.id;
-    hapusInspeksi.mutate(inspectionId);
-    setFotoApar((prev) => {
-      const next = { ...prev };
-      delete next[inspectionId];
-      return next;
-    });
+    hapusInspeksi.mutate(inspeksiAktif.id);
     setActiveInspectionUnit(null);
   };
 
@@ -425,31 +436,13 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
     const inspectionId = inspeksiAktif.id;
     const caption =
       slot === 'Kartu' ? 'Kartu APAR' : slot === 'Berat' ? 'Penimbangan CO2' : 'Pengecekan fisik';
-    unggahFoto.mutate(
-      { kind: 'apar', inspectionId, file, caption },
-      {
-        onSuccess: (foto) =>
-          setFotoApar((prev) => ({
-            ...prev,
-            [inspectionId]: [
-              ...(prev[inspectionId] ?? []),
-              { id: foto.id, url: livePhotoUrl(foto.id), caption },
-            ],
-          })),
-      },
-    );
+    // `temuan: false` = bukti inspeksi, bukan catatan hasil temuan.
+    unggahFoto.mutate({ kind: 'apar', inspectionId, file, caption, temuan: false });
   };
 
   const handleHapusFoto = (fotoId: string) => {
     if (!inspeksiAktif) return;
-    const inspectionId = inspeksiAktif.id;
-    hapusFoto.mutate({ id: fotoId, inspectionId }, {
-      onSuccess: () =>
-        setFotoApar((prev) => ({
-          ...prev,
-          [inspectionId]: (prev[inspectionId] ?? []).filter((f) => f.id !== fotoId),
-        })),
-    });
+    hapusFoto.mutate({ id: fotoId, inspectionId: inspeksiAktif.id });
   };
 
   const handlePrintReport = () => {
@@ -512,22 +505,12 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
       <div className="no-print flex flex-col space-y-2 pb-3 mb-4 border-b border-[var(--border)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-            <button
-              type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-1 text-[var(--primary)] hover:text-[#f2994a] font-medium transition-colors cursor-pointer pressable"
-            >
-              <ArrowLeft size={13} />
-              <span>Kembali ke Dashboard Kalender</span>
-            </button>
+            {isCollapsed && <TombolPerluas onKlik={onToggleCollapsed} />}
+            <span className="text-[var(--primary)] font-medium">{lokasi.namaProyek}</span>
             <span>/</span>
             <span className="hover:text-[var(--primary)] cursor-pointer">{lokasi.siteName}</span>
             <span>/</span>
             <span className="text-[var(--primary)] font-medium">Inspeksi APAR</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
-            <Briefcase size={12} />
-            <span>{lokasi.namaProyek}</span>
           </div>
         </div>
 
@@ -544,52 +527,6 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
                 <h1 className="text-lg font-bold text-[var(--primary)] tracking-tight">
                   Laporan Inspeksi APAR
                 </h1>
-                <div className="flex items-center bg-[var(--bg-sidebar)] border border-[var(--border)] rounded-[5px] p-0.5 shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={() => shiftMonth(-1)}
-                    title="Bulan Sebelumnya"
-                    className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-                  <div className="relative flex items-center">
-                    <select
-                      value={period}
-                      onChange={(e) => setPeriod(e.target.value)}
-                      className="text-xs font-semibold bg-transparent cursor-pointer py-0.5 px-2 focus:outline-none capitalize pr-5 appearance-none tabular-nums"
-                      style={{ color: APAR_ACCENT }}
-                    >
-                      {Array.from({ length: 12 }, (_, m) => {
-                        const d = new Date(2026, m, 1);
-                        const value = format(d, 'yyyy-MM');
-                        return (
-                          <option key={value} value={value} className="bg-[var(--bg-main)] text-[var(--primary)]">
-                            {format(d, 'MMMM yyyy', { locale: idLocale })}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <ChevronDown size={11} className="absolute right-1 pointer-events-none" style={{ color: APAR_ACCENT }} />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => shiftMonth(1)}
-                    title="Bulan Berikutnya"
-                    className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
-                  >
-                    <ChevronRight size={13} />
-                  </button>
-                </div>
-                {!isDefaultPeriod && (
-                  <button
-                    type="button"
-                    onClick={() => setPeriod(DEFAULT_PERIOD)}
-                    className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors shadow-2xs"
-                  >
-                    Bulan Ini
-                  </button>
-                )}
               </div>
               <p className="text-xs text-[var(--muted)] mt-0.5">
                 Monitoring progres pemeriksaan fisik 7 komponen APAR gedung per unit
@@ -598,12 +535,58 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="flex items-center bg-[var(--bg-sidebar)] border border-[var(--border)] rounded-[5px] p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => shiftMonth(-1)}
+                title="Bulan Sebelumnya"
+                className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
+              >
+                <ChevronLeft size={13} />
+              </button>
+              <div className="relative flex items-center">
+                <select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="text-xs font-semibold bg-transparent cursor-pointer py-0.5 px-2 focus:outline-none capitalize pr-5 appearance-none tabular-nums"
+                  style={{ color: '#2f80ed' }}
+                >
+                  {Array.from({ length: 12 }, (_, m) => {
+                    const d = new Date(2026, m, 1);
+                    const value = format(d, 'yyyy-MM');
+                    return (
+                      <option key={value} value={value} className="bg-[var(--bg-main)] text-[var(--primary)]">
+                        {format(d, 'MMMM yyyy', { locale: idLocale })}
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown size={11} className="absolute right-1 pointer-events-none" style={{ color: '#2f80ed' }} />
+              </div>
+              <button
+                type="button"
+                onClick={() => shiftMonth(1)}
+                title="Bulan Berikutnya"
+                className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
+              >
+                <ChevronRight size={13} />
+              </button>
+            </div>
+            {!isDefaultPeriod && (
+              <button
+                type="button"
+                onClick={() => setPeriod(DEFAULT_PERIOD)}
+                className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors shadow-2xs"
+              >
+                Bulan Ini
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}
               title="Tambah zona & unit APAR"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-semibold rounded-[4px] shadow-xs cursor-pointer pressable active:scale-[0.96] transition-transform duration-150 ease-[cubic-bezier(0.2,0,0,1)]"
-              style={{ backgroundColor: APAR_ACCENT }}
+              style={{ backgroundColor: '#2f80ed' }}
             >
               <span>Tambah APAR</span>
             </button>
@@ -688,12 +671,12 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
               type="button"
               onClick={() => setFilterTab(tab.key)}
               className={`py-1.5 px-3 rounded-[4px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-                filterTab === tab.key ? 'text-white font-semibold shadow-xs' : 'text-[var(--secondary)] hover:text-[var(--primary)]'
+                filterTab === tab.key ? 'bg-white dark:bg-[var(--bg-hover)] text-[var(--primary)] font-semibold shadow-xs' : 'text-[var(--secondary)] hover:text-[var(--primary)]'
               }`}
-              style={filterTab === tab.key ? { backgroundColor: tab.key === 'COMPLETED' ? '#059669' : '#eb5757' } : undefined}
+              style={undefined}
             >
               <span>{tab.label}</span>
-              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full tabular-nums ${filterTab === tab.key ? 'bg-black/20 text-white' : 'bg-[var(--bg-hover)] text-[var(--muted)]'}`}>
+              <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full tabular-nums bg-[var(--bg-hover)] text-[var(--muted)]`}>
                 {tab.count}
               </span>
             </button>
@@ -721,34 +704,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
               className="w-full pl-7 pr-2.5 py-1.5 text-xs bg-[var(--bg-main)] border border-[var(--border)] rounded-[4px] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none"
             />
           </div>
-          <div className="flex items-center bg-[var(--bg-sidebar)] p-0.5 rounded-[4px] border border-[var(--border)] text-xs">
-            <button
-              type="button"
-              onClick={() => setViewMode('TABLE')}
-              title="Tampilan Tabel (mudah dicetak / ekspor)"
-              className={`p-1.5 rounded-[3px] flex items-center gap-1 cursor-pointer transition-colors ${
-                viewMode === 'TABLE'
-                  ? 'bg-[var(--bg-main)] text-[var(--primary)] font-semibold shadow-2xs border border-[var(--border)]'
-                  : 'text-[var(--secondary)] hover:text-[var(--primary)]'
-              }`}
-            >
-              <TableIcon size={14} />
-              <span className="hidden sm:inline text-[11px]">Tabel</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('CARDS')}
-              title="Tampilan Kartu"
-              className={`p-1.5 rounded-[3px] flex items-center gap-1 cursor-pointer transition-colors ${
-                viewMode === 'CARDS'
-                  ? 'bg-[var(--bg-main)] text-[var(--primary)] font-semibold shadow-2xs border border-[var(--border)]'
-                  : 'text-[var(--secondary)] hover:text-[var(--primary)]'
-              }`}
-            >
-              <LayoutGrid size={14} />
-              <span className="hidden sm:inline text-[11px]">Kartu</span>
-            </button>
-          </div>
+          <ViewToggle value={viewMode} onChange={setViewMode} />
         </div>
       </div>
 
@@ -796,7 +752,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
                 type="button"
                 onClick={() => setFilterTab('ALL')}
                 className="no-print mt-3 px-3 py-1.5 text-xs font-semibold rounded-[4px] cursor-pointer"
-                style={{ color: APAR_ACCENT, backgroundColor: `${APAR_ACCENT}1a` }}
+                style={{ color: '#2f80ed', backgroundColor: 'rgba(47, 128, 237, 0.10)' }}
               >
                 Tampilkan Semua Unit
               </button>
@@ -804,7 +760,7 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
           </div>
         ) : viewMode === 'TABLE' ? (
           <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
-            <table className="apar-report-table w-full text-center border-collapse text-xs">
+            <table className="apar-report-table w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
                   <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
@@ -1098,13 +1054,14 @@ export const AparPage: React.FC<AparPageProps> = ({ onBack, suntingRefId, onSunt
         unit={activeInspectionUnit}
         isOpen={activeInspectionUnit !== null}
         inspeksi={inspeksiAktif}
-        foto={inspeksiAktif ? (fotoApar[inspeksiAktif.id] ?? []) : []}
+        foto={inspeksiAktif ? (fotoAktif.data ?? []) : []}
         mengunggah={unggahFoto.isPending}
         onUnggahFoto={handleUnggahFoto}
         onHapusFoto={handleHapusFoto}
         onClose={() => setActiveInspectionUnit(null)}
         onSaveDraft={handleSaveInspectionDraft}
         onCompleteInspection={handleCompleteInspection}
+        onBatalkanTerbit={handleBatalkanTerbit}
         onHapusBulan={handleHapusBulan}
         menghapusBulan={hapusInspeksi.isPending}
         onHapusUnit={handleHapusUnit}

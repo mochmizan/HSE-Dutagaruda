@@ -6,6 +6,7 @@ import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
 import { P3kInspectionModal } from './P3kInspectionModal';
 import { petakanGridP3k } from './petaApi';
 import { UnduhPdfButton } from '@/components/ui';
+import { TombolPerluas } from '@/features/navigation';
 import {
   useKotakP3k,
   useInspeksiP3k,
@@ -29,6 +30,8 @@ import {
 
 interface P3kPageProps {
   onBack: () => void;
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 function fmtTanggal(iso: string): string {
@@ -44,7 +47,7 @@ function fmtTanggal(iso: string): string {
  * Inspeksi Kotak P3K — yearly grid only.
  * Box is keyed by site name (one box per site). Empty start; month click opens the input form.
  */
-export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
+export const P3kPage: React.FC<P3kPageProps> = ({ onBack, isCollapsed, onToggleCollapsed }) => {
   const lokasi = useKonteksLokasi();
   const kotakQuery = useKotakP3k();
   const inspeksiQuery = useInspeksiP3k();
@@ -125,6 +128,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack }) => {
       {/* Top bar */}
       <div className="no-print flex items-center justify-between gap-2 pb-3 mb-4 border-b border-[var(--border)]">
         <div className="flex items-center gap-2 min-w-0">
+          {isCollapsed && <TombolPerluas onKlik={onToggleCollapsed} />}
           <button
             type="button"
             onClick={onBack}

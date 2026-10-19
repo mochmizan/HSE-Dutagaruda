@@ -11,10 +11,13 @@ import {
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
 import { PhotoCard, EmptyState, UnduhPdfButton } from '@/components/ui';
+import { TombolPerluas } from '@/features/navigation';
 import type { ApiLaporanPatroli } from '@/services/api/klien';
 
 interface PatrolPageProps {
   onBack: () => void;
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 const hariIni = () => new Date();
@@ -32,7 +35,7 @@ function fmtTanggal(iso: string): string {
  * Patroli K3 — single photo feed.
  * Reuses the Hydrant Section B card grid. Newest first. UI-only.
  */
-export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
+export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack, isCollapsed, onToggleCollapsed }) => {
   const lokasi = useKonteksLokasi();
   const laporanQuery = useLaporanPatroli();
   const unggahFoto = useUnggahFotoTemuanPatroli();
@@ -90,6 +93,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ onBack }) => {
       {/* Top bar */}
       <div className="no-print flex items-center justify-between gap-2 pb-3 mb-4 border-b border-[var(--border)]">
         <div className="flex items-center gap-2 min-w-0">
+          {isCollapsed && <TombolPerluas onKlik={onToggleCollapsed} />}
           <button
             type="button"
             onClick={onBack}

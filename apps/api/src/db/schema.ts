@@ -33,6 +33,13 @@ export const overallStatusEnum = pgEnum("overall_status", [
   "TIDAK_LAYAK",
 ]);
 
+export const approvalStatusEnum = pgEnum("approval_status", [
+  "DRAFT",
+  "DIAJUKAN",
+  "DIKETAHUI",
+  "DISETUJUI",
+]);
+
 export const aparJenisEnum = pgEnum("apar_jenis", ["POWDER", "CO2", "FOAM", "OTHER"]);
 
 export const pdfJobStatusEnum = pgEnum("pdf_job_status", ["queued", "done", "failed"]);
@@ -162,6 +169,7 @@ export const hydrantInspections = pgTable(
     valvePillar: hydrantStatusEnum("valve_pillar").notNull(),
     overallStatus: overallStatusEnum("overall_status").notNull(),
     overallOverridden: boolean("overall_overridden").default(false).notNull(),
+    approvalStatus: approvalStatusEnum("approval_status").default("DRAFT").notNull(),
     notes: text("notes"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -195,6 +203,7 @@ export const aparInspections = pgTable(
     beratCo2Kg: real("berat_co2_kg"),
     overallStatus: overallStatusEnum("overall_status").notNull(),
     overallOverridden: boolean("overall_overridden").default(false).notNull(),
+    approvalStatus: approvalStatusEnum("approval_status").default("DRAFT").notNull(),
     notes: text("notes"),
 
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -308,6 +317,14 @@ export const photos = pgTable(
     bytes: integer("bytes"),
     sha256: text("sha256"),
     caption: text("caption"),
+    /**
+     * Pemisah dua jenis dokumentasi pada satu rekam inspeksi:
+     * `false` = bukti fisik yang diunggah dari formulir inspeksi (Bukti
+     * Inspeksi / slot APAR), `true` = catatan hasil temuan (Section B) yang
+     * diunggah lewat "Tambah Temuan". Tanpa kolom ini, semua foto satu rekam
+     * tampil di kedua tempat.
+     */
+    temuan: boolean("temuan").default(false).notNull(),
     hydrantInspectionId: text("hydrant_inspection_id").references(
       () => hydrantInspections.id,
     ),

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { liveGet, livePost } from '@/services/api/liveClient';
+import { buatProyek, hapusProyek, ubahProyek } from '@/services/api/klien';
 import { ApiError } from '@/services/api/client';
 
 export interface SesiPengguna {
@@ -78,6 +79,19 @@ export function useDaftarProyek() {
   });
 }
 
+/** Proyek baru: buat, jadikan aktif, muat ulang seluruh data. */
+export function useBuatProyek() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (nama: string) => buatProyek(nama.trim()),
+    onSuccess: async (baris) => {
+      await livePost('/auth/organization/set-active', { organizationId: baris.id });
+      qc.setQueryData(['sesi'], await ambilSesi());
+      await qc.invalidateQueries();
+    },
+    onError: (err) => window.alert(err instanceof ApiError ? err.message : 'Gagal menambah proyek.'),
+  });
+}
 /** Pindah proyek aktif: set organisasi aktif lalu muat ulang seluruh data. */
 export function usePindahProyek() {
   const qc = useQueryClient();
@@ -91,6 +105,30 @@ export function usePindahProyek() {
       void qc.invalidateQueries();
     },
     onError: (err) => window.alert(err instanceof ApiError ? err.message : 'Gagal pindah proyek.'),
+  });
+}
+
+/** Ganti nama proyek (organisasi + cermin companies). */
+export function useUbahProyek() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; nama: string }) => ubahProyek(args.id, args.nama.trim()),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['proyek'] });
+    },
+    onError: (err) => window.alert(err instanceof ApiError ? err.message : 'Gagal mengganti nama proyek.'),
+  });
+}
+
+/** Hapus proyek tanpa lokasi. Pengalihan proyek aktif ditangani pemanggil. */
+export function useHapusProyek() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => hapusProyek(id),
+    onSuccess: () => {
+      void qc.invalidateQueries();
+    },
+    onError: (err) => window.alert(err instanceof ApiError ? err.message : 'Gagal menghapus proyek.'),
   });
 }
 

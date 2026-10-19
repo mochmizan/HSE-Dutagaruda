@@ -33,7 +33,9 @@ What "up" gives you (all `restart: unless-stopped`):
   `/api/*` → api:3001, `/storage/*` → garage. Single review/verify origin.
 - API + Postgres 17 + Garage (S3 foto) + Gotenberg 8 (PDF Chromium).
 - Seed data (only on a FRESH database — never reseed a live one):
-  company `PT DUTAGARUDA PIRANTI PRIMA`, site `Pabrik Utama`,
+  company `PT DUTAGARUDA PIRANTI PRIMA`, site `Utama` (live DB juga
+  memuat site tambahan buatan review, mis. `sampingan` — pilih berdasar
+  `siteId` di JSON, jangan asert satu site),
   `pengawas@contoh.id` / `Pengawas123`,
   approver `budi.approver@contoh.id` / `Approver123`.
 
@@ -41,6 +43,17 @@ Web iteration (optional, NOT the verify path): `cd apps/web` →
 `bun run dev --port 5173 --host 0.0.0.0 --strictPort` (proxy `/api`→`:8080`).
 After web edits the verify path needs `bun run build` + `docker compose
 restart caddy` (dist is baked at build time).
+
+Before asserting ANY web behavior on `:8080`, check the shell actually carries
+the build you just made: read `apps/web/dist/assets/index-*.js` and compare it
+with the `<script src>` the page runs. Caddy sends `Cache-Control: no-cache` for
+the shell and `public, max-age=31536000, immutable` for `/assets/*` (Okt 18,
+`infra/Caddyfile`), so a plain reload now tracks the build — but a browser that
+cached the shell BEFORE that change keeps the old `index.html` and its old
+bundles until one hard reload (`Ctrl+Shift+R`). A stale shell looks exactly like
+a code bug: the old bundle is missing the new handler, so the click appears to
+do nothing and no request reaches the API. That was the Okt 18 `Edit` report
+(the tab ran `index-crPKYrxr.js` while dist had `index-B65yR9bP.js`).
 
 Teardown: there is none per run — the stack is the persistent review
 instance. Never `docker compose down` (deletes nothing, but drops the
@@ -70,12 +83,15 @@ Auth (3 steps, all required — missing set-active looks like a cookie bug,
 
 ```powershell
 $J = "$env:TEMP\viaannn-jar.txt"
+$body = "$env:TEMP\viaannn-body.json"
+'{"email":"pengawas@contoh.id","password":"Pengawas123"}' | Set-Content -Encoding ascii $body
 curl.exe -s -c $J -X POST http://localhost:8080/api/auth/sign-in/email `
   -H "Content-Type: application/json" -H "Origin: http://localhost:8080" `
-  --data '{"email":"pengawas@contoh.id","password":"Pengawas123"}'
+  --data "@$body"
+'{"organizationId":"seed-perusahaan-1"}' | Set-Content -Encoding ascii $body
 curl.exe -s -b $J -c $J -X POST http://localhost:8080/api/auth/organization/set-active `
   -H "Content-Type: application/json" -H "Origin: http://localhost:8080" `
-  --data '{"organizationId":"seed-perusahaan-1"}'
+  --data "@$body"
 curl.exe -s -b $J "http://localhost:8080/api/inspections?month=2026-10"
 # expect JSON with keys: hydrant, apar, p3k, patrol
 ```
@@ -91,7 +107,9 @@ Real routes (all auth + `companyId` scoped unless noted; base
 - Foto: `GET /api/photos?inspectionKind=hydrant&inspectionId=<id>` (daftar),
   `GET /api/photos/:id` (302 ke presign singkat)
 - Ekspor PDF: `POST /api/export/:category/:refId` → job,
-  `GET /api/pdf-jobs/:id` (status + unduhan, ~2 detik per berkas)
+  `GET /api/pdf-jobs/:id` (status + unduhan, ~2 detik per berkas).
+  Kategori proven: `hydrant-monthly`, `p3k-yearly`,
+  `patrol-report` (bukan `hydrant`/`p3k`/`patrol`).
 
 Browser lane (labels below are literal — copy them exactly):
 
@@ -101,9 +119,20 @@ Browser lane (labels below are literal — copy them exactly):
   `Keluar dari aplikasi`). Company header reads
   `PT DUTAGARUDA PIRANTI PRIMA`.
 - Hydrant: row click → modal `Formulir Pemeriksaan` (6 selects + foto +
-  catatan + tombol `Hapus Bulan Ini` untuk rekam bulan ini).
-- APAR: `Selesaikan & Terbitkan`, `Tambah APAR`, `Cetak Kartu`, heading
-  `Catatan :`, rekap `Kadaluwarsa APAR`.
+  catatan + tombol `Hapus` untuk rekam bulan ini; footer `Hapus` +
+  `Terbitkan`, tanpa `Batal`). Terbit adalah sifat REKAM, bukan state modal:
+  kolom `hydrant_inspections.approval_status` (`DRAFT` .. `DIAJUKAN`),
+  `Terbitkan` menulis `DIAJUKAN`. Baris terbit dibuka baca-saja (badge
+  `Terbit` + tombol `Edit`, tanpa `Hapus`); baris `DRAFT` dibuka dalam modus
+  sunting (`Terbitkan`). `Edit` = batalkan terbit: menulis `DRAFT` ke rekam itu
+  dan baris pindah dari tab `Selesai Diperiksa` ke `Sedang Berjalan` (kartu
+  tombol `Lanjutkan`) sampai diterbitkan ulang. Select komponen menampilkan
+  `STANDAR` / `TIDAK STANDAR` / `HILANG` (nilai API `LAYAK` / `TIDAK_LAYAK` /
+  `HILANG`).
+- APAR: footer `Simpan Draft | Hapus | Terbitkan` (bukan `Selesaikan &
+  Terbitkan`), `Tambah APAR`, `Cetak Kartu`, heading `Catatan :` (blok
+  foto `Foto Dokumentasi` ada di paling atas form), rekap
+  `Kadaluwarsa APAR` (dari `expiredDate` unit terdaftar).
 - P3K: year grid 21 items × 12 months (√ / × / KD), rows `TANGGAL INSPEKSI`
   + `PARAF`; month header click = input form.
 - Patrol: header `LAPORAN KEGIATAN SAFETY PATROL`, add form requires

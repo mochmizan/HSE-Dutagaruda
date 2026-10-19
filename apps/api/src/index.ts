@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { auth } from "./auth/config.js";
 import { aparInspectionsApp, hydrantInspectionsApp, p3kInspectionsApp } from "./routes/inspections.js";
-import { clientsApp, companiesApp, sitesApp, zonesApp } from "./routes/org.js";
+import { clientsApp, companiesApp, projectsApp, sitesApp, zonesApp } from "./routes/org.js";
 import { patrolApp } from "./routes/patrol.js";
 import { aparUnitsApp, hydrantUnitsApp, p3kBoxesApp } from "./routes/units.js";
 import { dashboardApp, feedApp, settingsApp } from "./routes/feed.js";
@@ -30,6 +30,7 @@ export const app = new Hono()
   .on(["POST", "GET"], "/api/auth/*", (c) => auth.handler(c.req.raw))
   .route("/api/clients", clientsApp)
   .route("/api/companies", companiesApp)
+  .route("/api/projects", projectsApp)
   .route("/api/sites", sitesApp)
   .route("/api/zones", zonesApp)
   .route("/api/hydrant-units", hydrantUnitsApp)

@@ -48,8 +48,16 @@ PDF storage, and Gotenberg PDF rendering.
   inspection is 404): `{ items: [{ id, caption, createdAt }] }` ordered by
   createdAt.
 - Reports are final on save. There is no approval workflow: no
-  `approval_*` columns, no `/api/approvals` route, no edit-lock guards, and
+  `/api/approvals` route, no edit-lock guards, and
   no role input on `POST /api/users`. All content routes edit freely.
+- Publish state is one column, not a workflow:
+  `hydrant_inspections.approval_status` (enum `approval_status`: `DRAFT | DIAJUKAN | DIKETAHUI |
+  DISETUJUI`, NOT NULL DEFAULT `DRAFT`, migration `0003_*`). `POST`/`PATCH
+  /api/hydrant-inspections` accept it (default `DRAFT`); migration 0003 also
+  backfills pre-existing published rows to `DIAJUKAN`. The hydrant modal reads
+  `!= 'DRAFT'` as published and writes `DIAJUKAN` on `Terbitkan`. Only the
+  hydrant table has the column; APAR, P3K and patrol stay column-free, and
+  nothing enforces the value server-side.
 - Patrol findings with photos: `POST /api/safety-patrol-reports/:id/findings/photo`
   (multipart `file` + `description` + `locationNote`?, JPEG/PNG/WebP 8 MB,
   stores `foto/<companyId>/<findingId>.<ext>` + sha256, 201),

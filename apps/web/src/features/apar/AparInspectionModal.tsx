@@ -22,7 +22,14 @@ interface AparInspectionModalProps {
   onHapusFoto: (fotoId: string) => void;
   onClose: () => void;
   onSaveDraft: (unitId: string, draft: AparDraft) => void;
-  onCompleteInspection: (unit: AparUnitItem, draft: AparDraft, overall: OverallStatus) => void;
+  /** Terbit: menulis `DIAJUKAN`; promise ditunggu sebelum popup ditutup. */
+  onCompleteInspection: (
+    unit: AparUnitItem,
+    draft: AparDraft,
+    overall: OverallStatus,
+  ) => Promise<void>;
+  /** Batalkan terbit (tombol `Edit`): satu medan `approval_status` → DRAFT. */
+  onBatalkanTerbit: (inspectionId: string) => Promise<void>;
   onHapusBulan?: () => void;
   /** Status mutasi hapus (tombol menandai proses). */
   menghapusBulan?: boolean;
@@ -48,6 +55,52 @@ const APAR_ACCENT = '#f2994a';
 
 const OPTIONS: AparComponentStatus[] = ['BAIK', 'TIDAK_BAIK', 'NA'];
 
+/** Label tanpa nomor urut untuk baris catatan gabungan. */
+const LABEL_KOMPONEN_APAR: Record<string, string> = Object.fromEntries(
+  COMPONENT_FIELDS.map((f) => [f.key, f.label.replace(/^\d+\.\s*/, '')]),
+);
+
+/** Gabungkan komentar per komponen + catatan tambahan jadi satu teks. */
+function susunCatatanApar(
+  values: Record<string, string>,
+  catatanKomponen: Record<string, string>,
+  tambahan: string,
+): string {
+  const baris: string[] = [];
+  for (const [key, label] of Object.entries(LABEL_KOMPONEN_APAR)) {
+    if (values[key] && values[key] !== 'BAIK' && catatanKomponen[key]?.trim()) {
+      baris.push(`${label}: ${catatanKomponen[key].trim()}`);
+    }
+  }
+  if (tambahan.trim()) baris.push(`Catatan: ${tambahan.trim()}`);
+  return baris.join('\n');
+}
+
+/** Pecahkan teks gabungan balik ke per komponen + tambahan. */
+function uraiCatatanApar(penuh: string): {
+  catatanKomponen: Record<string, string>;
+  tambahan: string;
+} {
+  const catatanKomponen: Record<string, string> = {};
+  let tambahan = '';
+  for (const raw of (penuh || '').split('\n')) {
+    const baris = raw.trim();
+    if (!baris) continue;
+    let cocok = false;
+    for (const [key, label] of Object.entries(LABEL_KOMPONEN_APAR)) {
+      if (baris.startsWith(`${label}:`)) {
+        catatanKomponen[key] = baris.slice(label.length + 1).trim();
+        cocok = true;
+        break;
+      }
+    }
+    if (cocok) continue;
+    if (baris.startsWith('Catatan:')) tambahan = baris.slice(8).trim();
+    else tambahan = tambahan ? `${tambahan}\n${baris}` : baris;
+  }
+  return { catatanKomponen, tambahan };
+}
+
 export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   unit,
   isOpen,
@@ -59,6 +112,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   onClose,
   onSaveDraft,
   onCompleteInspection,
+  onBatalkanTerbit,
   onHapusBulan,
   menghapusBulan = false,
   onHapusUnit,
@@ -67,10 +121,15 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
 }) => {
   const [values, setValues] = useState<Record<string, AparComponentStatus>>({});
   const [notes, setNotes] = useState('');
+  const [catatanKomponen, setCatatanKomponen] = useState<Record<string, string>>({});
   const [tindakLanjut, setTindakLanjut] = useState('');
   const [overallStatus, setOverallStatus] = useState<OverallStatus>('LAYAK');
   const [isOverridden, setIsOverridden] = useState(false);
-  const [konfirmasiHapusBulan, setKonfirmasiHapusBulan] = useState(false);
+  const [konfirmasi, setKonfirmasi] = useState<'UNIT' | 'BULAN' | null>(null);
+  /** Potret baca-saja: cermin `approval_status` rekam, bukan dugaan lokal. */
+  const [terbit, setTerbit] = useState(false);
+  const [membatalkanTerbit, setMembatalkanTerbit] = useState(false);
+  const [menerbitkan, setMenerbitkan] = useState(false);
 
   // Init dari draftDetails, fallback ke completedReport.aparDetails (draft menang).
   useEffect(() => {
@@ -84,7 +143,11 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
     const next: Record<string, AparComponentStatus> = {};
     for (const f of COMPONENT_FIELDS) next[f.key] = pick(f.key);
     setValues(next);
-    setNotes((draft?.notes as string | undefined) ?? unit.completedReport?.summaryNotes ?? '');
+    // Teks catatan menyimpan gabungan; urai balik per komponen + tambahan.
+    const catatanMentah = (draft?.notes as string | undefined) ?? unit.completedReport?.summaryNotes ?? '';
+    const urai = uraiCatatanApar(catatanMentah);
+    setCatatanKomponen(urai.catatanKomponen);
+    setNotes(urai.tambahan);
     setTindakLanjut((draft?.tindakLanjut as string | undefined) ?? '');
     const savedOverall =
       (draft?.overallStatus as OverallStatus | undefined) ?? unit.completedReport?.overallStatus;
@@ -127,7 +190,23 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
     };
   }, [isOpen, onClose]);
 
+  // Mode terbit = properti rekam. Satu-satunya penulis `terbit` adalah efek ini,
+  // jadi popup tak bisa menampilkan keadaan yang tidak dimiliki rekam: terbit
+  // yang gagal tak menyisakan potret palsu, `Edit` yang gagal tak menyisakan
+  // form terbuka di atas rekam terbit. Flag proses dibersihkan saat popup
+  // dibuka / identitas rekam berubah supaya permintaan yang menggantung tidak
+  // mengunci tombol pada pembukaan berikutnya.
+  useEffect(() => {
+    if (!isOpen) return;
+    setMembatalkanTerbit(false);
+    setMenerbitkan(false);
+    setTerbit(Boolean(inspeksi && inspeksi.approvalStatus !== 'DRAFT'));
+  }, [isOpen, inspeksi?.id, inspeksi?.approvalStatus]);
+
   if (!isOpen || !unit) return null;
+
+  /** Rekam yang sedang tampil; `terbit` hanya benar bila rekam ini ada. */
+  const idRekam = inspeksi?.id ?? null;
 
   const isPowder = unit.jenis === 'POWDER';
 
@@ -140,20 +219,31 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
     tabung: values.tabung ?? 'BAIK',
     selang: values.selang ?? 'BAIK',
     katupTuas: values.katupTuas ?? 'BAIK',
-    notes,
+    notes: susunCatatanApar(values, catatanKomponen, notes),
     tindakLanjut,
     overallStatus,
   });
 
   const handleSaveDraft = () => {
     // Laman menutup modal saat mutasi berhasil; gagal = tetap terbuka + alarm.
+    if (terbit) return;
     onSaveDraft(unit.id, buildDraft());
   };
 
-  const handleComplete = (e: React.FormEvent) => {
+  // Terbit ditunggu: popup baru ditutup setelah rekam benar-benar `DIAJUKAN`,
+  // dan bila tulisan gagal form tetap terbuka (mutasi melaporkan pesannya).
+  const handleComplete = async (e: React.FormEvent) => {
     e.preventDefault();
-    onCompleteInspection(unit, buildDraft(), overallStatus);
-    onClose();
+    if (terbit || menerbitkan) return;
+    setMenerbitkan(true);
+    try {
+      await onCompleteInspection(unit, buildDraft(), overallStatus);
+      onClose();
+    } catch {
+      // onError mutasi sudah melaporkan pesannya.
+    } finally {
+      setMenerbitkan(false);
+    }
   };
 
   const setValue = (key: string, v: AparComponentStatus) => {
@@ -187,6 +277,11 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
                 <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#f2994a]/15 text-[#f2994a]">
                   {unit.zoneName}
                 </span>
+                {terbit && (
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    Terbit
+                  </span>
+                )}
                 <span className="px-1.5 py-0.2 rounded text-[10px] font-mono border border-[var(--border)] text-[var(--muted)] tabular-nums">
                   {unit.period} • {unit.jenis} {unit.ukuran}
                 </span>
@@ -207,7 +302,81 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
         </div>
 
         {/* Isi formulir */}
-        <form onSubmit={handleComplete} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <form onSubmit={handleComplete} className="flex-1 overflow-y-auto p-4">
+        <fieldset disabled={terbit} className="min-w-0 w-full space-y-4">
+          {/* Dokumentasi foto — unggahan nyata ke Garage via /api/uploads.
+              Grid dua kolom: tiap slot kartu berisi tombol + pratinjau
+              diskalakan maksimal ke lebar kolomnya. */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-[var(--primary)] flex items-center gap-1.5">
+              <Camera size={13} />
+              <span>Foto Dokumentasi</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 items-stretch">
+              {(
+                [
+                  { slot: 'Kartu' as const, keterangan: 'Kartu APAR', disabled: false, hint: 'Foto kartu gantung APAR' },
+                  { slot: 'Berat' as const, keterangan: 'Penimbangan CO2', disabled: isPowder, hint: isPowder ? 'Nonaktif untuk APAR Powder (khusus CO₂)' : 'Foto hasil penimbangan (CO₂)' },
+                  { slot: 'Pengecekan' as const, keterangan: 'Pengecekan fisik', disabled: false, hint: 'Foto proses pengecekan fisik' },
+                ]
+              ).map((f) => {
+                const slotFoto = foto.filter((g) => g.caption === f.keterangan);
+                return (
+                  <div
+                    key={f.slot}
+                    className="rounded-[5px] border border-[var(--border)] bg-[var(--bg-main)] p-2 flex flex-col gap-1.5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold text-[var(--primary)] truncate">{f.slot}</p>
+                        <p className="text-[10px] text-[var(--muted)] truncate">{f.hint}</p>
+                      </div>
+                      <FileFotoButton
+                        nonaktif={f.disabled}
+                        belumTersimpan={inspeksi == null}
+                        sibuk={mengunggah}
+                        onFile={(file) => onUnggahFoto(f.slot, file)}
+                      />
+                    </div>
+                    {slotFoto.length > 0 ? (
+                      <div className="relative rounded-[4px] overflow-hidden border border-[var(--border)] image-outline">
+                        <a
+                          href={slotFoto[0].url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`Buka pratinjau foto ${f.slot.toLowerCase()} di tab baru`}
+                        >
+                          <img
+                            src={slotFoto[0].url}
+                            alt={`Dokumentasi ${f.slot} APAR ${unit.kode}`}
+                            className="w-full h-auto object-contain image-outline"
+                          />
+                        </a>
+                        {slotFoto.length > 1 && (
+                          <span className="absolute bottom-1 right-1 text-[9px] font-mono px-1 rounded-full bg-black/60 text-white">
+                            +{slotFoto.length - 1}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => onHapusFoto(slotFoto[0].id)}
+                          title="Hapus foto"
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/65 text-white/90 hover:text-red-400 flex items-center justify-center cursor-pointer"
+                        >
+                          <Trash2 size={10} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="w-full aspect-[4/3] rounded-[4px] border border-dashed border-[var(--border-strong)] flex items-center justify-center text-[10px] text-[var(--muted)] text-center px-1">
+                        {f.disabled ? 'Tidak berlaku untuk jenis ini' : inspeksi == null ? 'Simpan dulu untuk unggah' : 'Belum ada foto'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
               Daftar 7 Komponen APAR
@@ -229,10 +398,25 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
                   >
                     {OPTIONS.map((o) => (
                       <option key={o} value={o}>
-                        {o === 'BAIK' ? 'BAIK' : o === 'TIDAK_BAIK' ? 'TIDAK BAIK' : 'NA (Tidak Berlaku)'}
+                        {o === 'BAIK' ? 'STANDAR' : o === 'TIDAK_BAIK' ? 'TIDAK STANDAR' : 'HILANG'}
                       </option>
                     ))}
                   </select>
+                  {(values[f.key] ?? 'BAIK') !== 'BAIK' ? (
+                    <input
+                      value={catatanKomponen[f.key] ?? ''}
+                      onChange={(e) => setCatatanKomponen((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      placeholder="Uraikan kondisi / ketidakhadiran komponen ini…"
+                      className="w-full text-[11px] px-2 py-1 rounded-[3px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#f2994a]"
+                    />
+                  ) : (
+                    <input
+                      value={catatanKomponen[f.key] ?? ''}
+                      disabled
+                      placeholder="Komponen standar — tanpa catatan"
+                      className="w-full text-[11px] px-2 py-1 rounded-[3px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--muted)] placeholder-[var(--muted)] cursor-not-allowed"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -278,7 +462,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
           {/* Catatan */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[var(--primary)]">
-              Catatan Hasil Pemeriksaan Lapangan
+              Catatan Temuan Tambahan
             </label>
             <textarea
               rows={2}
@@ -292,7 +476,8 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
           {/* Tindak lanjut */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-[var(--primary)]">
-              Tindak Lanjut <span className="font-normal text-[var(--muted)]">(wajib bila ada komponen Tidak Baik)</span>
+              Tindakan Rekomendasi / Tindak Lanjut{' '}
+              <span className="text-[10px] font-normal text-[var(--muted)]">(opsional)</span>
             </label>
             <textarea
               rows={2}
@@ -303,118 +488,99 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
             />
           </div>
 
-          {/* Dokumentasi foto — unggahan nyata ke Garage via /api/uploads */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-[var(--primary)] flex items-center gap-1.5">
-              <Camera size={13} />
-              <span>Foto Dokumentasi</span>
-            </label>
-            {(
-              [
-                { slot: 'Kartu' as const, keterangan: 'Kartu APAR', disabled: false, hint: 'Foto kartu gantung APAR' },
-                { slot: 'Berat' as const, keterangan: 'Penimbangan CO2', disabled: isPowder, hint: isPowder ? 'Nonaktif untuk APAR Powder (khusus CO₂)' : 'Foto hasil penimbangan (CO₂)' },
-                { slot: 'Pengecekan' as const, keterangan: 'Pengecekan fisik', disabled: false, hint: 'Foto proses pengecekan fisik' },
-              ]
-            ).map((f) => {
-              const slotFoto = foto.filter((g) => g.caption === f.keterangan);
-              return (
-                <div key={f.slot} className="space-y-1.5 rounded-[5px] border border-[var(--border)] bg-[var(--bg-main)] p-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-24 shrink-0 text-[11px] font-medium text-[var(--secondary)]">{f.slot}</span>
-                    <span className="flex-1 text-[10px] text-[var(--muted)]">{f.hint}</span>
-                    <FileFotoButton
-                      nonaktif={f.disabled}
-                      belumTersimpan={inspeksi == null}
-                      sibuk={mengunggah}
-                      onFile={(file) => onUnggahFoto(f.slot, file)}
-                    />
-                  </div>
-                  {slotFoto.length > 0 && (
-                    <div className="flex items-center gap-2 pl-[104px]">
-                      {slotFoto.map((g) => (
-                        <div
-                          key={g.id}
-                          className="relative w-14 h-14 rounded-[4px] border border-[var(--border)] overflow-hidden group image-outline shrink-0"
-                        >
-                          <a href={g.url} target="_blank" rel="noreferrer" title={`Buka pratinjau foto ${f.slot.toLowerCase()} di tab baru`}>
-                            <img
-                              src={g.url}
-                              alt={`Dokumentasi ${f.slot} APAR ${unit.kode}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => onHapusFoto(g.id)}
-                            title="Hapus foto"
-                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/65 text-white/90 hover:text-red-400 hidden group-hover:flex items-center justify-center cursor-pointer"
-                          >
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        </fieldset>
 
           {/* Kaki */}
           <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={menyimpanDraf}
-                className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {menyimpanDraf ? 'Menyimpan…' : 'Simpan Draft'}
-              </button>
-              {(inspeksi ? onHapusBulan : onHapusUnit) && (
+            <div className="flex items-center gap-4 flex-wrap">
+              {!terbit && (
                 <button
                   type="button"
-                  onClick={() => setKonfirmasiHapusBulan(true)}
+                  onClick={handleSaveDraft}
+                  disabled={menyimpanDraf}
+                  className="px-3 py-1.5 rounded-[4px] border border-[var(--border-strong)] hover:bg-[var(--bg-hover)] text-xs font-semibold text-[var(--primary)] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {menyimpanDraf ? 'Menyimpan…' : 'Simpan Draft'}
+                </button>
+              )}
+              {/* Dua cakupan hapus, dua label tetap — bukan satu tombol yang
+                  artinya bergeser menurut ada/tidaknya rekam bulan. Baris tabel
+                  adalah UNIT; rekam inspeksi hanya anaknya per bulan. */}
+              {onHapusUnit && (
+                <button
+                  type="button"
+                  onClick={() => setKonfirmasi('UNIT')}
                   disabled={menghapusBulan || menghapusUnit}
                   className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
                 >
-                  <Trash2 size={12} /> Hapus
+                  <Trash2 size={12} /> {menghapusUnit ? 'Menghapus…' : 'Hapus unit'}
+                </button>
+              )}
+              {inspeksi && onHapusBulan && (
+                <button
+                  type="button"
+                  onClick={() => setKonfirmasi('BULAN')}
+                  disabled={menghapusBulan || menghapusUnit}
+                  className="text-[11px] font-medium text-[var(--muted)] hover:text-[var(--secondary)] hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
+                >
+                  {menghapusBulan ? 'Mengosongkan…' : 'Kosongkan bulan ini'}
                 </button>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-1.5 rounded-[4px] hover:bg-[var(--bg-hover)] text-xs text-[var(--secondary)] cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 rounded-[4px] bg-[#f2994a] hover:bg-[#e08830] text-white text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Selesaikan &amp; Terbitkan
-              </button>
+              {terbit ? (
+                <button
+                  type="button"
+                  disabled={membatalkanTerbit || !idRekam}
+                  aria-busy={membatalkanTerbit}
+                  onClick={async () => {
+                    // Batalkan terbit: satu medan DRAF ditulis ke rekam yang
+                    // tampil, baris cache ditulis dari balasan server, dan efek
+                    // `terbit` yang mengembalikan popup ke bentuk pra-terbit.
+                    if (!idRekam) return;
+                    setMembatalkanTerbit(true);
+                    try {
+                      await onBatalkanTerbit(idRekam);
+                    } catch {
+                      // onError mutasi sudah melaporkan pesannya.
+                    } finally {
+                      setMembatalkanTerbit(false);
+                    }
+                  }}
+                  className="px-4 py-1.5 rounded-[4px] border border-[#2f80ed]/40 bg-[#2f80ed]/10 text-[#2f80ed] hover:bg-[#2f80ed]/20 text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {membatalkanTerbit ? 'Membatalkan…' : 'Edit'}
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={menerbitkan}
+                  aria-busy={menerbitkan}
+                  className="px-4 py-1.5 rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {menerbitkan ? 'Menerbitkan…' : 'Terbitkan'}
+                </button>
+              )}
             </div>
           </div>
         </form>
 
-        {/* Konfirmasi hapus: rekam bulan bila ada, bila tidak unit sebaris datanya */}
+        {/* Konfirmasi hapus: dua cakupan terpisah, label menyebut akibatnya */}
         <ConfirmModal
-          isOpen={konfirmasiHapusBulan}
-          title={inspeksi ? 'Hapus Inspeksi' : 'Hapus Unit'}
+          isOpen={konfirmasi !== null}
+          title={konfirmasi === 'BULAN' ? 'Kosongkan Inspeksi Bulan Ini' : 'Hapus Unit'}
           message={
-            inspeksi
-              ? `Rekaman inspeksi APAR ${unit.kode} bulan ini beserta seluruh foto dokumentasinya akan dihapus permanen. Lanjutkan?`
-              : `Unit APAR ${unit.kode} beserta seluruh data inspeksinya akan dihapus permanen. Lanjutkan?`
+            konfirmasi === 'BULAN'
+              ? `Rekaman inspeksi APAR ${unit.kode} bulan ini beserta seluruh fotonya akan dihapus. Unitnya tetap ada dan kembali “Belum Dimulai”. Lanjutkan?`
+              : `Unit APAR ${unit.kode} beserta seluruh rekaman inspeksi dan fotonya akan dihapus permanen. Lanjutkan?`
           }
-          confirmLabel="Hapus"
+          confirmLabel="Ya, hapus"
           accent="#f2994a"
-          onClose={() => setKonfirmasiHapusBulan(false)}
+          onClose={() => setKonfirmasi(null)}
           onConfirm={() => {
-            setKonfirmasiHapusBulan(false);
-            if (inspeksi) onHapusBulan?.();
+            const mode = konfirmasi;
+            setKonfirmasi(null);
+            if (mode === 'BULAN') onHapusBulan?.();
             else onHapusUnit?.();
           }}
         />

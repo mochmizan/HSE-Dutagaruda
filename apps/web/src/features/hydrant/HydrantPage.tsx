@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
-  Briefcase,
   Flame,
   CheckCircle2,
   Clock,
@@ -13,8 +11,6 @@ import {
   ChevronDown,
   ExternalLink,
   Printer,
-  Table as TableIcon,
-  LayoutGrid,
   Check,
   X,
   Camera,
@@ -26,14 +22,13 @@ import { HydrantInspectionModal } from './HydrantInspectionModal';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';
 import { HydrantFindingItem } from './types';
-import { PhotoCard, UnduhPdfButton } from '@/components/ui';
-import { livePhotoUrl } from '@/services/api/liveClient';
-import type { FotoTampil } from '@/services/api/queries';
+import { PhotoCard, UnduhPdfButton, ViewToggle } from '@/components/ui';
 import {
   petakanUnitHidran,
   useUnitHidran,
   useInspeksiHidran,
   useSimpanInspeksiHidran,
+  useBatalkanTerbitHidran,
   useHapusInspeksiHidran,
   useHapusUnitHidran,
   useBuatUnitHidran,
@@ -43,6 +38,7 @@ import {
   useFotoInspeksi,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import { TombolPerluas } from '@/features/navigation';
 import type { ApiInspeksiHidran } from '@/services/api/klien';
 
 interface HydrantPageProps {
@@ -51,18 +47,22 @@ interface HydrantPageProps {
   /** Permintaan sunting dari dasbor: buka modal inspeksi rekam dengan id ini. */
   suntingRefId?: { kategori: string | null; refId: string } | null;
   onSuntingSelesai?: () => void;
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 export const HydrantPage: React.FC<HydrantPageProps> = ({
-  onBack,
   onOpenReportDetail,
   suntingRefId,
   onSuntingSelesai,
+  isCollapsed,
+  onToggleCollapsed,
 }) => {
   const lokasi = useKonteksLokasi();
   const unitQuery = useUnitHidran();
   const inspeksiQuery = useInspeksiHidran();
   const simpanInspeksi = useSimpanInspeksiHidran();
+  const batalkanTerbit = useBatalkanTerbitHidran();
   const hapusInspeksi = useHapusInspeksiHidran();
   const hapusUnit = useHapusUnitHidran();
   const buatUnit = useBuatUnitHidran();
@@ -88,8 +88,9 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
   const [isAddFindingModalOpen, setIsAddFindingModalOpen] = useState(false);
 
-  // Foto bukti per inspeksi (id baris inspeksi → daftar foto sesi; API belum punya daftar foto).
-  const [fotoHidran, setFotoHidran] = useState<Record<string, FotoTampil[]>>({});
+  // Foto bukti dibaca dari API (lihat `fotoBukti` di bawah), bukan disimpan per
+  // sesi: tutup/buka ulang modal atau muat ulang halaman harus tetap menampilkan
+  // foto yang sama.
   const unggahFoto = useUnggahFoto();
   const hapusFoto = useHapusFoto();
   // Month navigation state (di atas: inspeksiAktif memakai period).
@@ -117,17 +118,17 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
       ) ?? null
     : null;
 
+  // Bukti inspeksi unit yang sedang dibuka, dibaca dari API — bukan state sesi,
+  // jadi tutup/buka ulang atau muat ulang tidak menghilangkan foto. Rekam ini
+  // juga bisa memuat foto temuan (bila unit ini jangkar Section B): saring.
+  const fotoAktif = useFotoInspeksi(inspeksiAktif?.id ?? null, 'hydrant');
+  const buktiAktif = (fotoAktif.data ?? []).filter((f) => !f.temuan);
+
   // Hapus rekam inspeksi bulan ini: hook membersihkan foto anak dulu (cegah 409),
-  // laman sekadar menyingkirkan daftar foto sesi + menutup modal.
+  // laman sekadar menutup modal.
   const handleHapusBulan = () => {
     if (!inspeksiAktif) return;
-    const inspectionId = inspeksiAktif.id;
-    hapusInspeksi.mutate(inspectionId);
-    setFotoHidran((prev) => {
-      const next = { ...prev };
-      delete next[inspectionId];
-      return next;
-    });
+    hapusInspeksi.mutate(inspeksiAktif.id);
     setActiveInspectionUnit(null);
   };
 
@@ -167,26 +168,35 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   }, [suntingRefId, inspeksiQuery.data, unitQuery.data]);
 
   // Unit + hasil inspeksi bulan terpilih dari API, dipetakan ke model UI.
-  const units = petakanUnitHidran(
-    unitSite,
-    inspeksiSite,
-    lokasi.zonaIdKeNama,
-    period,
+  // Memoized: identitas objek unit stabil antar-render — efek init modal
+  // tidak boleh menyala setiap refetch (mematikan mode terbit / menimpa
+  // ketikan yang sedang berjalan).
+  const units = useMemo(
+    () =>
+      petakanUnitHidran(
+        unitSite,
+        inspeksiSite,
+        lokasi.zonaIdKeNama,
+        period,
+      ),
+    [unitSite, inspeksiSite, lokasi.zonaIdKeNama, period],
   );
   const zones = lokasi.zonaNamaList;
 
-  // Catatan Hasil Temuan (Findings documentation photos & descriptions)
-  // B. Catatan hasil temuan = foto inspeksi nyata bulan terpilih (GET /api/photos via useFotoInspeksi).
+  // B. Catatan hasil temuan = HANYA foto bertanda `temuan` pada rekam jangkar
+  // bulan terpilih. Foto bukti inspeksi (unggahan dari modal) bukan temuan.
   const jangkarTemuan =
     inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
-  const fotoTemuan = useFotoInspeksi(jangkarTemuan);
+  const fotoTemuan = useFotoInspeksi(jangkarTemuan, 'hydrant');
   const findings: HydrantFindingItem[] = useMemo(
     () =>
-      (fotoTemuan.data ?? []).map((f) => ({
-        id: f.id,
-        imageUrl: f.url,
-        description: f.caption || 'Temuan dokumentasi',
-      })),
+      (fotoTemuan.data ?? [])
+        .filter((f) => f.temuan)
+        .map((f) => ({
+          id: f.id,
+          imageUrl: f.url,
+          description: f.caption || 'Temuan dokumentasi',
+        })),
     [fotoTemuan.data],
   );
 
@@ -225,88 +235,88 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     return true;
   });
 
-  // Draft & terbit sama-sama menyimpan inspeksi ke API (modal selalu mengisi 6 komponen).
-  // Tutup saat mutasi berhasil agar buka-ulang selalu membaca daftar pasca-simpan.
-  const handleSaveDraft = (unitId: string, draft: HydrantUnitItem['draftDetails']) => {
+  // Terbit menyimpan inspeksi ke API (modal selalu mengisi 6 komponen).
+  // Promise-nya dikembalikan: modal menunggu tulisan, dan potret terbit hanya
+  // muncul setelah rekamnya ada.
+  const handleCompleteInspection = async (newReport: InspectionReport) => {
+    const unit = units.find((u) => u.kode === newReport.assetCode);
+    if (!unit) {
+      window.alert(
+        `Unit ${newReport.assetCode} tidak ditemukan di lokasi ini. Muat ulang halaman lalu coba lagi.`,
+      );
+      throw new Error(`Unit ${newReport.assetCode} tidak ditemukan.`);
+    }
+    const d = newReport.hydrantDetails;
     const existing = inspeksiSite.find(
-      (i) => i.unitId === unitId && i.period.startsWith(period),
+      (i) => i.unitId === unit.id && i.period.startsWith(period),
     );
-    simpanInspeksi.mutate(
-      {
-        id: existing?.id,
-        unitId,
-        month: period,
-        boxHydrant: draft?.boxHydrant ?? 'LAYAK',
-        fireHose: draft?.fireHose ?? 'LAYAK',
-        hoseCoupling: draft?.hoseCoupling ?? 'LAYAK',
-        hoseRack: draft?.hoseRack ?? 'LAYAK',
-        nozzle: draft?.nozzle ?? 'LAYAK',
-        valvePillar: draft?.valvePillar ?? 'LAYAK',
-        overallStatus: draft?.overallStatus,
-        overallOverridden: Boolean(draft?.overallStatus),
-        notes: draft?.notes,
-      },
-      { onSuccess: () => setActiveInspectionUnit(null) },
-    );
+    await simpanInspeksi.mutateAsync({
+      id: existing?.id,
+      unitId: unit.id,
+      month: period,
+      boxHydrant: d?.boxHydrant ?? 'LAYAK',
+      fireHose: d?.fireHose ?? 'LAYAK',
+      hoseCoupling: d?.hoseCoupling ?? 'LAYAK',
+      hoseRack: d?.hoseRack ?? 'LAYAK',
+      nozzle: d?.nozzle ?? 'LAYAK',
+      valvePillar: d?.valvePillar ?? 'LAYAK',
+      overallStatus: newReport.overallStatus,
+      overallOverridden: true,
+      approvalStatus: 'DIAJUKAN',
+      notes: newReport.summaryNotes,
+    });
   };
 
-  const handleCompleteInspection = (newReport: InspectionReport) => {
-    const unit = units.find((u) => u.kode === newReport.assetCode);
-    if (unit) {
-      const d = newReport.hydrantDetails;
-      const existing = inspeksiSite.find(
-        (i) => i.unitId === unit.id && i.period.startsWith(period),
-      );
-      simpanInspeksi.mutate({
-        id: existing?.id,
-        unitId: unit.id,
-        month: period,
-        boxHydrant: d?.boxHydrant ?? 'LAYAK',
-        fireHose: d?.fireHose ?? 'LAYAK',
-        hoseCoupling: d?.hoseCoupling ?? 'LAYAK',
-        hoseRack: d?.hoseRack ?? 'LAYAK',
-        nozzle: d?.nozzle ?? 'LAYAK',
-        valvePillar: d?.valvePillar ?? 'LAYAK',
-        overallStatus: newReport.overallStatus,
-        overallOverridden: true,
-        notes: newReport.summaryNotes,
-      });
-    }
-    onOpenReportDetail?.(newReport);
+  // `Edit` pada rekam terbit = batalkan terbit rekam itu saja (satu medan,
+  // `approval_status` → DRAFT). Rekam yang sama turun jadi DRAF, jadi barisnya
+  // keluar dari "Selesai Diperiksa" dan tombolnya kembali ke `Terbitkan`.
+  const handleBatalkanTerbit = async (inspectionId: string): Promise<void> => {
+    await batalkanTerbit.mutateAsync(inspectionId);
   };
 
   const handleAddZone = (_zoneName: string) => {
     // Zona dibuat bersama unit pada handleAddHydrantUnits (butuh siteId).
   };
 
-  const handleUnggahFoto = (file: File, caption: string) => {
-    if (!inspeksiAktif) return;
-    const inspectionId = inspeksiAktif.id;
-    unggahFoto.mutate(
-      { kind: 'hydrant', inspectionId, file, caption },
+  // Bukti inspeksi (`temuan: false`) — dipisahkan dari catatan hasil temuan
+  // supaya unggahan baris ini tidak muncul di Section B.
+  const handleUnggahFoto = (file: File, caption: string, nilai?: HydrantUnitItem['draftDetails']) => {
+    if (!activeInspectionUnit) return;
+    const unggah = (inspectionId: string) =>
+      unggahFoto.mutate({
+        kind: 'hydrant',
+        inspectionId,
+        file,
+        caption,
+        temuan: false,
+      });
+    if (inspeksiAktif) {
+      unggah(inspeksiAktif.id);
+      return;
+    }
+    // Belum ada rekam: buat baris inspeksi sebagai jangkar foto — unggah foto
+    // tidak menunggu tombol Terbitkan.
+    simpanInspeksi.mutate(
       {
-        onSuccess: (foto) =>
-          setFotoHidran((prev) => ({
-            ...prev,
-            [inspectionId]: [
-              ...(prev[inspectionId] ?? []),
-              { id: foto.id, url: livePhotoUrl(foto.id), caption },
-            ],
-          })),
+        unitId: activeInspectionUnit.id,
+        month: period,
+        boxHydrant: nilai?.boxHydrant ?? 'LAYAK',
+        fireHose: nilai?.fireHose ?? 'LAYAK',
+        hoseCoupling: nilai?.hoseCoupling ?? 'LAYAK',
+        hoseRack: nilai?.hoseRack ?? 'LAYAK',
+        nozzle: nilai?.nozzle ?? 'LAYAK',
+        valvePillar: nilai?.valvePillar ?? 'LAYAK',
+        overallStatus: nilai?.overallStatus,
+        overallOverridden: Boolean(nilai?.overallStatus),
+        notes: nilai?.notes,
       },
+      { onSuccess: (baru) => unggah(baru.id) },
     );
   };
 
   const handleHapusFoto = (fotoId: string) => {
     if (!inspeksiAktif) return;
-    const inspectionId = inspeksiAktif.id;
-    hapusFoto.mutate({ id: fotoId, inspectionId }, {
-      onSuccess: () =>
-        setFotoHidran((prev) => ({
-          ...prev,
-          [inspectionId]: (prev[inspectionId] ?? []).filter((f) => f.id !== fotoId),
-        })),
-    });
+    hapusFoto.mutate({ id: fotoId, inspectionId: inspeksiAktif.id });
   };
 
   const handleAddHydrantUnits = (newItems: HydrantCreationItem[]) => {
@@ -326,14 +336,21 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     });
   };
 
-  // Tambah temuan = unggah foto nyata ke rekam inspeksi jangkar bulan terpilih.
+  // Tambah temuan = unggah foto nyata bertanda `temuan` ke rekam jangkar bulan
+  // terpilih, sehingga hanya foto ini yang tampil di Section B.
   const handleAddFinding = (item: { file: File; description: string; unitCode?: string }) => {
     if (!jangkarTemuan) {
       window.alert('Belum ada inspeksi bulan ini — simpan inspeksi satu unit dahulu.');
       return;
     }
     unggahFoto.mutate(
-      { kind: 'hydrant', inspectionId: jangkarTemuan, file: item.file, caption: item.description },
+      {
+        kind: 'hydrant',
+        inspectionId: jangkarTemuan,
+        file: item.file,
+        caption: item.description,
+        temuan: true,
+      },
       {
         onError: () => {},
       },
@@ -386,23 +403,12 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         {/* Back Link & Breadcrumb */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-            <button
-              type="button"
-              onClick={onBack}
-              className="inline-flex items-center gap-1 text-[var(--primary)] hover:text-[#eb5757] font-medium transition-colors cursor-pointer pressable"
-            >
-              <ArrowLeft size={13} />
-              <span>Kembali ke Dashboard Kalender</span>
-            </button>
+            {isCollapsed && <TombolPerluas onKlik={onToggleCollapsed} />}
+            <span className="text-[var(--primary)] font-medium">{lokasi.namaProyek}</span>
             <span>/</span>
             <span className="hover:text-[var(--primary)] cursor-pointer">{lokasi.siteName}</span>
             <span>/</span>
             <span className="text-[var(--primary)] font-medium">Inspeksi Hydrant</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
-            <Briefcase size={12} />
-            <span>{lokasi.namaProyek}</span>
           </div>
         </div>
 
@@ -417,58 +423,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                 <h1 className="text-lg font-bold text-[var(--primary)] tracking-tight">
                   Laporan Inspeksi Hydrant
                 </h1>
-
-                {/* Interactive Month Switcher */}
-                <div className="flex items-center bg-[var(--bg-sidebar)] border border-[var(--border)] rounded-[5px] p-0.5 shadow-2xs">
-                  <button
-                    type="button"
-                    onClick={handlePrevMonth}
-                    title="Bulan Sebelumnya"
-                    className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-
-                  <div className="relative flex items-center">
-                    <select
-                      value={`${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}`}
-                      onChange={(e) => {
-                        const [year, month] = e.target.value.split('-').map(Number);
-                        setSelectedMonth(new Date(year, month, 1));
-                      }}
-                      className="text-xs font-semibold text-[#eb5757] bg-transparent cursor-pointer py-0.5 px-2 focus:outline-none capitalize pr-5 appearance-none"
-                    >
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((m) => {
-                        const d = new Date(2026, m, 1);
-                        return (
-                          <option key={m} value={`2026-${m}`} className="bg-[var(--bg-main)] text-[var(--primary)]">
-                            {format(d, 'MMMM yyyy', { locale: idLocale })}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <ChevronDown size={11} className="absolute right-1 text-[#eb5757] pointer-events-none" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleNextMonth}
-                    title="Bulan Berikutnya"
-                    className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
-                  >
-                    <ChevronRight size={13} />
-                  </button>
-                </div>
-
-                {!isCurrentMonth && (
-                  <button
-                    type="button"
-                    onClick={handleResetToCurrentMonth}
-                    className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors shadow-2xs"
-                  >
-                    Bulan Ini
-                  </button>
-                )}
               </div>
               <p className="text-xs text-[var(--muted)] mt-0.5">
                 Monitoring progres pemeriksaan fisik 6 komponen hydrant gedung per unit
@@ -476,12 +430,64 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             </div>
           </div>
 
-          {/* Top Quick Actions: Add Zone/Hydrants & Print */}
+          {/* Top Quick Actions: Month Switcher, Add Zone/Hydrants & Print */}
           <div className="flex items-center gap-2">
+            {!isCurrentMonth && (
+              <button
+                type="button"
+                onClick={handleResetToCurrentMonth}
+                className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors shadow-2xs"
+              >
+                Bulan Ini
+              </button>
+            )}
+
+            {/* Interactive Month Switcher */}
+            <div className="flex items-center bg-[var(--bg-sidebar)] border border-[var(--border)] rounded-[5px] p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={handlePrevMonth}
+                title="Bulan Sebelumnya"
+                className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
+              >
+                <ChevronLeft size={13} />
+              </button>
+
+              <div className="relative flex items-center">
+                <select
+                  value={`${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}`}
+                  onChange={(e) => {
+                    const [year, month] = e.target.value.split('-').map(Number);
+                    setSelectedMonth(new Date(year, month, 1));
+                  }}
+                  className="text-xs font-semibold text-[#2f80ed] bg-transparent cursor-pointer py-0.5 px-2 focus:outline-none capitalize pr-5 appearance-none"
+                >
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((m) => {
+                    const d = new Date(2026, m, 1);
+                    return (
+                      <option key={m} value={`2026-${m}`} className="bg-[var(--bg-main)] text-[var(--primary)]">
+                        {format(d, 'MMMM yyyy', { locale: idLocale })}
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown size={11} className="absolute right-1 text-[#2f80ed] pointer-events-none" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextMonth}
+                title="Bulan Berikutnya"
+                className="w-6 h-6 rounded-[3px] flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer pressable transition-colors"
+              >
+                <ChevronRight size={13} />
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => setIsAddZoneModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#eb5757] hover:bg-[#d94444] text-white text-xs font-semibold rounded-[4px] shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2f80ed] hover:bg-[#2b77d4] text-white text-xs font-semibold rounded-[4px] shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Plus size={14} strokeWidth={2.5} />
               <span>Tambah Zona & Unit</span>
@@ -565,17 +571,13 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             onClick={() => setFilterTab('ALL')}
             className={`py-1.5 px-3 rounded-[4px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
               filterTab === 'ALL'
-                ? 'bg-[#eb5757] text-white font-semibold shadow-xs'
+                ? 'bg-white dark:bg-[var(--bg-hover)] text-[var(--primary)] font-semibold shadow-xs'
                 : 'text-[var(--secondary)] hover:text-[var(--primary)]'
             }`}
           >
             <span>Semua Unit</span>
             <span
-              className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
-                filterTab === 'ALL'
-                  ? 'bg-black/20 text-white'
-                  : 'bg-[var(--bg-hover)] text-[var(--muted)]'
-              }`}
+              className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-[var(--bg-hover)] text-[var(--muted)]"
             >
               {totalUnits}
             </span>
@@ -586,17 +588,13 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             onClick={() => setFilterTab('ON_PROGRESS')}
             className={`py-1.5 px-3 rounded-[4px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
               filterTab === 'ON_PROGRESS'
-                ? 'bg-[#eb5757] text-white font-semibold shadow-xs'
+                ? 'bg-white dark:bg-[var(--bg-hover)] text-[var(--primary)] font-semibold shadow-xs'
                 : 'text-[var(--secondary)] hover:text-[var(--primary)]'
             }`}
           >
             <span>Sedang Berjalan (On Progress)</span>
             <span
-              className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
-                filterTab === 'ON_PROGRESS'
-                  ? 'bg-black/20 text-white'
-                  : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-              }`}
+              className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400"
             >
               {onProgressUnits.length}
             </span>
@@ -607,17 +605,13 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             onClick={() => setFilterTab('COMPLETED')}
             className={`py-1.5 px-3 rounded-[4px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
               filterTab === 'COMPLETED'
-                ? 'bg-emerald-600 text-white font-semibold shadow-xs'
+                ? 'bg-white dark:bg-[var(--bg-hover)] text-[var(--primary)] font-semibold shadow-xs'
                 : 'text-[var(--secondary)] hover:text-[var(--primary)]'
             }`}
           >
             <span>Selesai Diperiksa</span>
             <span
-              className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
-                filterTab === 'COMPLETED'
-                  ? 'bg-black/20 text-white'
-                  : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-              }`}
+              className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
             >
               {completedUnits.length}
             </span>
@@ -650,36 +644,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             />
           </div>
 
-          {/* Layout Mode Toggle: Table vs Cards (User can revert or switch) */}
-          <div className="flex items-center bg-[var(--bg-sidebar)] p-0.5 rounded-[4px] border border-[var(--border)] text-xs">
-            <button
-              type="button"
-              onClick={() => setViewMode('TABLE')}
-              title="Tampilan Tabel (Mudah dicetak / ekspor)"
-              className={`p-1.5 rounded-[3px] flex items-center gap-1 cursor-pointer transition-colors ${
-                viewMode === 'TABLE'
-                  ? 'bg-[var(--bg-main)] text-[var(--primary)] font-semibold shadow-2xs border border-[var(--border)]'
-                  : 'text-[var(--secondary)] hover:text-[var(--primary)]'
-              }`}
-            >
-              <TableIcon size={14} />
-              <span className="hidden sm:inline text-[11px]">Tabel</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode('CARDS')}
-              title="Tampilan Kartu"
-              className={`p-1.5 rounded-[3px] flex items-center gap-1 cursor-pointer transition-colors ${
-                viewMode === 'CARDS'
-                  ? 'bg-[var(--bg-main)] text-[var(--primary)] font-semibold shadow-2xs border border-[var(--border)]'
-                  : 'text-[var(--secondary)] hover:text-[var(--primary)]'
-              }`}
-            >
-              <LayoutGrid size={14} />
-              <span className="hidden sm:inline text-[11px]">Kartu</span>
-            </button>
-          </div>
+          {/* Layout Mode Toggle: Table vs Cards (komponen shared di ui/Switchers) */}
+          <ViewToggle value={viewMode} onChange={setViewMode} />
         </div>
       </div>
 
@@ -703,7 +669,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setFilterTab('ALL')}
-                  className="px-3 py-1.5 text-xs font-semibold text-[#eb5757] bg-[#eb5757]/10 hover:bg-[#eb5757]/20 rounded-[4px] cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-semibold text-[#2f80ed] bg-[#2f80ed]/10 hover:bg-[#2f80ed]/20 rounded-[4px] cursor-pointer"
                 >
                   Tampilkan Semua Unit
                 </button>
@@ -711,7 +677,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAddZoneModalOpen(true)}
-                className="px-3 py-1.5 text-xs font-semibold text-white bg-[#eb5757] hover:bg-[#d94444] rounded-[4px] cursor-pointer"
+                className="px-3 py-1.5 text-xs font-semibold text-white bg-[#2f80ed] hover:bg-[#2b77d4] rounded-[4px] cursor-pointer"
               >
                 + Tambah Unit Baru
               </button>
@@ -722,7 +688,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
           /* TABLE LAYOUT: Print-ready, compact, comprehensive industrial inspection sheet */
           /* ========================================================================= */
           <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
-            <table className="w-full text-center border-collapse text-xs">
+            <table className="w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
               <thead>
                 <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
                   <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
@@ -767,15 +733,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                   return (
                     <tr
                       key={unit.id}
-                      onClick={() => {
-                        if (unit.status === 'SELESAI' && unit.completedReport && onOpenReportDetail) {
-                          onOpenReportDetail(unit.completedReport);
-                        } else {
-                          // Tanpa pengait detail (halaman mandiri): modal inspeksi
-                          // menampilkan hasil tersimpan.
-                          setActiveInspectionUnit(unit);
-                        }
-                      }}
+                      onClick={() => setActiveInspectionUnit(unit)}
                       title="Klik baris untuk melihat detail atau memperbarui hasil inspeksi"
                       className={`transition-colors cursor-pointer ${
                         isUnitTidakLayak
@@ -837,7 +795,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                                 ) : isNotLayak ? (
                                   <X size={10} strokeWidth={2.5} className="text-red-600 dark:text-red-400" />
                                 ) : (
-                                  <span className="text-[8px] text-[var(--muted)]">â€¢</span>
+                                  <span className="text-[8px] text-[var(--muted)]">•</span>
                                 )}
                               </span>
                             );
@@ -884,14 +842,21 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
 
                       {/* 7. Catatan / Temuan (Shows actual notes, never placeholder) */}
                       <td className="py-2.5 px-3 text-center align-middle text-[11px] text-[var(--secondary)]">
-                        <div className="flex items-center justify-center text-center">
+                        <div className="flex items-start justify-center text-left">
                           {notesText ? (
-                            <span className="italic line-clamp-2 max-w-[320px] text-[var(--primary)] text-center inline-block" title={notesText}>
-                              â€œ{notesText}â€
+                            <span
+                              className="italic line-clamp-3 max-w-[320px] text-[var(--primary)] inline-block"
+                              title={notesText}
+                            >
+                              {notesText.split('\n').filter(Boolean).map((baris, idx) => (
+                                <span key={idx} className="block leading-snug">
+                                  {baris}
+                                </span>
+                              ))}
                             </span>
                           ) : (
                             <span className="text-[var(--muted)] text-[10px] text-center inline-block">
-                              â€“
+                              –
                             </span>
                           )}
                         </div>
@@ -1027,13 +992,8 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                     {isCompleted ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          if (unit.completedReport && onOpenReportDetail) {
-                            onOpenReportDetail(unit.completedReport);
-                          } else {
-                            setActiveInspectionUnit(unit);
-                          }
-                        }}
+                        onClick={() => setActiveInspectionUnit(unit)}
+                        title="Buka form inspeksi bulan ini"
                         className="px-2.5 py-1 text-xs font-semibold rounded-[4px] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer flex items-center gap-1 pressable"
                       >
                         <span>Lihat Laporan</span>
@@ -1043,7 +1003,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
                       <button
                         type="button"
                         onClick={() => setActiveInspectionUnit(unit)}
-                        className="px-3 py-1 text-xs font-semibold rounded-[4px] bg-[#eb5757] hover:bg-[#d94444] text-white shadow-xs cursor-pointer flex items-center gap-1 pressable disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="px-3 py-1 text-xs font-semibold rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white shadow-xs cursor-pointer flex items-center gap-1 pressable disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <span>{isOnProgress ? 'Lanjutkan' : 'Mulai Inspeksi'}</span>
                         <ChevronRight size={12} />
@@ -1077,7 +1037,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
           <button
             type="button"
             onClick={() => setIsAddFindingModalOpen(true)}
-            className="no-print px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#eb5757] hover:bg-[#d94444] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
+            className="no-print px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Camera size={13} strokeWidth={2.2} />
             <span>Tambah Temuan</span>
@@ -1154,18 +1114,17 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         unit={activeInspectionUnit}
         isOpen={Boolean(activeInspectionUnit)}
         inspeksi={inspeksiAktif}
-        foto={inspeksiAktif ? (fotoHidran[inspeksiAktif.id] ?? []) : []}
+        foto={inspeksiAktif ? buktiAktif : []}
         mengunggah={unggahFoto.isPending}
         onUnggahFoto={handleUnggahFoto}
         onHapusFoto={handleHapusFoto}
         onClose={() => setActiveInspectionUnit(null)}
-        onSaveDraft={handleSaveDraft}
         onCompleteInspection={handleCompleteInspection}
+        onBatalkanTerbit={handleBatalkanTerbit}
         onHapusBulan={handleHapusBulan}
         menghapusBulan={hapusInspeksi.isPending}
         onHapusUnit={handleHapusUnit}
         menghapusUnit={hapusUnit.isPending}
-        menyimpanDraf={simpanInspeksi.isPending}
       />
 
       {/* 3. Modal Tambah Catatan Hasil Temuan */}

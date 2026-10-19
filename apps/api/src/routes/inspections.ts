@@ -34,6 +34,28 @@ import {
 
 const itemParamSchema = idParamSchema.extend({ itemId: z.string().min(1) });
 
+/** Medan yang menentukan status akhir. PATCH yang tidak menyentuhnya (mis.
+ *  `Edit` / batalkan terbit yang hanya mengirim `approvalStatus`) tidak boleh
+ *  menghitung ulang status akhir — kalau tidak, satu medan bisa diam-diam
+ *  menimpa nilai lain, tepat yang dihindari oleh tulisan satu-medan. */
+const MEDAN_KOMPONEN_HIDRAN = [
+  "boxHydrant",
+  "fireHose",
+  "hoseCoupling",
+  "hoseRack",
+  "nozzle",
+  "valvePillar",
+] as const;
+const MEDAN_KOMPONEN_APAR = [
+  "safetyPin",
+  "corong",
+  "segel",
+  "tekanan",
+  "tabung",
+  "selang",
+  "katupTuas",
+] as const;
+
 export const hydrantInspectionsApp = new Hono()
   .use("*", requireSession)
 
@@ -101,6 +123,7 @@ export const hydrantInspectionsApp = new Hono()
       valvePillar: body.valvePillar,
       overallStatus,
       overallOverridden: body.overallOverridden ?? false,
+      approvalStatus: body.approvalStatus ?? "DRAFT",
       notes: body.notes ?? null,
     })
     .returning();
@@ -134,8 +157,13 @@ export const hydrantInspectionsApp = new Hono()
     if (rows.length === 0) throw notFound("Inspeksi hidran");
     const body = c.req.valid("json");
     const merged = { ...rows[0], ...body };
-    const overallStatus =
-      (body.overallOverridden ?? rows[0].overallOverridden) && body.overallStatus
+    const sentuhPenilaian =
+      body.overallStatus !== undefined ||
+      body.overallOverridden !== undefined ||
+      MEDAN_KOMPONEN_HIDRAN.some((k) => body[k] !== undefined);
+    const overallStatus = !sentuhPenilaian
+      ? rows[0].overallStatus
+      : (body.overallOverridden ?? rows[0].overallOverridden) && body.overallStatus
         ? body.overallStatus
         : computeHydrantOverallStatus({
             boxHydrant: merged.boxHydrant,
@@ -241,6 +269,7 @@ export const aparInspectionsApp = new Hono()
       beratCo2Kg: body.beratCo2Kg ?? null,
       overallStatus,
       overallOverridden: body.overallOverridden ?? false,
+      approvalStatus: body.approvalStatus ?? "DRAFT",
       notes: body.notes ?? null,
     })
     .returning();
@@ -274,8 +303,13 @@ export const aparInspectionsApp = new Hono()
     if (rows.length === 0) throw notFound("Inspeksi APAR");
     const body = c.req.valid("json");
     const merged = { ...rows[0], ...body };
-    const overallStatus =
-      (body.overallOverridden ?? rows[0].overallOverridden) && body.overallStatus
+    const sentuhPenilaian =
+      body.overallStatus !== undefined ||
+      body.overallOverridden !== undefined ||
+      MEDAN_KOMPONEN_APAR.some((k) => body[k] !== undefined);
+    const overallStatus = !sentuhPenilaian
+      ? rows[0].overallStatus
+      : (body.overallOverridden ?? rows[0].overallOverridden) && body.overallStatus
         ? body.overallStatus
         : computeAparOverallStatus({
             safetyPin: merged.safetyPin,

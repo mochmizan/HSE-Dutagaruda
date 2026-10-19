@@ -1,7 +1,46 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, LayoutGrid, TableIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+
+export type ViewMode = 'TABLE' | 'CARDS';
+
+interface ViewToggleProps {
+  value: ViewMode;
+  onChange: (v: ViewMode) => void;
+}
+
+/** Pengalih Tabel/Kartu — segmented control seragam: pil putih aktif
+ *  (identik tab filter, plus `dark:bg-[var(--bg-hover)]` agar kontras
+ *  di mode gelap). Dipakai Hydrant & APAR. */
+export const ViewToggle: React.FC<ViewToggleProps> = ({ value, onChange }) => {
+  const base = 'p-1.5 rounded-[4px] flex items-center gap-1 cursor-pointer pressable transition-colors';
+  const opsi: { key: ViewMode; judul: string; title: string; Ikon: React.FC<{ size?: number }> }[] = [
+    { key: 'TABLE', judul: 'Tabel', title: 'Tampilan Tabel (mudah dicetak / ekspor)', Ikon: TableIcon },
+    { key: 'CARDS', judul: 'Kartu', title: 'Tampilan Kartu', Ikon: LayoutGrid },
+  ];
+  return (
+    <div className="flex items-center bg-[var(--bg-sidebar)] p-0.5 rounded-[5px] border border-[var(--border)] text-xs">
+      {opsi.map(({ key, judul, title, Ikon }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          title={title}
+          aria-pressed={value === key}
+          className={`${base} ${
+            value === key
+              ? 'bg-white dark:bg-[var(--bg-hover)] text-[var(--primary)] font-semibold shadow-xs'
+              : 'text-[var(--secondary)] hover:text-[var(--primary)]'
+          }`}
+        >
+          <Ikon size={14} />
+          <span className="hidden sm:inline text-[11px]">{judul}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
 
 /** Shared month switcher shell. Page owns the date state. */
 interface MonthSwitcherProps {

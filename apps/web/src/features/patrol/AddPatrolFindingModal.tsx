@@ -209,19 +209,12 @@ export const AddPatrolFindingModal: React.FC<AddPatrolFindingModalProps> = ({
 
           <div className="pt-2 border-t border-[var(--border)] flex items-center justify-end gap-2">
             <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 text-xs font-medium rounded border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--secondary)] cursor-pointer pressable"
-            >
-              Batal
-            </button>
-            <button
               type="submit"
               disabled={isMenyimpan}
-              className="px-4 py-1.5 text-xs font-semibold rounded bg-[#2f80ed] hover:brightness-95 text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 text-xs font-semibold rounded bg-[#2f80ed] hover:bg-[#2b77d4] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Check size={13} strokeWidth={2.5} />
-              <span>{isMenyimpan ? 'Menyimpan…' : 'Simpan Foto'}</span>
+              <span>{isMenyimpan ? 'Menyimpan…' : 'Terbitkan'}</span>
             </button>
           </div>
         </form>

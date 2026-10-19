@@ -23,6 +23,10 @@ the Hono API through these hooks.
   `kunci`, mappers `petakan*` (API rows → UI models in `types/hse.ts`).
   Mutations invalidate on settle; `useUbahButirP3k` and
   `useHapusTemuanPatroli` are optimistic with rollback.
+  `useBatalkanTerbitHidran` is the Hydrant batalkan-terbit command: PATCHes one
+  field (`approvalStatus: 'DRAFT'`) so a stale cache cannot overwrite other
+  columns, and writes the returned row back into `kunci.inspeksiHidran` so the
+  modal re-derives its read-only state from the record itself.
   `useHapusInspeksiHidran`/`useHapusInspeksiApar` delete the month record —
   child photos are cleaned first (`ambilFotoInspeksi` + `hapusFoto`) so the
   API's 409-on-remaining-photos guard never trips.

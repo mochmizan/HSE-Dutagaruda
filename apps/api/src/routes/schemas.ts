@@ -55,6 +55,7 @@ export const hydrantInspectionBodySchema = z.object({
   valvePillar: z.enum(["LAYAK", "TIDAK_LAYAK", "HILANG"]),
   overallStatus: z.enum(["LAYAK", "LAYAK_DENGAN_CATATAN", "TIDAK_LAYAK"]).optional(),
   overallOverridden: z.boolean().optional(),
+  approvalStatus: z.enum(["DRAFT", "DIAJUKAN", "DIKETAHUI", "DISETUJUI"]).optional(),
   notes: z.string().optional(),
 });
 
@@ -71,6 +72,7 @@ export const aparInspectionBodySchema = z.object({
   beratCo2Kg: z.number().optional(),
   overallStatus: z.enum(["LAYAK", "LAYAK_DENGAN_CATATAN", "TIDAK_LAYAK"]).optional(),
   overallOverridden: z.boolean().optional(),
+  approvalStatus: z.enum(["DRAFT", "DIAJUKAN", "DIKETAHUI", "DISETUJUI"]).optional(),
   notes: z.string().optional(),
 });
 

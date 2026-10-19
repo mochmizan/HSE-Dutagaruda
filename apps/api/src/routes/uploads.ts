@@ -18,13 +18,15 @@ const uploadFormSchema = z.object({
   inspectionKind: z.enum(["hydrant", "apar"]),
   inspectionId: z.string().min(1),
   caption: z.string().max(500).optional(),
+  /** `true` = foto catatan hasil temuan (Section B); default bukti inspeksi. */
+  temuan: z.enum(["true", "false"]).optional(),
 });
 
 export const uploadsApp = new Hono()
   .use("*", requireSession)
 
   .post("/", zValidator("form", uploadFormSchema), async (c) => {
-  const { inspectionKind, inspectionId, caption } = c.req.valid("form");
+  const { inspectionKind, inspectionId, caption, temuan } = c.req.valid("form");
   const owned = companyId(c);
   const table = inspectionKind === "hydrant" ? hydrantInspections : aparInspections;
   const head = await db
@@ -61,11 +63,12 @@ export const uploadsApp = new Hono()
       bytes: bytes.length,
       sha256,
       caption: caption ?? null,
+      temuan: temuan === "true",
       hydrantInspectionId: inspectionKind === "hydrant" ? inspectionId : null,
       aparInspectionId: inspectionKind === "apar" ? inspectionId : null,
     })
     .returning();
-  return c.json({ id: row.id, key: row.s3Key }, 201);
+  return c.json({ id: row.id, key: row.s3Key, temuan: row.temuan }, 201);
 });
 
 const photoListQuerySchema = z.object({
@@ -88,7 +91,12 @@ export const photosApp = new Hono()
     .limit(1);
   if (ownedInspection.length === 0) throw notFound("Inspeksi");
   const rows = await db
-    .select({ id: photos.id, caption: photos.caption, createdAt: photos.createdAt })
+    .select({
+      id: photos.id,
+      caption: photos.caption,
+      temuan: photos.temuan,
+      createdAt: photos.createdAt,
+    })
     .from(photos)
     .where(and(eq(photos.companyId, owned), eq(ownerCol, inspectionId)))
     .orderBy(asc(photos.createdAt));

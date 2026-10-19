@@ -66,6 +66,7 @@ export type ApiStatusHidran = 'LAYAK' | 'TIDAK_LAYAK' | 'HILANG';
 export type ApiStatusApar = 'BAIK' | 'TIDAK_BAIK' | 'NA';
 export type ApiStatusP3k = 'STANDAR' | 'DIBAWAH_STANDAR' | 'KADALUARSA';
 export type ApiStatusAkhir = 'LAYAK' | 'LAYAK_DENGAN_CATATAN' | 'TIDAK_LAYAK';
+export type ApiStatusApproval = 'DRAFT' | 'DIAJUKAN' | 'DIKETAHUI' | 'DISETUJUI';
 
 export interface ApiInspeksiHidran {
   id: string;
@@ -81,6 +82,7 @@ export interface ApiInspeksiHidran {
   valvePillar: ApiStatusHidran;
   overallStatus: ApiStatusAkhir;
   overallOverridden: boolean;
+  approvalStatus: ApiStatusApproval;
   notes: string | null;
   createdAt: string;
 }
@@ -100,6 +102,7 @@ export interface ApiInspeksiApar {
   beratCo2Kg: number | null;
   overallStatus: ApiStatusAkhir;
   overallOverridden: boolean;
+  approvalStatus: ApiStatusApproval;
   notes: string | null;
   createdAt: string;
 }
@@ -208,6 +211,7 @@ export interface MasukanInspeksiHidran {
   valvePillar: ApiStatusHidran;
   overallStatus?: ApiStatusAkhir;
   overallOverridden?: boolean;
+  approvalStatus?: ApiStatusApproval;
   notes?: string;
 }
 
@@ -233,6 +237,7 @@ export interface MasukanInspeksiApar {
   katupTuas: ApiStatusApar;
   overallStatus?: ApiStatusAkhir;
   overallOverridden?: boolean;
+  approvalStatus?: ApiStatusApproval;
   notes?: string;
 }
 
@@ -353,6 +358,17 @@ export interface ApiPerusahaan {
 
 export const ambilPerusahaan = () => liveGet<Halaman<ApiPerusahaan>>('/companies?limit=10');
 
+/** Proyek = organisasi + baris cermin companies (satu id). */
+export const buatProyek = (nama: string) =>
+  livePost<ApiPerusahaan>('/projects', { name: nama });
+
+export const ubahProyek = (id: string, nama: string) =>
+  livePatch<ApiPerusahaan>(`/projects/${id}`, { name: nama });
+
+export const hapusProyek = (id: string) => liveDelete<{ ok: boolean }>(`/projects/${id}`);
+
+export const hapusLokasi = (id: string) => liveDelete<{ ok: boolean }>(`/sites/${id}`);
+
 export const buatKotakP3k = (body: { siteId: string; name: string }) =>
   livePost<ApiP3kBox>('/p3k-boxes', body);
 
@@ -361,6 +377,8 @@ export const buatKotakP3k = (body: { siteId: string; name: string }) =>
 export interface ApiFoto {
   id: string;
   caption: string | null;
+  /** `true` = foto catatan hasil temuan; `false` = bukti inspeksi. */
+  temuan: boolean;
   mime: string | null;
   bytes: number | null;
 }
@@ -371,12 +389,14 @@ export const unggahFoto = (
   inspectionId: string,
   file: File,
   caption?: string,
+  temuan = false,
 ) => {
   const form = new FormData();
   form.append('file', file);
   form.append('inspectionKind', inspectionKind);
   form.append('inspectionId', inspectionId);
   if (caption) form.append('caption', caption);
+  form.append('temuan', temuan ? 'true' : 'false');
   return livePostForm<ApiFoto & { key: string }>('/uploads', form);
 };
 

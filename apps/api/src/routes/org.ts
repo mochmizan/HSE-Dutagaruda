@@ -2,6 +2,7 @@ import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq, gt } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client.js";
+import { member, organization } from "../db/auth-schema.js";
 import {
   aparUnits,
   companies,
@@ -84,6 +85,95 @@ export const companiesApp = new Hono()
 export const clientsApp = new Hono()
   .use("*", requireSession)
   .route("/", companiesApp);
+
+/** Slug unik organisasi dari nama (kolom slug wajib unik). */
+function slugProyek(nama: string): string {
+  const dasar =
+    nama
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "proyek";
+  return `${dasar}-${newId().slice(0, 8).toLowerCase()}`;
+}
+
+function pemintaId(c: { get(key: string): { id: string } }): string {
+  return (c.get("user") as { id: string }).id;
+}
+
+async function wajibAnggota(organizationId: string, userId: string): Promise<void> {
+  const shots = await db
+    .select({ id: member.id })
+    .from(member)
+    .where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
+    .limit(1);
+  if (shots.length === 0) throw notFound("Proyek");
+}
+
+/**
+ * Proyek = organisasi Better Auth + baris cermin companies (satu id).
+ * Cermin wajib ada: sites.companyId FK ke companies.id, tanpanya
+ * proyek baru tak bisa punya lokasi.
+ */
+export const projectsApp = new Hono()
+  .use("*", requireSession)
+
+  .post("/", zValidator("json", companyBodySchema), async (c) => {
+    const body = c.req.valid("json");
+    const nama = body.name.trim();
+    const id = newId();
+    await db.insert(organization).values({
+      id,
+      name: nama,
+      slug: slugProyek(nama),
+      createdAt: new Date(),
+    });
+    await db.insert(companies).values({ id, name: nama });
+    await db.insert(member).values({
+      id: newId(),
+      organizationId: id,
+      userId: pemintaId(c),
+      role: "owner",
+      createdAt: new Date(),
+    });
+    return c.json({ id, name: nama }, 201);
+  })
+
+  .patch(
+    "/:id",
+    zValidator("param", idParamSchema),
+    zValidator("json", companyBodySchema.partial()),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      await wajibAnggota(id, pemintaId(c));
+      const body = c.req.valid("json");
+      if (body.name !== undefined) {
+        const nama = body.name.trim();
+        await db.update(organization).set({ name: nama }).where(eq(organization.id, id));
+        await db.update(companies).set({ name: nama }).where(eq(companies.id, id));
+      }
+      const rows = await db.select().from(companies).where(eq(companies.id, id)).limit(1);
+      if (rows.length === 0) throw notFound("Proyek");
+      return c.json(rows[0]);
+    },
+  )
+
+  .delete("/:id", zValidator("param", idParamSchema), async (c) => {
+    const { id } = c.req.valid("param");
+    await wajibAnggota(id, pemintaId(c));
+    const kids = await db
+      .select({ id: sites.id })
+      .from(sites)
+      .where(eq(sites.companyId, id))
+      .limit(1);
+    if (kids.length > 0) throw blockedByChildren("Proyek");
+    // Cascade FK menghapus member + invitation; cermin companies dihapus eksplisit.
+    await db.delete(organization).where(eq(organization.id, id));
+    await db.delete(companies).where(eq(companies.id, id));
+    return c.json({ ok: true });
+  });
 
 export const sitesApp = new Hono()
   .use("*", requireSession)

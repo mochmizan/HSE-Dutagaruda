@@ -1,8 +1,8 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { addMonths, subMonths, format } from 'date-fns';
-import { MapPin, Loader2 } from 'lucide-react';
-import { HseSidebar } from '@/features/navigation';
+import { Loader2 } from 'lucide-react';
+import { HseSidebar, TombolPerluas } from '@/features/navigation';
 import { LoginScreen, useSesi, useKeluar } from '@/features/auth';
 import { PenyediaLokasi, useKonteksLokasi } from '@/features/konteksLokasi';
 import { HseCalendar } from '@/features/calendar';
@@ -34,6 +34,8 @@ function AppIsi() {
   const sesi = useSesi();
   const keluar = useKeluar();
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const toggleCollapsed = () => setIsCollapsed((v) => !v);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
@@ -157,6 +159,8 @@ function AppIsi() {
         namaPengguna={sesi.data.nama}
         onKeluar={() => keluar.mutate()}
         keluarBerjalan={keluar.isPending}
+        isCollapsed={isCollapsed}
+        onToggleCollapsed={toggleCollapsed}
       />
 
       {/* 2. Main Area: Toggle between Calendar Dashboard and Category Specific Pages (e.g. Hydrant, APAR) */}
@@ -165,26 +169,18 @@ function AppIsi() {
           {/* Center: Main Inspection Area (Calendar + 4 PRD Squares) */}
           <main className="flex-1 flex flex-col h-screen overflow-y-auto px-6 py-4 bg-[var(--bg-main)]">
             {/* Top Breadcrumb & Site Meta */}
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                  <span className="hover:text-[var(--primary)] cursor-pointer">
-                    {lokasi.siteName}
-                  </span>
-                  <span>/</span>
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[var(--border)]">
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center gap-2 text-xs">
+                  {isCollapsed && <TombolPerluas onKlik={toggleCollapsed} />}
                   <span className="text-[var(--primary)] font-medium">
                     {lokasi.namaProyek}
                   </span>
                 </div>
 
-                <h1 className="text-lg font-bold text-[var(--primary)] tracking-tight flex items-center gap-2">
+                <h1 className="text-lg font-bold text-[var(--primary)] tracking-tight flex items-center gap-2 pt-1">
                   <span>Dashboard Digitalisasi Inspeksi K3</span>
                 </h1>
-
-                <div className="flex items-center gap-1 text-[11px] text-[var(--muted)]">
-                  <MapPin size={12} />
-                  <span>{lokasi.address}</span>
-                </div>
               </div>
             </div>
 
@@ -200,23 +196,6 @@ function AppIsi() {
                 reports={reports}
                 activeCategoryFilter={activeCategoryFilter}
               />
-            </div>
-
-            {/* Detail Lokasi Aktif (tanpa kartu angka) */}
-            <div className="w-full mt-3 px-1 py-2 border-t border-[var(--border)]">
-              <div className="flex items-center gap-2.5">
-                <span className="w-9 h-9 rounded-[6px] bg-[#2383e2]/15 text-[#2383e2] flex items-center justify-center flex-shrink-0">
-                  <MapPin size={18} />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-sm font-bold text-[var(--primary)] tracking-tight truncate">
-                    {lokasi.siteName}
-                  </h2>
-                  <p className="text-xs text-[var(--muted)] truncate">
-                    {lokasi.address} — {lokasi.namaProyek}
-                  </p>
-                </div>
-              </div>
             </div>
           </main>
 
@@ -237,6 +216,8 @@ function AppIsi() {
             onBack={() => setCurrentView('dashboard')}
             suntingRefId={bukaSunting}
             onSuntingSelesai={() => setBukaSunting(null)}
+            isCollapsed={isCollapsed}
+            onToggleCollapsed={toggleCollapsed}
           />
         </Suspense>
       ) : currentView === 'apar' ? (
@@ -245,15 +226,25 @@ function AppIsi() {
             onBack={() => setCurrentView('dashboard')}
             suntingRefId={bukaSunting}
             onSuntingSelesai={() => setBukaSunting(null)}
+            isCollapsed={isCollapsed}
+            onToggleCollapsed={toggleCollapsed}
           />
         </Suspense>
       ) : currentView === 'p3k' ? (
         <Suspense fallback={<HalamanMemuat />}>
-          <P3kPage onBack={() => setCurrentView('dashboard')} />
+          <P3kPage
+          onBack={() => setCurrentView('dashboard')}
+          isCollapsed={isCollapsed}
+          onToggleCollapsed={toggleCollapsed}
+        />
         </Suspense>
       ) : (
         <Suspense fallback={<HalamanMemuat />}>
-          <PatrolPage onBack={() => setCurrentView('dashboard')} />
+          <PatrolPage
+          onBack={() => setCurrentView('dashboard')}
+          isCollapsed={isCollapsed}
+          onToggleCollapsed={toggleCollapsed}
+        />
         </Suspense>
       )}
 

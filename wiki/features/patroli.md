@@ -9,9 +9,13 @@ default hari ini. Cetak A4 portrait (header + grid).
 ## Sub-features
 
 - `patrol-list` menampilkan feed terbaru-dulu dengan caption + tanggal.
-- `patrol-add` menambah temuan (foto wajib + caption).
-- `patrol-delete` menghapus via hover-delete + konfirmasi.
-- `patrol-print` mengunduh PDF via `POST /api/export/patrol/:refId`.
+- `patrol-add` menambah temuan (foto wajib + caption). Tombol modal kini
+  `Terbitkan` (biru, sebelumnya `Simpan Foto`); tombol `Batal` dihapus.
+- `patrol-delete` menghapus via hover-delete langsung; TANPA dialog
+  konfirmasi (terverifikasi live: kartu hilang seketika, tanpa
+  `window.confirm`) — hati-hati saat mengendarai di atas data review.
+- `patrol-print` mengunduh PDF via `POST /api/export/patrol-report/:refId`
+  (bukan `/patrol/`); ada juga `Cetak` (window.print) di header.
 
 ## How to get to it (user POV)
 
