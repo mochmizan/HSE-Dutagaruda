@@ -1,6 +1,6 @@
 import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
-import { member, organization } from "../db/auth-schema.js";
+import { member } from "../db/auth-schema.js";
 import { db } from "../db/client.js";
 import { auth } from "./config.js";
 import { and, eq } from "drizzle-orm";
@@ -30,12 +30,10 @@ export const requireSession = createMiddleware<{
       ),
     )
     .limit(1);
-  const org = await db
-    .select({ id: organization.id })
-    .from(organization)
-    .where(eq(organization.id, session.session.activeOrganizationId))
-    .limit(1);
-  if (rows.length === 0 || org.length === 0) {
+  // member.organization_id is an FK to organization.id, so a member row proves
+  // the organization exists. The separate existence check was a third round
+  // trip per request for a fact the FK already guarantees.
+  if (rows.length === 0) {
     throw new HTTPException(401, { message: "Keanggotaan perusahaan tidak ditemukan." });
   }
   c.set("user", {
@@ -43,7 +41,7 @@ export const requireSession = createMiddleware<{
     email: session.user.email,
     name: session.user.name,
     role: rows[0].role,
-    companyId: org[0].id,
+    companyId: session.session.activeOrganizationId,
   });
   await next();
 });
