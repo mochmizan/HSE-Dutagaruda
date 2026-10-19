@@ -7,6 +7,9 @@
 // Setiap angka dicetak dengan jumlah run dan rentang. Median dipakai, bukan mean,
 // karena satu request dingin bisa menggeser mean jauh.
 
+import { request } from "node:http";
+import { brotliDecompressSync, gunzipSync, zstdDecompressSync } from "node:zlib";
+
 const BASE = process.env.BENCH_BASE ?? "http://localhost:8080";
 const ORIGIN = BASE;
 const EMAIL = process.env.BENCH_EMAIL ?? "pengawas@contoh.id";
@@ -51,6 +54,50 @@ function ringkas(xs: number[]) {
   return { med: Math.round(med * 10) / 10, min: Math.round(s[0] * 10) / 10, max: Math.round(s[s.length - 1] * 10) / 10, n: s.length };
 }
 
+/** Satu GET tanpa dekompresi otomatis, supaya byte di kabel bisa dihitung. */
+function ambilMentah(path: string): Promise<{ encoding: string; kabel: number; body: Buffer }> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(path, BASE);
+    const req = request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname + url.search,
+        method: "GET",
+        headers: { "Accept-Encoding": "gzip, br, zstd" },
+      },
+      (res) => {
+        let kabel = 0;
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => {
+          kabel += c.length;
+          chunks.push(c);
+        });
+        res.on("end", () =>
+          resolve({
+            encoding: (res.headers["content-encoding"] as string) ?? "(tidak ada)",
+            kabel,
+            body: Buffer.concat(chunks),
+          }),
+        );
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function dekompres(r: { encoding: string; body: Buffer }): Buffer {
+  try {
+    if (r.encoding === "gzip") return gunzipSync(r.body);
+    if (r.encoding === "br") return brotliDecompressSync(r.body);
+    if (r.encoding === "zstd") return zstdDecompressSync(r.body);
+  } catch {
+    return r.body;
+  }
+  return r.body;
+}
+
 const ENDPOINTS: [string, string][] = [
   ["GET", "/api/health"],
   ["GET", "/api/sites"],
@@ -87,28 +134,31 @@ async function probeApi() {
 }
 
 async function probeAset() {
-  // Ukuran yang benar-benar dikirim untuk satu kunjungan dingin: HTML, CSS, dan
-  // JS yang dirujuk index.html.
-  const html = await fetch(`${BASE}/`, { headers: { "Accept-Encoding": "gzip, br, zstd" } });
-  const text = await html.text();
-  const refs = [...text.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((m) => m[1]);
+  // Byte di kabel harus diukur dengan http mentah. `fetch` membuka dekompresi
+  // otomatis, jadi `arrayBuffer().byteLength` selalu ukuran mentah dan tidak
+  // pernah bisa membuktikan kompresi bekerja. Versi pertama probe ini salah
+  // karena itu, dan melaporkan 421 KB "dikirim" padahal kabelnya 123 KB.
+  const html = await ambilMentah("/");
+  const teks = dekompres(html).toString("utf8");
+  const refs = [...teks.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((m) => m[1]);
   const rows = [];
-  let total = 0;
+  let totalKabel = 0;
   let totalMentah = 0;
   for (const ref of refs) {
     const t0 = performance.now();
-    const res = await fetch(`${BASE}${ref}`, { headers: { "Accept-Encoding": "gzip, br, zstd" } });
-    const buf = await res.arrayBuffer();
-    total += buf.byteLength;
-    totalMentah += Number(res.headers.get("content-length") ?? buf.byteLength);
+    const r = await ambilMentah(ref);
+    const mentah = dekompres(r).byteLength;
+    totalKabel += r.kabel;
+    totalMentah += mentah;
     rows.push({
       aset: ref.split("/").pop(),
-      encoding: res.headers.get("content-encoding") ?? "(tidak ada)",
-      dikirim: buf.byteLength,
+      encoding: r.encoding,
+      dikirim: r.kabel,
+      mentah,
       ms: Math.round(performance.now() - t0),
     });
   }
-  return { refs: rows, totalDikirim: total, totalMentah };
+  return { refs: rows, totalDikirim: totalKabel, totalMentah, html: { encoding: html.encoding, kabel: html.kabel } };
 }
 
 async function main() {
@@ -130,12 +180,18 @@ async function main() {
   }
 
   console.log(`\nMuat awal web\n`);
-  console.log("aset".padEnd(30) + "encoding".padStart(14) + "dikirim".padStart(10) + "ms".padStart(7));
+  console.log(`HTML: encoding=${aset.html.encoding}, ${aset.html.kabel} B\n`);
+  console.log("aset".padEnd(30) + "encoding".padStart(12) + "dikirim".padStart(10) + "mentah".padStart(10) + "ms".padStart(7));
   for (const r of aset.refs) {
-    console.log(r.aset.padEnd(30) + r.encoding.padStart(14) + String(r.dikirim).padStart(10) + String(r.ms).padStart(7));
+    console.log(
+      r.aset.padEnd(30) + r.encoding.padStart(12) + String(r.dikirim).padStart(10) +
+      String(r.mentah).padStart(10) + String(r.ms).padStart(7),
+    );
   }
-  console.log(`\nTotal dikirim: ${aset.totalDikirim.toLocaleString("id-ID")} B (${Math.round(aset.totalDikirim / 1024)} KB)`);
+  console.log(`\nTotal di kabel: ${aset.totalDikirim.toLocaleString("id-ID")} B (${Math.round(aset.totalDikirim / 1024)} KB)`);
   console.log(`Total mentah:  ${aset.totalMentah.toLocaleString("id-ID")} B (${Math.round(aset.totalMentah / 1024)} KB)`);
+  const hemat = aset.totalMentah - aset.totalDikirim;
+  console.log(`Hemat:         ${hemat.toLocaleString("id-ID")} B (${Math.round((hemat / aset.totalMentah) * 100)}%)\n`);
 }
 
 await main();
