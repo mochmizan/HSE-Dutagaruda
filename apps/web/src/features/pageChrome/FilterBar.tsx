@@ -17,8 +17,6 @@ interface FilterBarProps {
   onSearchQuery: (q: string) => void;
   viewMode: ViewMode;
   onViewMode: (mode: ViewMode) => void;
-  /** Placeholder kotak cari; halaman boleh menyebut kolom yang bisa dicari. */
-  placeholderCari?: string;
 }
 
 const KELAS_TAB = (aktif: boolean) =>
@@ -51,7 +49,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onSearchQuery,
   viewMode,
   onViewMode,
-  placeholderCari = 'Cari unit atau zona...',
 }) => (
   <div className="no-print flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 pb-3 mb-3 border-b border-[var(--border)]">
     <div className="flex items-center gap-1 bg-[var(--bg-sidebar)] p-0.5 rounded-[5px] border border-[var(--border)] text-xs flex-wrap">
@@ -103,7 +100,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
         <input
           type="text"
-          placeholder={placeholderCari}
+          placeholder="Cari unit atau zona..."
           value={searchQuery}
           onChange={(e) => onSearchQuery(e.target.value)}
           className="w-full pl-7 pr-2.5 py-1.5 text-xs bg-[var(--bg-main)] border border-[var(--border)] rounded-[4px] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2f80ed]"

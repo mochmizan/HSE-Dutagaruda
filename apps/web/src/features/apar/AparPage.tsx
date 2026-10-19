@@ -599,7 +599,6 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
         onSearchQuery={setSearchQuery}
         viewMode={viewMode}
         onViewMode={setViewMode}
-        placeholderCari="Cari kode, zona, atau petugas…"
       />
 
       {/* e. Bagian A — hasil pemeriksaan */}
