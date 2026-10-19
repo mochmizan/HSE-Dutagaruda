@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { db } from "../db/client.js";
 import {
   aparInspections,
@@ -20,6 +21,7 @@ import {
   idParamSchema,
   listQuerySchema,
   p3kBoxBodySchema,
+  urutanUnitSchema,
 } from "./schemas.js";
 
 async function ownSiteZone(
@@ -41,6 +43,52 @@ async function ownSiteZone(
       .limit(1);
     if (zone.length === 0) throw notFound("Zona");
   }
+}
+
+/** Tabel unit yang punya kolom `sortOrder` (Hydrant dan APAR). */
+type TabelUnit = typeof hydrantUnits | typeof aparUnits;
+
+/**
+ * Tulis ulang urutan tampil unit satu lokasi.
+ *
+ * `ids` harus memuat SELURUH unit lokasi itu tepat sekali — bukan sebagian —
+ * supaya tidak ada dua unit yang mendapat `sort_order` sama (urutan jadi tak
+ * deterministik) dan tidak ada unit yang tertinggal di urutan lama. Daftar yang
+ * tidak cocok ditolak 400, bukan diam-diam diterima.
+ */
+async function simpanUrutanUnit(
+  tabel: TabelUnit,
+  owned: string,
+  siteId: string,
+  ids: string[],
+): Promise<void> {
+  await ownSiteZone(owned, siteId);
+
+  const milikLokasi = await db
+    .select({ id: tabel.id })
+    .from(tabel)
+    .where(and(eq(tabel.companyId, owned), eq(tabel.siteId, siteId)));
+  const milik = new Set(milikLokasi.map((r) => r.id));
+
+  const unik = new Set(ids);
+  if (unik.size !== ids.length) {
+    throw new HTTPException(400, { message: "Daftar urutan memuat unit ganda." });
+  }
+  if (ids.length !== milik.size || ids.some((id) => !milik.has(id))) {
+    throw new HTTPException(400, {
+      message: "Daftar urutan harus memuat seluruh unit pada lokasi ini.",
+    });
+  }
+
+  // Satu transaksi: penulisan sebagian akan meninggalkan urutan bolong.
+  await db.transaction(async (tx) => {
+    for (const [urutan, id] of ids.entries()) {
+      await tx
+        .update(tabel)
+        .set({ sortOrder: urutan })
+        .where(and(eq(tabel.id, id), eq(tabel.companyId, owned)));
+    }
+  });
 }
 
 export const hydrantUnitsApp = new Hono()
@@ -72,11 +120,22 @@ export const hydrantUnitsApp = new Hono()
   const body = c.req.valid("json");
   const owned = companyId(c);
   await ownSiteZone(owned, body.siteId, body.zoneId);
+  // Unit baru masuk ke urutan paling akhir, bukan menimpa urutan unit lain.
+  const [terakhir] = await db
+    .select({ maks: sql<number>`coalesce(max(${hydrantUnits.sortOrder}), -1)` })
+    .from(hydrantUnits)
+    .where(and(eq(hydrantUnits.companyId, owned), eq(hydrantUnits.siteId, body.siteId)));
   const [row] = await db
     .insert(hydrantUnits)
-    .values({ id: newId(), companyId: owned, ...body })
+    .values({ id: newId(), companyId: owned, sortOrder: Number(terakhir?.maks ?? -1) + 1, ...body })
     .returning();
   return c.json(row, 201);
+  })
+
+  .put("/urutan", zValidator("json", urutanUnitSchema), async (c) => {
+    const { siteId, ids } = c.req.valid("json");
+    await simpanUrutanUnit(hydrantUnits, companyId(c), siteId, ids);
+    return c.json({ ok: true });
   })
 
   .get("/:id", zValidator("param", idParamSchema), async (c) => {
@@ -160,11 +219,21 @@ export const aparUnitsApp = new Hono()
   const body = c.req.valid("json");
   const owned = companyId(c);
   await ownSiteZone(owned, body.siteId, body.zoneId);
+  const [terakhir] = await db
+    .select({ maks: sql<number>`coalesce(max(${aparUnits.sortOrder}), -1)` })
+    .from(aparUnits)
+    .where(and(eq(aparUnits.companyId, owned), eq(aparUnits.siteId, body.siteId)));
   const [row] = await db
     .insert(aparUnits)
-    .values({ id: newId(), companyId: owned, ...body })
+    .values({ id: newId(), companyId: owned, sortOrder: Number(terakhir?.maks ?? -1) + 1, ...body })
     .returning();
   return c.json(row, 201);
+  })
+
+  .put("/urutan", zValidator("json", urutanUnitSchema), async (c) => {
+    const { siteId, ids } = c.req.valid("json");
+    await simpanUrutanUnit(aparUnits, companyId(c), siteId, ids);
+    return c.json({ ok: true });
   })
 
   .get("/:id", zValidator("param", idParamSchema), async (c) => {

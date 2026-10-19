@@ -3,6 +3,12 @@ import { periodKeySchema } from "@viaannn/shared";
 
 export const idParamSchema = z.object({ id: z.string().min(1) });
 
+/** Urutan tampil unit per lokasi: id lengkap, sudah berurutan. */
+export const urutanUnitSchema = z.object({
+  siteId: z.string().min(1, "Lokasi wajib diisi."),
+  ids: z.array(z.string().min(1)).min(1, "Daftar urutan tidak boleh kosong."),
+});
+
 export const companyBodySchema = z.object({
   name: z.string().min(1, "Nama perusahaan wajib diisi."),
 });

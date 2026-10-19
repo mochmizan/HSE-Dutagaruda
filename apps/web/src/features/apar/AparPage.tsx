@@ -35,11 +35,13 @@ import {
   useHapusUnitApar,
   useBuatUnitApar,
   useUbahUnitApar,
+  useUrutkanUnit,
   useUnggahFoto,
   useHapusFoto,
   useFotoInspeksi,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import { susunUrutanBaru } from '@/lib/urutanUnit';
 import type { ApiInspeksiApar } from '@/services/api/klien';
 
 // ─────────────────────────────────────────────────────────────
@@ -216,6 +218,19 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
       }),
     [units, filterTab, zoneFilter, searchQuery]
   );
+
+  // Pindah baris: daftar yang dikirim adalah SEMUA unit lokasi, karena server
+  // menuntut daftar lengkap; posisi baris disisipkan ke sana.
+  const urutkan = useUrutkanUnit('apar');
+  const handlePindah = (unitId: string, arah: -1 | 1) => {
+    const ids = susunUrutanBaru(
+      units.map((u) => u.id),
+      filteredUnits.map((u) => u.id),
+      unitId,
+      arah,
+    );
+    if (ids) urutkan.mutate({ siteId: lokasi.siteId, ids });
+  };
 
   // ── Turunan: rekap kedaluwarsa dikelompokkan per tanggal ──
   const expiryGroups = useMemo(() => {
@@ -613,7 +628,7 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
             )}
           </div>
         ) : viewMode === 'TABLE' ? (
-          <AparTable units={filteredUnits} onBuka={handleOpenInspection} />
+          <AparTable units={filteredUnits} onBuka={handleOpenInspection} onPindah={handlePindah} />
         ) : (
           <AparCards units={filteredUnits} onPilihKartu={handleSelectUnit} aksen={APAR_ACCENT} />
         )}

@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertCircle, Check, CheckCircle2, Clock, X } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { KeteranganTeks } from '@/features/pageChrome';
+import { KeteranganTeks, NoUrut } from '@/features/pageChrome';
 import type { HydrantUnitItem } from '../../types/hse';
 
 /** Enam komponen hydrant, urut sesuai kertas. */
@@ -42,6 +42,8 @@ export function tanggalTampil(unit: HydrantUnitItem): string {
 interface HydrantTableProps {
   units: HydrantUnitItem[];
   onBuka: (unit: HydrantUnitItem) => void;
+  /** Pindahkan satu baris; `arah` -1 naik, +1 turun. */
+  onPindah?: (unitId: string, arah: -1 | 1) => void;
 }
 
 /**
@@ -51,12 +53,12 @@ interface HydrantTableProps {
  * melar dan tabel jauh lebih lebar daripada tabel APAR. Catatan tetap terbaca
  * saat baris dibuka.
  */
-export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => (
+export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka, onPindah }) => (
   <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
     <table className="w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
       <thead>
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-          <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
+          <th className="py-2.5 px-3 w-16 text-center align-middle">No.</th>
           <th className="py-2.5 px-3 min-w-[96px] text-center align-middle">Kode Hydrant</th>
           <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Zona</th>
           <th className="py-2.5 px-3 min-w-[224px] text-center align-middle">
@@ -93,7 +95,13 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka }) => 
               }`}
             >
               <td className="py-2.5 px-3 text-center align-middle font-mono text-[var(--muted)] tabular-nums">
-                {idx + 1}
+                <NoUrut
+                  nomor={idx + 1}
+                  bisaNaik={Boolean(onPindah) && idx > 0}
+                  bisaTurun={Boolean(onPindah) && idx < units.length - 1}
+                  onNaik={() => onPindah?.(unit.id, -1)}
+                  onTurun={() => onPindah?.(unit.id, 1)}
+                />
               </td>
 
               <td className="py-2.5 px-3 text-center align-middle font-semibold text-[var(--primary)] font-mono">

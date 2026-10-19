@@ -68,6 +68,15 @@ PDF storage, and Gotenberg PDF rendering.
   follow the cursor; the web client does so in `ambilSemua` (`klien.ts`).
   `siteId` and `period` are accepted query filters on inspections, units, zones,
   boxes and patrol reports and are applied in SQL.
+- Unit display order is user-controlled and stored, not derived: `sort_order`
+  on `hydrant_units` and `apar_units` (migration `0007_*`, backfilled from
+  `kode` so existing tables kept their old sequence). `PUT /api/<hydrant-units|
+  apar-units>/urutan` takes `{ siteId, ids }`, requires `ids` to be every unit of
+  that site exactly once (400 otherwise) and rewrites all positions in one
+  transaction. New units are appended at `max(sort_order) + 1`. The list route
+  still orders by `id` because its cursor pagination needs a monotonic key —
+  display order is applied client-side in `klien.ts`, and PDF export orders by
+  `sort_order` then `kode`.
 - `GET /api/photos?inspectionKind=hydrant|apar&inspectionId=` lists a photo
   owner inspection's photos, tenant-scoped (unknown or other-company
   inspection is 404): `{ items: [{ id, caption, createdAt }] }` ordered by

@@ -15,6 +15,7 @@ const unitHidran = (over: Partial<ApiHydrantUnit> = {}): ApiHydrantUnit => ({
   siteId: "s1",
   zoneId: "z1",
   kode: "H-01",
+  sortOrder: 0,
   createdAt: "2026-01-01T00:00:00.000Z",
   ...over,
 });
@@ -47,6 +48,7 @@ const unitApar = (over: Partial<ApiAparUnit> = {}): ApiAparUnit => ({
   tahun: 2024,
   jenis: "POWDER",
   ukuran: "3 kg",
+  sortOrder: 0,
   expiredDate: "2026-10-31",
   createdAt: "2026-01-01T00:00:00.000Z",
   ...over,

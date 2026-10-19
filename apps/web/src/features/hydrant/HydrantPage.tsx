@@ -23,11 +23,13 @@ import {
   useHapusUnitHidran,
   useBuatUnitHidran,
   useUbahUnitHidran,
+  useUrutkanUnit,
   useUnggahFoto,
   useHapusFoto,
   useFotoInspeksi,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import { susunUrutanBaru } from '@/lib/urutanUnit';
 import type { ApiInspeksiHidran } from '@/services/api/klien';
 
 /** Aksen halaman Hydrant, satu tempat. */
@@ -222,6 +224,20 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
 
     return true;
   });
+
+  // Pindah baris: urutan disimpan per lokasi, jadi daftar yang dikirim adalah
+  // SEMUA unit lokasi — bukan hanya baris yang lolos saringan. `susunUrutanBaru`
+  // menyisipkan baris ke posisi tetangganya di daftar penuh.
+  const urutkan = useUrutkanUnit('hydrant');
+  const handlePindah = (unitId: string, arah: -1 | 1) => {
+    const ids = susunUrutanBaru(
+      units.map((u) => u.id),
+      filteredUnits.map((u) => u.id),
+      unitId,
+      arah,
+    );
+    if (ids) urutkan.mutate({ siteId: lokasi.siteId, ids });
+  };
 
   // Terbit menyimpan inspeksi ke API (modal selalu mengisi 6 komponen).
   // Promise-nya dikembalikan: modal menunggu tulisan, dan potret terbit hanya
@@ -440,7 +456,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             </div>
           </div>
         ) : viewMode === 'TABLE' ? (
-          <HydrantTable units={filteredUnits} onBuka={setActiveInspectionUnit} />
+          <HydrantTable units={filteredUnits} onBuka={setActiveInspectionUnit} onPindah={handlePindah} />
         ) : (
           <HydrantCards units={filteredUnits} onBuka={setActiveInspectionUnit} aksen={AKSEN} />
         )}

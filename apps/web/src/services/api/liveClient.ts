@@ -59,6 +59,9 @@ export const livePostForm = <T>(path: string, form: FormData) =>
 export const livePatch = <T>(path: string, body?: unknown) =>
   apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
 
+export const livePut = <T>(path: string, body?: unknown) =>
+  apiFetch<T>(path, { method: 'PUT', body: JSON.stringify(body) });
+
 export const liveDelete = <T>(path: string) =>
   apiFetch<T>(path, { method: 'DELETE' });
 

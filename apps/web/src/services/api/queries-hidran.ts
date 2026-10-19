@@ -121,3 +121,49 @@ export function useUbahUnitHidran() {
     onError: (err) => window.alert(gagal(err)),
   });
 }
+
+/**
+ * Simpan urutan tampil unit satu lokasi (Hydrant atau APAR).
+ *
+ * Perubahan ditulis optimistis ke cache lebih dulu supaya baris tidak melompat
+ * balik saat menunggu jaringan, lalu daftar diambil ulang dari server. Bila
+ * server menolak, `onError` mengembalikan cache ke keadaan sebelumnya — tanpa
+ * itu tabel akan menampilkan urutan yang tidak pernah tersimpan.
+ */
+export function useUrutkanUnit(kategori: 'hydrant' | 'apar') {
+  const qc = useQueryClient();
+  const kunciDaftar = kategori === 'hydrant' ? kunci.unitHidran : kunci.unitApar;
+  const simpan = kategori === 'hydrant' ? k.simpanUrutanUnitHidran : k.simpanUrutanUnitApar;
+
+  return useMutation({
+    mutationFn: (args: { siteId: string; ids: string[] }) => simpan(args.siteId, args.ids),
+
+    onMutate: async ({ siteId, ids }) => {
+      await qc.cancelQueries({ queryKey: kunciDaftar });
+      const sebelumnya = qc.getQueriesData<{ id: string; siteId: string }[]>({
+        queryKey: kunciDaftar,
+      });
+      const posisi = new Map(ids.map((id, i) => [id, i]));
+
+      for (const [kunciQuery, data] of sebelumnya) {
+        if (!data) continue;
+        qc.setQueryData(
+          kunciQuery,
+          data.map((u) =>
+            u.siteId === siteId && posisi.has(u.id) ? { ...u, sortOrder: posisi.get(u.id)! } : u,
+          ),
+        );
+      }
+      return { sebelumnya };
+    },
+
+    onError: (err, _args, ctx) => {
+      for (const [kunciQuery, data] of ctx?.sebelumnya ?? []) {
+        qc.setQueryData(kunciQuery, data);
+      }
+      window.alert(gagal(err));
+    },
+
+    onSettled: () => void qc.invalidateQueries({ queryKey: kunciDaftar }),
+  });
+}

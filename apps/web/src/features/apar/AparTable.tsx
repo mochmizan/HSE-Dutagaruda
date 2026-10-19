@@ -2,7 +2,7 @@ import React from 'react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { formatIndonesianDate } from '../../lib/dates';
-import { KeteranganTeks } from '@/features/pageChrome';
+import { KeteranganTeks, NoUrut } from '@/features/pageChrome';
 import type { AparUnitItem } from '../../types/hse';
 import { COMPONENT_LABELS, ComponentChip, EligibilityBadge } from './AparBadges';
 
@@ -23,6 +23,8 @@ export const getEffectiveDetails = (unit: AparUnitItem) => {
 interface AparTableProps {
   units: AparUnitItem[];
   onBuka: (unit: AparUnitItem) => void;
+  /** Pindahkan satu baris; `arah` -1 naik, +1 turun. */
+  onPindah?: (unitId: string, arah: -1 | 1) => void;
 }
 
 /**
@@ -31,12 +33,12 @@ interface AparTableProps {
  * Dipisah dari AparPage agar halaman tidak lagi 1000+ baris. Markup, kelas,
  * dan urutan kolom sama dengan versi sebelumnya.
  */
-export const AparTable: React.FC<AparTableProps> = ({ units, onBuka }) => (
+export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah }) => (
   <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
     <table className="apar-report-table w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
       <thead>
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-          <th className="py-2.5 px-3 w-12 text-center align-middle">No.</th>
+          <th className="py-2.5 px-3 w-16 text-center align-middle">No.</th>
           <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Kode APAR</th>
           <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Zona</th>
           <th className="py-2.5 px-3 min-w-[110px] text-center align-middle">Jenis / Ukuran</th>
@@ -65,7 +67,15 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka }) => (
                   : 'hover:bg-[var(--bg-hover)]/60'
               }`}
             >
-              <td className="py-2.5 px-3 text-center align-middle font-mono text-[var(--muted)] tabular-nums">{idx + 1}</td>
+              <td className="py-2.5 px-3 text-center align-middle font-mono text-[var(--muted)] tabular-nums">
+                <NoUrut
+                  nomor={idx + 1}
+                  bisaNaik={Boolean(onPindah) && idx > 0}
+                  bisaTurun={Boolean(onPindah) && idx < units.length - 1}
+                  onNaik={() => onPindah?.(unit.id, -1)}
+                  onTurun={() => onPindah?.(unit.id, 1)}
+                />
+              </td>
               <td className="py-2.5 px-3 text-center align-middle font-semibold text-[var(--primary)] font-mono tabular-nums">{unit.kode}</td>
               <td className="py-2.5 px-3 text-center align-middle font-semibold text-[var(--primary)]">{unit.zoneName}</td>
               <td className="py-2.5 px-3 text-center align-middle text-[var(--secondary)]">

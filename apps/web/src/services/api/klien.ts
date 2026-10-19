@@ -7,7 +7,7 @@
  * pemanggilan memakai fetch + deklarasi tipe di berkas ini.
  */
 
-import { liveGet, livePost, livePatch, liveDelete, livePostForm, liveApiBase } from './liveClient';
+import { liveGet, livePost, livePatch, livePut, liveDelete, livePostForm, liveApiBase } from './liveClient';
 import { ApiError } from './client';
 
 export interface Halaman<T> {
@@ -37,6 +37,7 @@ export interface ApiHydrantUnit {
   siteId: string;
   zoneId: string;
   kode: string;
+  sortOrder: number;
   createdAt: string;
 }
 
@@ -52,6 +53,7 @@ export interface ApiAparUnit {
   jenis: ApiAparJenis | null;
   ukuran: string | null;
   expiredDate: string;
+  sortOrder: number;
   createdAt: string;
 }
 
@@ -188,6 +190,20 @@ const BATAS_BARIS = 2000;
 const UKURAN_HALAMAN = 100;
 
 /**
+ * Urutkan unit menurut `sortOrder` yang diatur pengguna.
+ *
+ * Server tetap memaginasi dengan kursor `id` (kursor harus monoton, dan
+ * `sortOrder` bisa berubah kapan saja), jadi pengurutan tampil dilakukan di
+ * sini. `id` jadi pemecah seri supaya urutan tetap deterministik bila ada dua
+ * unit dengan `sortOrder` sama — misalnya saat migrasi belum sempat mengisi.
+ */
+function urutkanUnit<T extends { id: string; sortOrder?: number }>(daftar: T[]): T[] {
+  return [...daftar].sort(
+    (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id.localeCompare(b.id),
+  );
+}
+
+/**
  * Ambil SELURUH baris sebuah daftar dengan mengikuti `nextCursor`.
  *
  * Server membatasi satu halaman. Pemanggil tidak boleh menerima himpunan
@@ -223,11 +239,11 @@ export const ubahLokasi = (id: string, body: { name?: string; address?: string }
 
 export const ambilZona = (cakupan: CakupanDaftar = {}) => ambilSemua<ApiZone>('/zones', cakupan);
 
-export const ambilUnitHidran = (cakupan: CakupanDaftar = {}) =>
-  ambilSemua<ApiHydrantUnit>('/hydrant-units', cakupan);
+export const ambilUnitHidran = async (cakupan: CakupanDaftar = {}) =>
+  urutkanUnit(await ambilSemua<ApiHydrantUnit>('/hydrant-units', cakupan));
 
-export const ambilUnitApar = (cakupan: CakupanDaftar = {}) =>
-  ambilSemua<ApiAparUnit>('/apar-units', cakupan);
+export const ambilUnitApar = async (cakupan: CakupanDaftar = {}) =>
+  urutkanUnit(await ambilSemua<ApiAparUnit>('/apar-units', cakupan));
 
 export const ambilKotakP3k = (cakupan: CakupanDaftar = {}) =>
   ambilSemua<ApiP3kBox>('/p3k-boxes', cakupan);
@@ -393,10 +409,18 @@ export const ubahUnitApar = (id: string, body: Partial<MasukanUnitApar>) =>
 
 export const hapusUnitApar = (id: string) => liveDelete(`/apar-units/${id}`);
 
+/** Urutan tampil unit APAR per lokasi. `ids` = seluruh unit lokasi, sudah berurutan. */
+export const simpanUrutanUnitApar = (siteId: string, ids: string[]) =>
+  livePut<{ ok: boolean }>('/apar-units/urutan', { siteId, ids });
+
 export const ubahUnitHidran = (id: string, body: Partial<MasukanUnitHidran>) =>
   livePatch<ApiHydrantUnit>(`/hydrant-units/${id}`, body);
 
 export const hapusUnitHidran = (id: string) => liveDelete(`/hydrant-units/${id}`);
+
+/** Urutan tampil unit per lokasi. `ids` = seluruh unit lokasi, sudah berurutan. */
+export const simpanUrutanUnitHidran = (siteId: string, ids: string[]) =>
+  livePut<{ ok: boolean }>('/hydrant-units/urutan', { siteId, ids });
 
 export const buatZona = (body: { siteId: string; name: string }) =>
   livePost<ApiZone>('/zones', body);

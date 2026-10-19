@@ -100,6 +100,8 @@ export const hydrantUnits = pgTable(
       .notNull()
       .references(() => zones.id),
     kode: text("kode").notNull(),
+    /** Urutan tampil yang diatur pengguna; 0..n-1 per lokasi. */
+    sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -128,6 +130,8 @@ export const aparUnits = pgTable(
     jenis: aparJenisEnum("jenis"),
     ukuran: text("ukuran"),
     expiredDate: date("expired_date").notNull(),
+    /** Urutan tampil yang diatur pengguna; 0..n-1 per lokasi. */
+    sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

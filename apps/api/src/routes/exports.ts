@@ -87,7 +87,7 @@ async function loadHydrantMonthly(refId: string, owned: string): Promise<Hydrant
         eq(hydrantUnits.siteId, a.siteId),
       ),
     )
-    .orderBy(asc(hydrantUnits.kode));
+    .orderBy(asc(hydrantUnits.sortOrder), asc(hydrantUnits.kode));
   const photoRows = rows.length
     ? await db
         .select({ s3Key: photos.s3Key, caption: photos.caption })
@@ -159,7 +159,7 @@ async function loadAparMonthly(refId: string, owned: string): Promise<AparMonthl
         eq(aparUnits.siteId, a.siteId),
       ),
     )
-    .orderBy(asc(aparUnits.kode));
+    .orderBy(asc(aparUnits.sortOrder), asc(aparUnits.kode));
   const expiring = await db
     .select({
       kode: aparUnits.kode,
