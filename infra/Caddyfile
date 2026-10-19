@@ -1,6 +1,11 @@
 :80 {
   root * /srv/web
 
+  # Satu directive di level situs: berlaku untuk shell SPA, /assets/*, /api/*,
+  # dan /storage/*. zstd didahulukan bila klien menerimanya, gzip sebagai
+  # cadangan. Tipe biner (PNG/JPEG/PDF) tidak disentuh encoder.
+  encode zstd gzip
+
   handle /api/* {
     reverse_proxy api:3001
   }
