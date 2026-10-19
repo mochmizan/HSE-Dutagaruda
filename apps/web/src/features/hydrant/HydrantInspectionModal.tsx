@@ -250,6 +250,23 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
     }
   };
 
+  // Esc + kunci scroll badan saat terbuka. Kontrak features/AGENTS.md mewajibkan
+  // Esc menutup modal; versi sebelumnya hanya punya backdrop click, sehingga
+  // papan ketik tidak bisa keluar dari formulir Hydrant.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen, onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 select-none"

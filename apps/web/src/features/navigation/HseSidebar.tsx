@@ -115,6 +115,13 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
   const [suntingProyekId, setSuntingProyekId] = useState<string | null>(null);
   const [namaProyekSunting, setNamaProyekSunting] = useState('');
 
+  // Seksi LOKASI: lokasi mana yang terbuka, tambah baris, dan sunting nama sebaris.
+  const [lokasiTerbuka, setLokasiTerbuka] = useState<string | null>(null);
+  const [tambahLokasi, setTambahLokasi] = useState(false);
+  const [namaBaru, setNamaBaru] = useState('');
+  const [suntingId, setSuntingId] = useState<string | null>(null);
+  const [namaSunting, setNamaSunting] = useState('');
+
   const simpanProyekBaru = () => {
     const nama = namaProyekBaru.trim();
     if (!nama || buatProyek.isPending) return;
@@ -146,6 +153,9 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
     setMenu(null);
   };
 
+  // Seksi LOKASI: lokasi mana yang terbuka, tambah baris, dan sunting nama sebaris.
+  // Dideklarasikan sebelum `jalankanHapus` karena handler itu menutup lokasi yang
+  // baru dihapus.
   const jalankanHapus = () => {
     if (!menu) return;
     const target = menu;
@@ -175,13 +185,6 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
       hapusProyek.mutate(target.id);
     }
   };
-
-  // Seksi LOKASI: lokasi mana yang terbuka, tambah baris, dan sunting nama sebaris.
-  const [lokasiTerbuka, setLokasiTerbuka] = useState<string | null>(null);
-  const [tambahLokasi, setTambahLokasi] = useState(false);
-  const [namaBaru, setNamaBaru] = useState('');
-  const [suntingId, setSuntingId] = useState<string | null>(null);
-  const [namaSunting, setNamaSunting] = useState('');
 
   const simpanLokasiBaru = () => {
     const nama = namaBaru.trim();

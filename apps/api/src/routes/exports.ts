@@ -43,12 +43,14 @@ const exportParamSchema = z.object({
 export type ExportCategory = z.infer<typeof exportParamSchema>["category"];
 
 async function presignedPhotoRows(s3Keys: { s3Key: string; caption: string | null }[]) {
-  const out: { src: string | null; caption: string }[] = [];
-  for (const p of s3Keys) {
-    const src = (await objectExists(p.s3Key)) ? await presignedGet(p.s3Key, 60, "internal") : null;
-    out.push({ src, caption: p.caption ?? "Foto temuan" });
-  }
-  return out;
+  // Presign paralel: satu PDF bisa memuat belasan foto, dan menandatanganinya
+  // berurutan menambah satu round trip Garage per foto ke waktu ekspor.
+  return Promise.all(
+    s3Keys.map(async (p) => ({
+      src: (await objectExists(p.s3Key)) ? await presignedGet(p.s3Key, 60, "internal") : null,
+      caption: p.caption ?? "Foto temuan",
+    })),
+  );
 }
 
 async function loadHydrantMonthly(refId: string, owned: string): Promise<HydrantMonthlyData> {
@@ -90,7 +92,16 @@ async function loadHydrantMonthly(refId: string, owned: string): Promise<Hydrant
     ? await db
         .select({ s3Key: photos.s3Key, caption: photos.caption })
         .from(photos)
-        .where(inArray(photos.hydrantInspectionId, rows.map((r) => r.inspectionId)))
+        .where(
+          and(
+            inArray(photos.hydrantInspectionId, rows.map((r) => r.inspectionId)),
+            // Section B adalah "Catatan Hasil Temuan". Foto bukti fisik
+            // (`temuan = false`) punya tempatnya sendiri di formulir, bukan di
+            // sini; tanpa filter ini satu foto 3,7 MB ikut tercetak dan PDF
+            // satu halaman membengkak jadi 4,3 MB.
+            eq(photos.temuan, true),
+          ),
+        )
     : [];
   return {
     siteName: a.siteName,

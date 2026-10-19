@@ -55,7 +55,32 @@ export const patrolApp = new Hono()
         .orderBy(asc(safetyPatrolReports.id))
         .limit(n),
   });
-  return c.json(page);
+  // Sertakan temuan dalam satu query. Sebelumnya klien memanggil satu request
+  // per laporan, jadi 40 laporan berarti 41 round trip hanya untuk membuka
+  // halaman patroli.
+  const ids = page.items.map((r) => r.id);
+  const temuan = ids.length
+    ? await db
+        .select()
+        .from(safetyPatrolFindings)
+        .where(
+          and(
+            eq(safetyPatrolFindings.companyId, owned),
+            inArray(safetyPatrolFindings.reportId, ids),
+          ),
+        )
+        .orderBy(asc(safetyPatrolFindings.createdAt))
+    : [];
+  const perLaporan = new Map<string, typeof temuan>();
+  for (const f of temuan) {
+    const daftar = perLaporan.get(f.reportId);
+    if (daftar) daftar.push(f);
+    else perLaporan.set(f.reportId, [f]);
+  }
+  return c.json({
+    ...page,
+    items: page.items.map((r) => ({ ...r, findings: perLaporan.get(r.id) ?? [] })),
+  });
   })
 
   .post("/", zValidator("json", patrolReportBodySchema), async (c) => {

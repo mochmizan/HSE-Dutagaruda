@@ -8,6 +8,7 @@
  */
 
 import { liveGet, livePost, livePatch, liveDelete, livePostForm, liveApiBase } from './liveClient';
+import { ApiError } from './client';
 
 export interface Halaman<T> {
   items: T[];
@@ -163,7 +164,56 @@ export interface ApiUmpan {
 
 // ── Permintaan ──
 
-export const ambilLokasi = () => liveGet<Halaman<ApiSite>>('/sites?limit=100');
+/** Cakupan daftar: lokasi aktif dan/atau bulan (`YYYY-MM`). Keduanya opsional
+ *  supaya pemanggil lama tetap sah; server menyaring di SQL. */
+export interface CakupanDaftar {
+  siteId?: string;
+  period?: string;
+}
+
+/** Satu-satunya tempat menyusun query string daftar. */
+export function kueriDaftar(cakupan: CakupanDaftar & { cursor?: string; limit?: number }): string {
+  const q = new URLSearchParams();
+  if (cakupan.siteId) q.set('siteId', cakupan.siteId);
+  if (cakupan.period) q.set('period', cakupan.period);
+  if (cakupan.cursor) q.set('cursor', cakupan.cursor);
+  if (cakupan.limit !== undefined) q.set('limit', String(cakupan.limit));
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
+/** Batas keras pengambilan berantai; mencegah loop tanpa ujung bila server
+ *  mengembalikan kursor yang sama terus. */
+const BATAS_BARIS = 2000;
+const UKURAN_HALAMAN = 100;
+
+/**
+ * Ambil SELURUH baris sebuah daftar dengan mengikuti `nextCursor`.
+ *
+ * Server membatasi satu halaman. Pemanggil tidak boleh menerima himpunan
+ * terpotong diam-diam, jadi kursor selalu diikuti di sini: daftar lebih dari
+ * satu halaman tetap utuh, dan bila melewati `BATAS_BARIS` permintaan gagal
+ * dengan pesan jelas alih-alih memotong data.
+ */
+async function ambilSemua<T>(path: string, cakupan: CakupanDaftar = {}): Promise<T[]> {
+  const items: T[] = [];
+  let cursor: string | undefined;
+  for (;;) {
+    const page = await liveGet<Halaman<T>>(
+      `${path}${kueriDaftar({ ...cakupan, limit: UKURAN_HALAMAN, cursor })}`,
+    );
+    items.push(...page.items);
+    if (page.nextCursor === null) return items;
+    if (items.length >= BATAS_BARIS) {
+      throw new ApiError(0, 'Batas baris', {
+        pesan: `Daftar melebihi ${BATAS_BARIS} baris. Persempit cakupan lokasi atau bulan.`,
+      });
+    }
+    cursor = page.nextCursor;
+  }
+}
+
+export const ambilLokasi = () => ambilSemua<ApiSite>('/sites');
 
 export const buatLokasi = (body: { name: string; address?: string }) =>
   livePost<ApiSite>('/sites', body);
@@ -171,28 +221,31 @@ export const buatLokasi = (body: { name: string; address?: string }) =>
 export const ubahLokasi = (id: string, body: { name?: string; address?: string }) =>
   livePatch<ApiSite>(`/sites/${id}`, body);
 
-export const ambilZona = () => liveGet<Halaman<ApiZone>>('/zones?limit=100');
+export const ambilZona = (cakupan: CakupanDaftar = {}) => ambilSemua<ApiZone>('/zones', cakupan);
 
-export const ambilUnitHidran = () => liveGet<Halaman<ApiHydrantUnit>>('/hydrant-units?limit=100');
+export const ambilUnitHidran = (cakupan: CakupanDaftar = {}) =>
+  ambilSemua<ApiHydrantUnit>('/hydrant-units', cakupan);
 
-export const ambilUnitApar = () => liveGet<Halaman<ApiAparUnit>>('/apar-units?limit=100');
+export const ambilUnitApar = (cakupan: CakupanDaftar = {}) =>
+  ambilSemua<ApiAparUnit>('/apar-units', cakupan);
 
-export const ambilKotakP3k = () => liveGet<Halaman<ApiP3kBox>>('/p3k-boxes?limit=100');
+export const ambilKotakP3k = (cakupan: CakupanDaftar = {}) =>
+  ambilSemua<ApiP3kBox>('/p3k-boxes', cakupan);
 
-export const ambilInspeksiHidran = () =>
-  liveGet<Halaman<ApiInspeksiHidran>>('/hydrant-inspections?limit=100');
+export const ambilInspeksiHidran = (cakupan: CakupanDaftar = {}) =>
+  ambilSemua<ApiInspeksiHidran>('/hydrant-inspections', cakupan);
 
-export const ambilInspeksiApar = () =>
-  liveGet<Halaman<ApiInspeksiApar>>('/apar-inspections?limit=100');
+export const ambilInspeksiApar = (cakupan: CakupanDaftar = {}) =>
+  ambilSemua<ApiInspeksiApar>('/apar-inspections', cakupan);
 
-export const ambilInspeksiP3k = () =>
-  liveGet<Halaman<ApiInspeksiP3k>>('/p3k-inspections?limit=100');
+export const ambilInspeksiP3k = (cakupan: CakupanDaftar = {}) =>
+  ambilSemua<ApiInspeksiP3k>('/p3k-inspections', cakupan);
 
 export const ambilButirP3k = (inspectionId: string) =>
   liveGet<ApiInspeksiP3k>(`/p3k-inspections/${inspectionId}`);
 
-export const ambilLaporanPatroli = () =>
-  liveGet<Halaman<ApiLaporanPatroli>>('/safety-patrol-reports?limit=100');
+export const ambilLaporanPatroli = (cakupan: CakupanDaftar = {}) =>
+  ambilSemua<ApiLaporanPatroli>('/safety-patrol-reports', cakupan);
 
 export const ambilTemuanPatroli = (reportId: string) =>
   liveGet<{ items: ApiTemuanPatroli[] }>(`/safety-patrol-reports/${reportId}/findings`);
@@ -356,7 +409,7 @@ export interface ApiPerusahaan {
   createdAt: string;
 }
 
-export const ambilPerusahaan = () => liveGet<Halaman<ApiPerusahaan>>('/companies?limit=10');
+export const ambilPerusahaan = () => ambilSemua<ApiPerusahaan>('/companies');
 
 /** Proyek = organisasi + baris cermin companies (satu id). */
 export const buatProyek = (nama: string) =>
