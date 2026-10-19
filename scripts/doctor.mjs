@@ -22,12 +22,20 @@ for (const svc of ["api", "postgres", "caddy", "garage", "gotenberg"]) {
 }
 
 const cmdOk = async (cmd, args) => (await sh(cmd, args)).code === 0;
+const pendengar = await sh("powershell", [
+  "-NoProfile",
+  "-Command",
+  "(Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Measure-Object).Count",
+]);
+const jumlahPendengar = Number.parseInt(pendengar.out, 10);
 cek(
   "port-5173",
-  true,
-  (await cmdOk("powershell", ["-NoProfile", "-Command", "(Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue | Measure-Object).Count"]))
-    ? "terisi (pastikan ini dev server web, bukan proses basi)"
-    : "bebas",
+  pendengar.code === 0 && Number.isFinite(jumlahPendengar),
+  !Number.isFinite(jumlahPendengar)
+    ? `tak terbaca (${pendengar.err || pendengar.out || "powershell gagal"})`
+    : jumlahPendengar > 0
+      ? `terisi ${jumlahPendengar} listener (pastikan ini dev server web, bukan proses basi)`
+      : "bebas",
 );
 cek(
   "postgres-5433",
