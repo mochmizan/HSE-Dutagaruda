@@ -17,7 +17,7 @@ import { computeAparOverallStatus } from '../../lib/statusCalculator';
 import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
 import { PrintButton, UnduhPdfButton } from '@/components/ui';
-import { PageHeader, FilterBar, RingkasanInspeksi } from '@/features/pageChrome';
+import { PageHeader, FilterBar, KartuStatistik } from '@/features/pageChrome';
 import { AparPrintHeader, AparExpiry, AparSignatures } from './AparPrintChrome';
 import {
   unitHasIssue,
@@ -191,6 +191,15 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   }, [suntingRefId, inspeksiQuery.data, unitQuery.data]);
   const completedUnits = useMemo(() => units.filter((u) => u.status === 'SELESAI'), [units]);
   const inProgressUnits = useMemo(() => units.filter((u) => u.status === 'SEDANG_BERJALAN'), [units]);
+
+  // Bilah progres di kartu ringkas. Dihitung sekali dari jumlah unit; tanpa
+  // pembagi nol (halaman tanpa unit) bilahnya kosong, bukan `NaN`.
+  const persenSelesai = units.length
+    ? Math.round((completedUnits.length / units.length) * 100)
+    : 0;
+  const persenBerjalan = units.length
+    ? Math.round((inProgressUnits.length / units.length) * 100)
+    : 0;
 
   const filteredUnits = useMemo(
     () =>
@@ -522,16 +531,60 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
         onCetak={handlePrintReport}
       />
 
-      <RingkasanInspeksi
-        judulTotal="Total APAR Terdaftar"
-        ikon="🧯"
-        kakiTotal="Wajib periksa 1x per bulan"
-        total={units.length}
-        selesai={completedUnits.length}
-        berjalan={inProgressUnits.length}
-        jumlahZona={zones.length}
-        kakiSelesai="Laporan telah diterbitkan"
-      />
+      <div className="no-print grid grid-cols-2 gap-3 mb-4">
+        <KartuStatistik
+          nada="netral"
+          judul="Total APAR Terdaftar"
+          nilai={units.length}
+          rincian={`${zones.length} Zona Terpantau`}
+          ikon="🧯"
+          kaki="Wajib periksa 1x per bulan"
+          isi={
+            <div className="mt-2 space-y-1.5">
+              <div className="flex h-1.5 rounded-full overflow-hidden bg-[var(--bg-hover)]">
+                <div
+                  className="bg-emerald-500"
+                  style={{ width: `${persenSelesai}%` }}
+                  title={`${completedUnits.length} unit selesai`}
+                />
+                <div
+                  className="bg-amber-500"
+                  style={{ width: `${persenBerjalan}%` }}
+                  title={`${inProgressUnits.length} unit berjalan`}
+                />
+              </div>
+              <div className="flex items-center gap-3 text-[10px] text-[var(--muted)] tabular-nums">
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {completedUnits.length} selesai
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  {inProgressUnits.length} berjalan
+                </span>
+              </div>
+            </div>
+          }
+        />
+        <KartuStatistik
+          nada="hijau"
+          judul="Selesai Diperiksa"
+          nilai={completedUnits.length}
+          rincian={`dari ${units.length} unit terdaftar`}
+          lencana="Lengkap"
+          kaki="Laporan telah diterbitkan"
+          isi={
+            <div className="mt-2">
+              <div className="flex h-1.5 rounded-full overflow-hidden bg-emerald-500/15">
+                <div className="bg-emerald-500" style={{ width: `${persenSelesai}%` }} />
+              </div>
+              <div className="mt-1.5 text-[10px] text-[var(--muted)] tabular-nums">
+                {persenSelesai}% unit sudah punya laporan terbit
+              </div>
+            </div>
+          }
+        />
+      </div>
 
       <FilterBar
         filterTab={filterTab}
