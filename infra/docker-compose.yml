@@ -21,6 +21,10 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     networks:
       - hse
     healthcheck:
@@ -65,12 +69,16 @@ services:
   gotenberg:
     image: gotenberg/gotenberg:8@sha256:f29984bd1e226bf1b93ba90af06000afa8b315853e99d27b9aaa41b93f15c769
     restart: unless-stopped
-    command: ["gotenberg", "--api-timeout=60s"]
+    command: ["gotenberg", "--api-timeout=60s", "--chromium-idle-shutdown-timeout=60s"]
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     networks:
       - hse
 
   caddy:
-    image: caddy:latest
+    image: caddy:2.11.7
     restart: unless-stopped
     ports:
       - "8080:80"
