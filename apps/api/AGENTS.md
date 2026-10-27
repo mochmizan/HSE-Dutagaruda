@@ -38,6 +38,16 @@ PDF storage, and Gotenberg PDF rendering.
 - Every route app mounts under `/api/<plural>` in `src/index.ts`; every handler
   uses `requireSession` + `companyId(c)` scoping. Errors are problem-shaped via
   `app.onError`.
+- Projects are organizations (`organization` + mirror row in `companies`), not a
+  `projects` table. The *selected* project is recorded server-side in
+  `project_preferences` (one row per user, `POST /api/projects/aktif`), because
+  `session.active_organization_id` dies with the session row on sign-out and a
+  new session starts null — that made the client guess `organizations[0]` at
+  every sign-in. `GET /api/projects/aktif` deliberately runs WITHOUT
+  `requireSession` (it must answer while the session has no active org) and
+  returns `{ organizationId: null }` plus a cleanup when the membership is gone.
+  `PATCH/DELETE /api/projects/:id` stay membership-checked; delete clears any
+  preference pointing at the removed project.
 - Photos: bytes in Garage under `foto/<companyId>/<photoId>.<ext>`, row in
   `photos` (exactly one owner inspection). `POST /api/uploads` (multipart,
   JPEG/PNG/WebP, 8 MB max), `GET /api/photos/:id` → 302 presigned 60s,
@@ -120,8 +130,8 @@ PDF storage, and Gotenberg PDF rendering.
 
 - Full gate (runs inside the network so presigned fetches work):
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  — expect 66/66 (CRUD + upload round-trip + photo list + 5 exports +
-  pdf-job flow + typed-client probe `klien-tertipikasi`). The gate's
+  — expect 68/68 (CRUD + upload round-trip + photo list + 5 exports +
+  pdf-job flow + proyek-aktif rekam/baca + typed-client probe `klien-tertipikasi`). The gate's
   byte-fetch check maps the public storage origin onto `CHECK_BASE` so it
   validates the same Caddy `/storage` route.
 - Host variant `bun run --filter @viaannn/api check` now also passes the byte

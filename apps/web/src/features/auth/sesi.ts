@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { liveGet, livePost } from '@/services/api/liveClient';
-import { buatProyek, hapusProyek, ubahProyek } from '@/services/api/klien';
+import {
+  ambilProyekAktif,
+  buatProyek,
+  hapusProyek,
+  rekamProyekAktif,
+  ubahProyek,
+} from '@/services/api/klien';
 import { ApiError } from '@/services/api/client';
 
 export interface SesiPengguna {
@@ -79,13 +85,51 @@ export function useDaftarProyek() {
   });
 }
 
+/**
+ * Pasang proyek aktif: set organisasi aktif di sesi, lalu catat pilihannya di
+ * server supaya bertahan saat keluar/masuk lagi atau pindah peramban.
+ */
+async function pasangProyekAktif(organizationId: string): Promise<void> {
+  await livePost('/auth/organization/set-active', { organizationId });
+  await rekamProyekAktif(organizationId).catch(() => {
+    // Pencatatan preferensi tidak boleh menggagalkan perpindahan proyek.
+  });
+}
+
+/**
+ * Tentukan proyek aktif setelah masuk: pakai catatan server (pilihan terakhir
+ * pengguna), lalu organisasi pertama, lalu benih. Tanpa ini klien menebak
+ * organisasi pertama setiap kali masuk sehingga proyek pilihan pengguna
+ * seolah hanya tersimpan di peramban.
+ */
+async function pulihkanProyek(): Promise<void> {
+  let target: string | null = null;
+  try {
+    target = (await ambilProyekAktif()).organizationId;
+  } catch {
+    target = null;
+  }
+  if (!target) {
+    try {
+      const orgs = ambilDaftarOrganisasi(await liveGet<unknown>('/auth/organization/list'));
+      target = orgs[0]?.id ? String(orgs[0].id) : null;
+    } catch {
+      target = null;
+    }
+  }
+  await pasangProyekAktif(target ?? 'seed-perusahaan-1');
+}
+
 /** Proyek baru: buat, jadikan aktif, muat ulang seluruh data. */
 export function useBuatProyek() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (nama: string) => buatProyek(nama.trim()),
-    onSuccess: async (baris) => {
-      await livePost('/auth/organization/set-active', { organizationId: baris.id });
+    mutationFn: async (nama: string) => {
+      const baris = await buatProyek(nama.trim());
+      await pasangProyekAktif(baris.id);
+      return baris;
+    },
+    onSuccess: async () => {
       qc.setQueryData(['sesi'], await ambilSesi());
       await qc.invalidateQueries();
     },
@@ -97,7 +141,7 @@ export function usePindahProyek() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (organizationId: string) => {
-      await livePost('/auth/organization/set-active', { organizationId });
+      await pasangProyekAktif(organizationId);
       return ambilSesi();
     },
     onSuccess: (sesi) => {
@@ -105,6 +149,28 @@ export function usePindahProyek() {
       void qc.invalidateQueries();
     },
     onError: (err) => window.alert(err instanceof ApiError ? err.message : 'Gagal pindah proyek.'),
+  });
+}
+
+/**
+ * Pemulihan proyek aktif saat sesi belum punya organisasi aktif — misalnya
+ * sesi dibuat di luar alur masuk UI. Idempoten; aman dipanggil sekali per sesi.
+ */
+export function usePulihkanProyek() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      await pulihkanProyek();
+      return ambilSesi();
+    },
+    onSuccess: (sesi) => {
+      qc.setQueryData(['sesi'], sesi);
+      void qc.invalidateQueries();
+    },
+    onError: () => {
+      // Tidak ada proyek tersimpan dan belum ada organisasi: biarkan layar
+      // kosong apa adanya, jangan berkedip pesan galat.
+    },
   });
 }
 
@@ -140,17 +206,10 @@ export function useMasuk() {
         email: masukan.email.trim(),
         password: masukan.sandi,
       });
-      let organisasiId = 'seed-perusahaan-1';
-      try {
-        const daftar = await liveGet<unknown>('/auth/organization/list');
-        const orgs = ambilDaftarOrganisasi(daftar);
-        if (orgs.length > 0 && orgs[0]?.id) organisasiId = String(orgs[0].id);
-      } catch {
-        // Tetap coba bawaan benih bila daftar gagal dibaca.
-      }
-      await livePost('/auth/organization/set-active', { organizationId: organisasiId });
-      const sesi = await ambilSesi();
-      return sesi;
+      // Sesi baru selalu lahir tanpa organisasi aktif: pasang proyek yang
+      // tercatat di server, bukan menebak organisasi pertama.
+      await pulihkanProyek();
+      return ambilSesi();
     },
     onSuccess: (sesi) => {
       qc.setQueryData(['sesi'], sesi);

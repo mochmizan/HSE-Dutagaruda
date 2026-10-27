@@ -17,7 +17,9 @@ the Hono API through these hooks.
   plus one function per endpoint. This is the system boundary; internal code
   trusts these types. Carries photo
   (`unggahFoto` multipart via `livePostForm`, `hapusFoto`) and PDF export
-  (`eksporPdf`, `ambilPdfJob`) contracts.
+  (`eksporPdf`, `ambilPdfJob`) contracts, plus the project switch pair
+  `ambilProyekAktif` / `rekamProyekAktif` (`/projects/aktif`) that makes the
+  chosen project a server fact instead of a per-session client guess.
 - `api/queries.ts`: barrel only. The TanStack Query hooks live in per-domain
   modules so no single file grows past ~200 lines. Every existing import from
   `@/services/api/queries` still resolves.

@@ -1,11 +1,15 @@
 # Inspeksi Hydrant
 
-Halaman pola master (aksen `#eb5757`): pengalih bulan (tombol `Bulan Ini`
-di kiri pengalih, tampil hanya saat tidak di bulan berjalan) + 2 statistik +
-tabs +
-tabel/kartu unit, klik baris membuka modal inspeksi 6 komponen, Section B
+Halaman pola master (aksen `#eb5757`): cangkang bersama
+`features/inspeksi/InspectionPageShell.tsx` + konfigurasi per kategori
+`inspectionConfig.ts` (`KONFIG_HYDRANT`: remah, judul, deskripsi `6 komponen`,
+`Tambah Zona & Unit`, `hydrant-monthly`, ikon Flame) + status kosong bersama
+`EmptyUnits.tsx` (varian Hydrant dua tombol, biru aksi `#2f80ed`): kop cetak +
+kepala + 2 statistik + tabs + tabel/kartu + `HydrantFindings` + tanda tangan +
+modal, klik baris membuka modal inspeksi 6 komponen, Section B
 temuan foto di bawah, cetak A4 portrait (tabel + temuan + tanda tangan 3
-kolom).
+kolom). Semua hook tetap di `HydrantPage` dengan urutan asli; shell
+presentasional saja.
 
 ## Sub-features
 
@@ -31,6 +35,12 @@ kolom).
   `Catatan: …`, `Tindak Lanjut: …` via `susunCatatan`), dibuka-ulang
   diurai balik (`uraiCatatan`). Kolom Catatan tabel merender gabungan itu
   sebagai daftar baris-per-baris (split `\n`), bukan kalimat berkuotasi.
+- `hydrant-shell` (Okt 27): `HydrantPage` dirender lewat `InspectionPageShell`
+  dengan `KONFIG_HYDRANT` (kepala: remah, judul, deskripsi `6 komponen`,
+  `Tambah Zona & Unit`, ekspor `hydrant-monthly`, ikon Flame); Section A
+  memakai `EmptyUnits` varian Hydrant (dua tombol, biru `#2f80ed`); slot
+  shell = kop cetak → statistik → saring → isi (judul cetak A + tabel/kartu) →
+  `HydrantFindings` → tanda tangan → modals. Tanpa perubahan perilaku.
 - `hydrant-terbit-state` — terbit = sifat REKAM TERPERSISTENSI, bukan state
   lokal modal: kolom `hydrant_inspections.approval_status`
   (`DRAFT|DIAJUKAN|DIKETAHUI|DISETUJUI`); baris terbit bila

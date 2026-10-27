@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
 import { P3kInspectionModal } from './P3kInspectionModal';
-import { P3kHeader } from './P3kHeader';
 import { P3kKepala } from './P3kKepala';
 import { P3kStatistik } from './P3kStatistik';
 import { P3kTabel } from './P3kTabel';
@@ -16,6 +15,8 @@ import {
 } from '@/services/api/queries';
 import { ambilButirP3k } from '@/services/api/klien';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import { InspectionPageShell, KONFIG_P3K } from '@/features/inspeksi';
+import { YearSwitcher } from '@/components/ui';
 import {
   MONTH_KEYS,
   MONTH_NAMES,
@@ -27,7 +28,6 @@ import {
 } from './types';
 
 interface P3kPageProps {
-  onBack: () => void;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
 }
@@ -36,7 +36,7 @@ interface P3kPageProps {
  * Inspeksi Kotak P3K — yearly grid only.
  * Box is keyed by site name (one box per site). Empty start; month click opens the input form.
  */
-export const P3kPage: React.FC<P3kPageProps> = ({ onBack, isCollapsed, onToggleCollapsed }) => {
+export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed }) => {
   const lokasi = useKonteksLokasi();
   const kotakQuery = useKotakP3k();
   const inspeksiQuery = useInspeksiP3k();
@@ -101,46 +101,65 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack, isCollapsed, onToggleC
   const activeIdx = activeMonth ? MONTH_KEYS.indexOf(activeMonth) : -1;
 
   return (
-    <main className="flex-1 flex flex-col h-screen overflow-y-auto px-6 py-4 bg-[var(--bg-main)]">
-      {/* Top bar */}
-      <P3kHeader
-        isCollapsed={isCollapsed}
-        onToggleCollapsed={onToggleCollapsed}
-        onBack={onBack}
-        year={year}
-        onShiftYear={(delta) => setYear((y) => String(Number(y) + delta))}
-        jangkarEkspor={jangkarEkspor}
-        onPrint={handlePrint}
-      />
+    <InspectionPageShell
+      config={KONFIG_P3K}
+      namaProyek={lokasi.namaProyek}
+      siteName={lokasi.siteName}
+      isCollapsed={isCollapsed}
+      onToggleCollapsed={onToggleCollapsed}
+      poros={
+        <>
+          {year !== String(new Date().getFullYear()) && (
+            <button
+              type="button"
+              onClick={() => setYear(String(new Date().getFullYear()))}
+              className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors shadow-2xs"
+            >
+              Tahun Ini
+            </button>
+          )}
+          <YearSwitcher
+            year={year}
+            onChange={(y) => setYear(String(Number(y)))}
+            accent={KONFIG_P3K.aksen}
+          />
+        </>
+      }
+      jangkarEkspor={jangkarEkspor}
+      namaBerkas={year}
+      onCetak={handlePrint}
+      statistik={
+        <P3kStatistik filled={stats.filled} kurang={stats.kurang} kd={stats.kd} />
+      }
+      isi={
+        <>
+          {/* Paper header */}
+          <div className="bg-white dark:bg-[var(--bg-main)] print:bg-white">
+            <P3kKepala
+              year={year}
+              unitKerja={unitKerja}
+              onUbahUnitKerja={setUnitKerja}
+              lokasiKerja={lokasiKerja}
+              onUbahLokasiKerja={setLokasiKerja}
+            />
 
-      {/* Stats */}
-      <P3kStatistik filled={stats.filled} kurang={stats.kurang} kd={stats.kd} />
+            {/* Yearly grid */}
+            <P3kTabel grid={grid} year={year} onPilihBulan={setActiveMonth} />
 
-      {/* Paper header */}
-      <div className="bg-white dark:bg-[var(--bg-main)] print:bg-white">
-        <P3kKepala
-          year={year}
-          unitKerja={unitKerja}
-          onUbahUnitKerja={setUnitKerja}
-          lokasiKerja={lokasiKerja}
-          onUbahLokasiKerja={setLokasiKerja}
-        />
-
-        {/* Yearly grid */}
-        <P3kTabel grid={grid} year={year} onPilihBulan={setActiveMonth} />
-
-        <p className="mt-1.5 text-[11px] print:text-[7px] italic text-[var(--secondary)] print:text-black print:mt-0.5">
-          Catatan: Apabila jumlah di bawah standar, maka harus diisi kembali sesuai dengan jumlah
-          standar yang tercantum
-        </p>
-      </div>
-
-      <P3kInspectionModal
-        isOpen={activeMonth !== null}
-        monthLabel={activeIdx >= 0 ? `${MONTH_NAMES[activeIdx]} ${year}` : ''}
-        initial={activeData}
-        onClose={() => setActiveMonth(null)}
-        onSave={(data) => {
+            <p className="mt-1.5 text-[11px] print:text-[7px] italic text-[var(--secondary)] print:text-black print:mt-0.5">
+              Catatan: Apabila jumlah di bawah standar, maka harus diisi kembali sesuai dengan jumlah
+              standar yang tercantum
+            </p>
+          </div>
+        </>
+      }
+      modals={
+        <P3kInspectionModal
+          isOpen={activeMonth !== null}
+          monthLabel={activeIdx >= 0 ? `${MONTH_NAMES[activeIdx]} ${year}` : ''}
+          initial={activeData}
+          onClose={() => setActiveMonth(null)}
+          onSave={(data) => {
           if (activeMonth && kotak) {
             const bulan = `${year}-${activeMonth}`;
             const kepala = {
@@ -192,6 +211,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ onBack, isCollapsed, onToggleC
           setActiveMonth(null);
         }}
       />
-    </main>
+    }
+    />
   );
 };

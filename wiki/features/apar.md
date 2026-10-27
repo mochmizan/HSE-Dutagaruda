@@ -1,10 +1,23 @@
 # Inspeksi APAR
 
-Halaman gaya dokumen kertas (aksen `#f2994a`): tabel checklist bulanan 7
-komponen → rekap `Kadaluwarsa APAR` → heading `Catatan :` (tulis tangan,
-tanpa kotak) + tanda tangan → cip Pilih APAR → kartu tahunan 12 bulan
-(hanya-tampil). Cetak 2 halaman (hal. 1 tabel bulanan, hal. 2 kedaluwarsa +
-Catatan + tanda tangan).
+Halaman gaya dokumen kertas (aksen `#f2994a`): cangkang bersama
+`features/inspeksi/InspectionPageShell.tsx` + `KONFIG_APAR` (`inspectionConfig.ts`:
+remah, judul, deskripsi `7 komponen`, `Tambah Zona & Unit`, `apar-monthly`,
+ikon ShieldCheck) + status kosong bersama `EmptyUnits.tsx` (varian APAR tombol
+tunggal tanpa tambah): seluruh isi APAR (kop bulanan, checklist, rekap,
+tanda tangan, cip unit, kartu tahunan) menempati SATU slot `isi` supaya grup
+cetak `apar-report-print` + `apar-card-print` tetap utuh — urutan: tabel hasil
+pemeriksaan fisik unit APAR 7 komponen → rekap `B. Rekap Kadaluwarsa APAR` →
+`Catatan :` (tulis tangan, HANYA saat cetak) + tanda tangan → cip Pilih APAR →
+kartu tahunan 12 bulan (hanya-tampil). Cetak 2 halaman (hal. 1 tabel bulanan,
+hal. 2 kedaluwarsa + Catatan + tanda tangan).
+
+Kepadatan teks disamakan dengan Hydrant (Okt 27): judul `A. Hasil Pemeriksaan
+Fisik Unit APAR` hanya dirender saat cetak, paragraf instruksi
+(`Klik baris untuk melihat detail…`), subjudul rekap
+(`Dihitung otomatis dari tanggal kedaluwarsa…`), dan label `Catatan :` di layar
+dihapus. Label baris cip dipendekkan jadi `Pilih APAR`. Tidak ada perubahan
+perilaku.
 
 ## Sub-features
 
@@ -44,6 +57,15 @@ Catatan + tanda tangan).
   Keduanya lewat `ConfirmModal` (`Batal` + `Ya, hapus`);
   `Edit` tetap non-destruktif (hanya batalkan terbit). Zona yang kosong
   (tak ada unit tersisa) ikut dihapus oleh hook, bukan laman.
+- `apar-shell` (Okt 27): `AparPage` dirender lewat `InspectionPageShell`
+  yang sama dengan `KONFIG_APAR`; seluruh isi (kop bulanan, hasil pemeriksaan
+  fisik unit APAR, rekap `B. Rekap Kadaluwarsa APAR`, `Catatan :` + tanda tangan, cip Pilih APAR `01–20`, kartu
+  tahunan `AparYearCard`) menempati SATU slot `isi` supaya grup cetak
+  `apar-report-print` + `apar-card-print` (2 halaman) tetap utuh; status kosong
+  memakai `EmptyUnits` varian APAR (tombol tunggal `Tampilkan Semua Unit`,
+  biru `#2f80ed`, tanpa tombol tambah — sama seperti sebelum shell); footer
+  modal tetap `Simpan Draft | Hapus | Terbitkan`; primer biru `#2f80ed`;
+  aksen terkunci `#f2994a`. Tanpa perubahan perilaku.
 - Aksen biru `#2f80ed` seragam lintas kategori untuk aksi utama (tidak
   mengikuti aksen APAR `#f2994a`): `Tambah APAR`, select + chevron
   pengalih bulan, `Terbitkan`, tombol `Tampilkan Semua Unit` saat kosong.
@@ -92,7 +114,7 @@ Preconditions:
   tindak lanjut. Rekam terbit terkunci (potret baca-saja + badge `Terbit`);
   sunting lewat `Edit` (= batalkan terbit), hapus lewat `Hapus unit` /
   `Kosongkan bulan ini` yang tetap tampil saat terbit.
-- **Kedaluwarsa.** Rekap `Kadaluwarsa APAR` terhitung dari `expiredDate`
+- **Kedaluwarsa.** Rekap `B. Rekap Kadaluwarsa APAR` terhitung dari `expiredDate`
   unit terdaftar (unit tanpa satu pun inspeksi ikut muncul di rekap;
   terverifikasi live Okt 17) — jangan asert "dari inspeksi tersimpan".
 - **Bukti.** `units.json`, `inspections.json`, snapshot record view +

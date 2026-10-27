@@ -18,13 +18,20 @@ interface PageHeaderProps {
   deskripsi: string;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
-  bulan: Date;
+  /** Blok poros periode. Bila diisi, menggantikan pengalih bulan bawaan
+   *  (P3K: pengalih tahun). Bila absen dan `bulan` absen, tanpa poros
+   *  (Patroli: umpan tanpa pengalih periode). */
+  poros?: React.ReactNode;
+  bulan?: Date;
   /** Tampilkan tombol `Bulan Ini` hanya saat bulan terpilih bukan bulan acuan. */
-  tampilkanReset: boolean;
-  onResetBulan: () => void;
-  onPilihBulan: (bulan: Date) => void;
-  labelTambah: string;
-  onTambah: () => void;
+  tampilkanReset?: boolean;
+  onResetBulan?: () => void;
+  onPilihBulan?: (bulan: Date) => void;
+  /** Bila labelTambah + onTambah absen, tombol tambah tidak tampil (P3K). */
+  labelTambah?: string;
+  onTambah?: () => void;
+  /** Ikon tombol tambah (Patroli: kamera); Hydrant/APAR tanpa ikon. */
+  ikonTambah?: React.ReactNode;
   kategoriEkspor: KategoriEkspor;
   jangkarEkspor: string | null;
   namaBerkas: string;
@@ -32,12 +39,14 @@ interface PageHeaderProps {
 }
 
 /**
- * Kepala halaman inspeksi, dipakai Hydrant dan APAR dengan bentuk yang sama.
+ * Kepala halaman inspeksi, dipakai keempat kategori dengan bentuk yang sama.
  *
- * Urutan aksi dikunci: `Bulan Ini` → pengalih bulan → tambah → Unduh PDF →
- * Cetak. Sebelumnya APAR menaruh `Bulan Ini` di kanan pengalih bulan dan
- * memakai label tombol yang berbeda; keduanya diseragamkan di sini supaya
- * halaman tidak bisa menyimpang lagi.
+ * Urutan aksi dikunci: poros periode (`Bulan Ini` → pengalih bulan, atau
+ * poros kustom P3K, atau tanpa poros Patroli) → tambah → Unduh PDF → Cetak.
+ * Tombol `Cetak` selalu netral (ghost) di keempat halaman — P3K sempat hijau,
+ * kini diseragamkan supaya krom kanan atas tidak menyimpang lagi. Satu slot
+ * `poros` opsional menggantikan pengalih bulan bawaan supaya tidak ada tiga
+ * varian kepala halaman.
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   namaProyek,
@@ -49,12 +58,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   deskripsi,
   isCollapsed,
   onToggleCollapsed,
+  poros,
   bulan,
   tampilkanReset,
   onResetBulan,
   onPilihBulan,
   labelTambah,
   onTambah,
+  ikonTambah,
   kategoriEkspor,
   jangkarEkspor,
   namaBerkas,
@@ -89,25 +100,33 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        {tampilkanReset && (
+        {poros ??
+          (bulan && tampilkanReset !== undefined && onResetBulan && onPilihBulan ? (
+            <>
+              {tampilkanReset && (
+                <button
+                  type="button"
+                  onClick={onResetBulan}
+                  className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors shadow-2xs"
+                >
+                  Bulan Ini
+                </button>
+              )}
+
+              <MonthSwitcher value={bulan} accent="#2f80ed" onChange={onPilihBulan} />
+            </>
+          ) : null)}
+
+        {labelTambah && onTambah && (
           <button
             type="button"
-            onClick={onResetBulan}
-            className="text-[11px] font-medium px-2 py-0.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors shadow-2xs"
+            onClick={onTambah}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2f80ed] hover:bg-[#2b77d4] text-white text-xs font-semibold rounded-[4px] shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Bulan Ini
+            {ikonTambah}
+            <span>{labelTambah}</span>
           </button>
         )}
-
-        <MonthSwitcher value={bulan} accent="#2f80ed" onChange={onPilihBulan} />
-
-        <button
-          type="button"
-          onClick={onTambah}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#2f80ed] hover:bg-[#2b77d4] text-white text-xs font-semibold rounded-[4px] shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <span>{labelTambah}</span>
-        </button>
 
         <UnduhPdfButton category={kategoriEkspor} refId={jangkarEkspor} namaBerkas={namaBerkas} />
 

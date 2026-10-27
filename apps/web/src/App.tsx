@@ -1,9 +1,9 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { flushSync } from 'react-dom';
 import { addMonths, subMonths, format } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { HseSidebar, TombolPerluas } from '@/features/navigation';
-import { LoginScreen, useSesi, useKeluar } from '@/features/auth';
+import { LoginScreen, useSesi, useKeluar, usePulihkanProyek } from '@/features/auth';
 import { PenyediaLokasi, useKonteksLokasi } from '@/features/konteksLokasi';
 import { HseCalendar } from '@/features/calendar';
 import { MonthlyReportsPanel, ReportDetailModal } from '@/features/reports';
@@ -33,6 +33,12 @@ const PatrolPage = lazy(() => import('@/features/patrol').then((m) => ({ default
 function AppIsi() {
   const sesi = useSesi();
   const keluar = useKeluar();
+  const pulihkanProyek = usePulihkanProyek();
+  // Pemulihan proyek aktif hanya sekali per sesi; tanpa penjaga ini efek akan
+  // memicu mutation berulang saat pemulihan gagal (mis. belum punya proyek).
+  const dipulihkan = useRef<string | null>(null);
+  const pulihkanRef = useRef(pulihkanProyek.mutate);
+  pulihkanRef.current = pulihkanProyek.mutate;
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const toggleCollapsed = () => setIsCollapsed((v) => !v);
@@ -71,6 +77,15 @@ function AppIsi() {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Sesi yang lahir tanpa organisasi aktif (mis. dibuat di luar alur masuk)
+  // akan ditolak 401 oleh semua rute data. Pulihkan proyek dari catatan server.
+  useEffect(() => {
+    const s = sesi.data;
+    if (!s || s.perusahaanId || dipulihkan.current === s.id) return;
+    dipulihkan.current = s.id;
+    pulihkanRef.current();
+  }, [sesi.data]);
 
   const toggleTheme = (e?: React.MouseEvent) => {
     const isAppearanceTransition =
@@ -233,7 +248,6 @@ function AppIsi() {
       ) : currentView === 'p3k' ? (
         <Suspense fallback={<HalamanMemuat />}>
           <P3kPage
-          onBack={() => setCurrentView('dashboard')}
           isCollapsed={isCollapsed}
           onToggleCollapsed={toggleCollapsed}
         />
@@ -241,7 +255,6 @@ function AppIsi() {
       ) : (
         <Suspense fallback={<HalamanMemuat />}>
           <PatrolPage
-          onBack={() => setCurrentView('dashboard')}
           isCollapsed={isCollapsed}
           onToggleCollapsed={toggleCollapsed}
         />

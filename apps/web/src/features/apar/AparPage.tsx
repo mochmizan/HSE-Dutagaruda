@@ -17,7 +17,8 @@ import { computeAparOverallStatus } from '../../lib/statusCalculator';
 import { formatIndonesianDate } from '../../lib/dates';
 import { AparYearCard } from './AparYearCard';
 import { PrintButton, UnduhPdfButton } from '@/components/ui';
-import { PageHeader, FilterBar, KartuStatistik } from '@/features/pageChrome';
+import { FilterBar, KartuStatistik } from '@/features/pageChrome';
+import { EmptyUnits, InspectionPageShell, KONFIG_APAR } from '@/features/inspeksi';
 import { AparPrintHeader, AparExpiry, AparSignatures } from './AparPrintChrome';
 import {
   unitHasIssue,
@@ -520,249 +521,224 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   // RENDER — halaman
   // ─────────────────────────────────────────────────────────
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[var(--bg-main)] text-[var(--primary)] px-6 py-4 select-none font-sans">
-      <PageHeader
-        namaProyek={lokasi.namaProyek}
-        siteName={lokasi.siteName}
-        remahKategori="Inspeksi APAR"
-        ikon={<ShieldCheck size={18} strokeWidth={2.2} />}
-        aksen={APAR_ACCENT}
-        judul="Laporan Inspeksi APAR"
-        deskripsi="Monitoring progres pemeriksaan fisik 7 komponen APAR gedung per unit"
-        isCollapsed={isCollapsed}
-        onToggleCollapsed={onToggleCollapsed}
-        bulan={monthDate}
-        tampilkanReset={!isDefaultPeriod}
-        onResetBulan={() => setPeriod(bulanBerjalan())}
-        onPilihBulan={(d) => setPeriod(format(d, 'yyyy-MM'))}
-        labelTambah="Tambah Zona & Unit"
-        onTambah={() => setIsAddModalOpen(true)}
-        kategoriEkspor="apar-monthly"
-        jangkarEkspor={jangkarBulanan}
-        namaBerkas={period}
-        onCetak={handlePrintReport}
-      />
-
-      <div className="no-print grid grid-cols-2 gap-3 mb-4">
-        <KartuStatistik
-          nada="netral"
-          judul="Total APAR Terdaftar"
-          nilai={units.length}
-          rincian={`${zones.length} Zona Terpantau`}
-          ikon="🧯"
-          kaki="Wajib periksa 1x per bulan"
-        />
-        <KartuStatistik
-          nada="hijau"
-          judul="Selesai Diperiksa"
-          nilai={completedUnits.length}
-          rincian={`dari ${units.length} unit terdaftar`}
-          ikon="✅"
-          lencana="Lengkap"
-          kaki="Laporan telah diterbitkan"
-          isi={
-            <div className="mt-2">
-              <div className="flex h-1.5 rounded-full overflow-hidden bg-emerald-500/15">
-                <div className="bg-emerald-500" style={{ width: `${persenSelesai}%` }} />
+    <InspectionPageShell
+      config={KONFIG_APAR}
+      namaProyek={lokasi.namaProyek}
+      siteName={lokasi.siteName}
+      isCollapsed={isCollapsed}
+      onToggleCollapsed={onToggleCollapsed}
+      bulan={monthDate}
+      tampilkanReset={!isDefaultPeriod}
+      onResetBulan={() => setPeriod(bulanBerjalan())}
+      onPilihBulan={(d) => setPeriod(format(d, 'yyyy-MM'))}
+      onTambah={() => setIsAddModalOpen(true)}
+      jangkarEkspor={jangkarBulanan}
+      namaBerkas={period}
+      onCetak={handlePrintReport}
+      statistik={
+        <div className="no-print grid grid-cols-2 gap-3 mb-4">
+          <KartuStatistik
+            nada="netral"
+            judul="Total APAR Terdaftar"
+            nilai={units.length}
+            rincian={`${zones.length} Zona Terpantau`}
+            ikon="🧯"
+            kaki="Wajib periksa 1x per bulan"
+          />
+          <KartuStatistik
+            nada="hijau"
+            judul="Selesai Diperiksa"
+            nilai={completedUnits.length}
+            rincian={`dari ${units.length} unit terdaftar`}
+            ikon="✅"
+            lencana="Lengkap"
+            kaki="Laporan telah diterbitkan"
+            isi={
+              <div className="mt-2">
+                <div className="flex h-1.5 rounded-full overflow-hidden bg-emerald-500/15">
+                  <div className="bg-emerald-500" style={{ width: `${persenSelesai}%` }} />
+                </div>
+                <div className="mt-1.5 text-[10px] text-[var(--muted)] tabular-nums">
+                  {persenSelesai}% unit sudah punya laporan terbit
+                </div>
               </div>
-              <div className="mt-1.5 text-[10px] text-[var(--muted)] tabular-nums">
-                {persenSelesai}% unit sudah punya laporan terbit
+            }
+          />
+        </div>
+      }
+      saring={
+        <FilterBar
+          filterTab={filterTab}
+          onFilterTab={setFilterTab}
+          total={units.length}
+          onProgress={inProgressUnits.length}
+          completed={completedUnits.length}
+          zona={zones}
+          zoneFilter={zoneFilter}
+          onZoneFilter={setZoneFilter}
+          searchQuery={searchQuery}
+          onSearchQuery={setSearchQuery}
+          viewMode={viewMode}
+          onViewMode={setViewMode}
+        />
+      }
+      isi={
+        <div className="space-y-3 pb-8">
+          <div id="apar-report-print" className="space-y-3">
+            <div className="apar-report-part space-y-3">
+              <AparPrintHeader
+                siteName={lokasi.siteName}
+                monthLabel={monthLabel}
+                inspectionDatesLabel={inspectionDatesLabel}
+              />
+              <div className="apar-report-part space-y-3">
+                <div className="hidden print:block mb-2">
+                  <h2 className="text-xs font-bold text-black uppercase tracking-wider">
+                    A. Hasil Pemeriksaan Fisik Unit APAR
+                  </h2>
+                </div>
+
+                {filteredUnits.length === 0 ? (
+                  <EmptyUnits
+                    ikon={<ShieldCheck size={32} />}
+                    aksen={KONFIG_APAR.aksen}
+                    judul="Tidak ada unit APAR yang cocok"
+                    filterTab={filterTab}
+                    onTampilkanSemua={() => setFilterTab('ALL')}
+                  />
+                ) : viewMode === 'TABLE' ? (
+                  <AparTable units={filteredUnits} onBuka={handleOpenInspection} onPindah={handlePindah} />
+                ) : (
+                  <AparCards units={filteredUnits} onPilihKartu={handleSelectUnit} aksen={APAR_ACCENT} />
+                )}
+              </div>
+
+              <AparExpiry groups={expiryGroups} />
+            </div>
+
+            <AparSignatures
+              names={sigNames}
+              roles={sigRoles}
+              onName={(i, v) => setSigNames((prev) => prev.map((x, k) => (k === i ? v : x)))}
+              onRole={(i, v) => setSigRoles((prev) => prev.map((x, k) => (k === i ? v : x)))}
+            />
+
+            <div className="no-print pt-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">
+                  Pilih APAR
+                </p>
+                <UnduhPdfButton
+                  category="apar-card"
+                  refId={jangkarKartu}
+                  label="Unduh PDF Kartu"
+                  namaBerkas={`${activeKode}-${cardYear}`}
+                />
+                <PrintButton
+                  onClick={handlePrintCard}
+                  label="Cetak Kartu"
+                  disabled={!selectedUnit}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {units.map((unit) => {
+                  const remaining = daysToExpiry(unit.expiredDate);
+                  const issue = unitHasIssue(unit);
+                  const allGood = unit.status === 'SELESAI' && !issue;
+                  const isSelected = activeKode === unit.kode;
+                  return (
+                    <button
+                      key={unit.id}
+                      type="button"
+                      onClick={() => handleToggleCard(unit.kode)}
+                      title={
+                        `APAR ${unit.kode} — ${unit.zoneName} — ` +
+                        (issue ? 'ada komponen tidak baik' : allGood ? 'semua komponen baik' : 'belum diperiksa') +
+                        (remaining < 0 ? ' — sudah kedaluwarsa' : remaining <= 90 ? ` — kedaluwarsa ${remaining} hari lagi` : '')
+                      }
+                      className="relative w-10 h-10 rounded-full border font-mono text-xs font-bold tabular-nums cursor-pointer pressable transition-all bg-[var(--bg-main)] text-[var(--primary)]"
+                      style={{
+                        borderColor: isSelected ? APAR_ACCENT : remaining < 0 ? '#ef4444' : remaining <= 90 ? '#f59e0b' : 'var(--border)',
+                        borderWidth: isSelected ? 2 : 1,
+                        boxShadow: isSelected ? `0 0 0 2px ${APAR_ACCENT}55` : undefined,
+                      }}
+                    >
+                      {unit.kode}
+                      <span
+                        className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] leading-4 text-center font-bold ${
+                          issue
+                            ? 'bg-amber-500 text-white'
+                            : allGood
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-[var(--bg-hover)] text-[var(--muted)] border border-[var(--border)]'
+                        }`}
+                      >
+                        {issue ? '!' : allGood ? '✓' : '○'}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          }
-        />
-      </div>
 
-      <FilterBar
-        filterTab={filterTab}
-        onFilterTab={setFilterTab}
-        total={units.length}
-        onProgress={inProgressUnits.length}
-        completed={completedUnits.length}
-        zona={zones}
-        zoneFilter={zoneFilter}
-        onZoneFilter={setZoneFilter}
-        searchQuery={searchQuery}
-        onSearchQuery={setSearchQuery}
-        viewMode={viewMode}
-        onViewMode={setViewMode}
-      />
-
-      {/* e. Bagian A — hasil pemeriksaan */}
-      <div className="space-y-3 pb-8">
-        {/* Grup cetak LAPORAN: kop + kedaluwarsa/catatan (hal. 1) + tabel bulanan/tanda tangan (hal. 2) */}
-        <div id="apar-report-print" className="space-y-3">
-          <div className="apar-report-part space-y-3">
-            <AparPrintHeader
-              siteName={lokasi.siteName}
-              monthLabel={monthLabel}
-              inspectionDatesLabel={inspectionDatesLabel}
-            />
-        <div className="apar-report-part space-y-3">
-            <div className="mb-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] print:text-black">
-                A. Hasil Pemeriksaan Fisik Unit APAR
-              </p>
-              <h2 className="text-sm font-bold text-[var(--primary)] tracking-tight print:text-black">
-                Checklist Bulanan APAR
-              </h2>
-              <p className="no-print text-xs text-[var(--muted)] mt-0.5">
-                Klik baris untuk melihat detail atau memperbarui hasil inspeksi
-              </p>
+            <div id="apar-card-print">
+              <div className="hidden print:block pb-2 mb-3 border-b border-black">
+                <h2 className="text-xs font-bold text-black uppercase tracking-wider">
+                  B. Kartu Kontrol Tahunan APAR{selectedUnit ? ` — APAR ${selectedUnit.kode}` : ''}
+                </h2>
+              </div>
+              <div ref={cardAnchorRef} className="scroll-mt-4 pt-2">
+                {selectedUnit && (
+                  <AparYearCard
+                    unit={selectedUnit}
+                    period={period}
+                    year={cardYear}
+                    onYearChange={setCardYear}
+                    grid={activeGrid}
+                  />
+                )}
+              </div>
             </div>
-
-        {filteredUnits.length === 0 ? (
-          <div className="py-16 text-center text-xs text-[var(--muted)] border border-dashed border-[var(--border)] rounded-[8px] bg-[var(--bg-sidebar)]/50">
-            <ShieldCheck size={32} className="mx-auto mb-2 opacity-40" style={{ color: APAR_ACCENT }} />
-            <p className="font-semibold text-sm text-[var(--primary)]">Tidak ada unit APAR yang cocok</p>
-            <p className="text-xs text-[var(--muted)] mt-1">Coba sesuaikan tab filter atau kata kunci pencarian Anda.</p>
-            {filterTab !== 'ALL' && (
-              <button
-                type="button"
-                onClick={() => setFilterTab('ALL')}
-                className="no-print mt-3 px-3 py-1.5 text-xs font-semibold rounded-[4px] cursor-pointer"
-                style={{ color: '#2f80ed', backgroundColor: 'rgba(47, 128, 237, 0.10)' }}
-              >
-                Tampilkan Semua Unit
-              </button>
-            )}
-          </div>
-        ) : viewMode === 'TABLE' ? (
-          <AparTable units={filteredUnits} onBuka={handleOpenInspection} onPindah={handlePindah} />
-        ) : (
-          <AparCards units={filteredUnits} onPilihKartu={handleSelectUnit} aksen={APAR_ACCENT} />
-        )}
-
-        </div>
-
-        <AparExpiry groups={expiryGroups} />
-        </div>
-
-        <AparSignatures
-          names={sigNames}
-          roles={sigRoles}
-          onName={(i, v) => setSigNames((prev) => prev.map((x, k) => (k === i ? v : x)))}
-          onRole={(i, v) => setSigRoles((prev) => prev.map((x, k) => (k === i ? v : x)))}
-        />
-
-        {/* d. Pemilih APAR (layar saja) */}
-        <div className="no-print pt-4">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-              Pilih APAR — klik untuk membuka kartu tahunan
-            </p>
-            <UnduhPdfButton
-              category="apar-card"
-              refId={jangkarKartu}
-              label="Unduh PDF Kartu"
-              namaBerkas={`${activeKode}-${cardYear}`}
-            />
-            <PrintButton
-              onClick={handlePrintCard}
-              label="Cetak Kartu"
-              disabled={!selectedUnit}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {units.map((unit) => {
-              const remaining = daysToExpiry(unit.expiredDate);
-              const issue = unitHasIssue(unit);
-              const allGood = unit.status === 'SELESAI' && !issue;
-              const isSelected = activeKode === unit.kode;
-              return (
-                <button
-                  key={unit.id}
-                  type="button"
-                  onClick={() => handleToggleCard(unit.kode)}
-                  title={
-                    `APAR ${unit.kode} — ${unit.zoneName} — ` +
-                    (issue ? 'ada komponen tidak baik' : allGood ? 'semua komponen baik' : 'belum diperiksa') +
-                    (remaining < 0 ? ' — sudah kedaluwarsa' : remaining <= 90 ? ` — kedaluwarsa ${remaining} hari lagi` : '')
-                  }
-                  className="relative w-10 h-10 rounded-full border font-mono text-xs font-bold tabular-nums cursor-pointer pressable transition-all bg-[var(--bg-main)] text-[var(--primary)]"
-                  style={{
-                    borderColor: isSelected ? APAR_ACCENT : remaining < 0 ? '#ef4444' : remaining <= 90 ? '#f59e0b' : 'var(--border)',
-                    borderWidth: isSelected ? 2 : 1,
-                    boxShadow: isSelected ? `0 0 0 2px ${APAR_ACCENT}55` : undefined,
-                  }}
-                >
-                  {unit.kode}
-                  <span
-                    className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] leading-4 text-center font-bold ${
-                      issue
-                        ? 'bg-amber-500 text-white'
-                        : allGood
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-[var(--bg-hover)] text-[var(--muted)] border border-[var(--border)]'
-                    }`}
-                  >
-                    {issue ? '!' : allGood ? '✓' : '○'}
-                  </span>
-                </button>
-              );
-            })}
           </div>
         </div>
+      }
+      modals={
+        <>
+          <AparInspectionModal
+            unit={activeInspectionUnit}
+            isOpen={activeInspectionUnit !== null}
+            inspeksi={inspeksiAktif}
+            foto={inspeksiAktif ? (fotoAktif.data ?? []) : []}
+            mengunggah={unggahFoto.isPending}
+            onUnggahFoto={handleUnggahFoto}
+            onHapusFoto={handleHapusFoto}
+            onClose={() => setActiveInspectionUnit(null)}
+            onSaveDraft={handleSaveInspectionDraft}
+            onCompleteInspection={handleCompleteInspection}
+            onBatalkanTerbit={handleBatalkanTerbit}
+            onHapusBulan={handleHapusBulan}
+            menghapusBulan={hapusInspeksi.isPending}
+            onHapusUnit={handleHapusUnit}
+            menghapusUnit={hapusUnit.isPending}
+            menyimpanDraf={simpanInspeksi.isPending}
+          />
 
-        {/* e. Kartu tahunan — grup cetak KARTU (judul + kartu) */}
-        <div id="apar-card-print">
-          <div className="hidden print:block pb-2 mb-3 border-b border-black">
-            <h2 className="text-xs font-bold text-black uppercase tracking-wider">
-              B. Kartu Kontrol Tahunan APAR{selectedUnit ? ` — APAR ${selectedUnit.kode}` : ''}
-            </h2>
-          </div>
-          <div ref={cardAnchorRef} className="scroll-mt-4 pt-2">
-          {selectedUnit && (
-            <AparYearCard
-              unit={selectedUnit}
-              period={period}
-              year={cardYear}
-              onYearChange={setCardYear}
-              grid={activeGrid}
-            />
-          )}
-          </div>
-        </div>
+          <ReportDetailModal
+            report={detailReport}
+            onClose={() => setDetailReport(null)}
+          />
 
-        </div>
-      </div>
-
-      {/* Modal inspeksi per baris (klik baris tabel) */}
-      <AparInspectionModal
-        unit={activeInspectionUnit}
-        isOpen={activeInspectionUnit !== null}
-        inspeksi={inspeksiAktif}
-        foto={inspeksiAktif ? (fotoAktif.data ?? []) : []}
-        mengunggah={unggahFoto.isPending}
-        onUnggahFoto={handleUnggahFoto}
-        onHapusFoto={handleHapusFoto}
-        onClose={() => setActiveInspectionUnit(null)}
-        onSaveDraft={handleSaveInspectionDraft}
-        onCompleteInspection={handleCompleteInspection}
-        onBatalkanTerbit={handleBatalkanTerbit}
-        onHapusBulan={handleHapusBulan}
-        menghapusBulan={hapusInspeksi.isPending}
-        onHapusUnit={handleHapusUnit}
-        menghapusUnit={hapusUnit.isPending}
-        menyimpanDraf={simpanInspeksi.isPending}
-      />
-
-      {/* Rekam hasil inspeksi — tampil otomatis setelah “Selesaikan & Terbitkan” */}
-      <ReportDetailModal
-        report={detailReport}
-        onClose={() => setDetailReport(null)}
-      />
-
-      {/* Modal tambah zona & unit APAR */}
-      <AddZoneAparModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        existingZones={zones}
-        existingUnits={units.map((u) => ({ id: u.id, kode: u.kode, zoneName: u.zoneName }))}
-        onAddZone={handleAddZone}
-        onAddAparUnits={handleAddAparUnits}
-        onReassignUnitZone={handleReassignUnitZone}
-      />
-    </div>
+          <AddZoneAparModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            existingZones={zones}
+            existingUnits={units.map((u) => ({ id: u.id, kode: u.kode, zoneName: u.zoneName }))}
+            onAddZone={handleAddZone}
+            onAddAparUnits={handleAddAparUnits}
+            onReassignUnitZone={handleReassignUnitZone}
+          />
+        </>
+      }
+    />
   );
 };

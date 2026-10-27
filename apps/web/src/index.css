@@ -332,12 +332,5 @@ body {
     flex: 0 0 82%;
     scroll-snap-align: start;
   }
-
-  .apar-toolbar-label {
-    max-width: 88px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 }
 

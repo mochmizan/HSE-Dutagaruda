@@ -16,7 +16,7 @@ No code until the owner approves the spec.
 - `bun run test` runs the unit suite (97 tests). `bun run doctor` runs the
   pre-flight. The live integration gate is
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  (expect 66/66).
+  (expect 68/68).
 - Performance claims need a before/after measurement, not an opinion:
   `bun scripts/bench/probe.ts` (web payload on the wire + API latency),
   `bun scripts/bench/pdf.ts` (PDF render time and size). The probe must read

@@ -135,6 +135,21 @@ async function main(): Promise<void> {
   });
   record("organisasi-aktif", active.status === 200, `(${active.status})`);
 
+  // Proyek aktif dicatat server (project_preferences), bukan hanya di sesi:
+  // pilihan harus bertahan setelah keluar/masuk lagi.
+  const proyekRekam = await req(authed, "POST", "/api/projects/aktif", {
+    organizationId: COMPANY,
+  });
+  record("proyek-aktif-rekam", proyekRekam.status === 200, `(${proyekRekam.status})`);
+
+  const proyekBaca = await req(authed, "GET", "/api/projects/aktif");
+  const proyekTersimpan = (proyekBaca.json as { organizationId?: string | null } | null)?.organizationId;
+  record(
+    "proyek-aktif-baca",
+    proyekBaca.status === 200 && proyekTersimpan === COMPANY,
+    `(${proyekBaca.status} ${proyekTersimpan ?? "null"})`,
+  );
+
   const sites = await req(authed, "GET", "/api/sites");
   record("situs-terautentikasi-200", sites.status === 200, `(${sites.status})`);
 

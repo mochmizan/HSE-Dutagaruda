@@ -444,6 +444,13 @@ export const ubahProyek = (id: string, nama: string) =>
 
 export const hapusProyek = (id: string) => liveDelete<{ ok: boolean }>(`/projects/${id}`);
 
+/** Proyek aktif yang dicatat server; bertahan lintas sesi dan peramban. */
+export const ambilProyekAktif = () =>
+  liveGet<{ organizationId: string | null }>('/projects/aktif');
+
+export const rekamProyekAktif = (organizationId: string) =>
+  livePost<{ organizationId: string }>('/projects/aktif', { organizationId });
+
 export const hapusLokasi = (id: string) => liveDelete<{ ok: boolean }>(`/sites/${id}`);
 
 export const buatKotakP3k = (body: { siteId: string; name: string }) =>

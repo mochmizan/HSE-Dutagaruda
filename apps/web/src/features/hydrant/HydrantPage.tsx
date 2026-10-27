@@ -9,7 +9,8 @@ import { HydrantCards } from './HydrantCards';
 import { HydrantFindings } from './HydrantFindings';
 import { HydrantPrintHeader, HydrantPrintSignatures } from './HydrantPrintChrome';
 import { HydrantStats } from './HydrantStats';
-import { PageHeader, FilterBar } from '@/features/pageChrome';
+import { FilterBar } from '@/features/pageChrome';
+import { EmptyUnits, InspectionPageShell, KONFIG_HYDRANT } from '@/features/inspeksi';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';
 import { HydrantFindingItem } from './types';
@@ -375,139 +376,114 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-[var(--bg-main)] text-[var(--primary)] px-6 py-4 select-none font-sans">
-      <HydrantPrintHeader siteName={lokasi.siteName} monthLabel={monthLabel} />
-
-      <PageHeader
-        namaProyek={lokasi.namaProyek}
-        siteName={lokasi.siteName}
-        remahKategori="Inspeksi Hydrant"
-        ikon={<Flame size={18} strokeWidth={2.2} />}
-        aksen="#eb5757"
-        judul="Laporan Inspeksi Hydrant"
-        deskripsi="Monitoring progres pemeriksaan fisik 6 komponen hydrant gedung per unit"
-        isCollapsed={isCollapsed}
-        onToggleCollapsed={onToggleCollapsed}
-        bulan={selectedMonth}
-        tampilkanReset={!isCurrentMonth}
-        onResetBulan={handleResetToCurrentMonth}
-        onPilihBulan={setSelectedMonth}
-        labelTambah="Tambah Zona & Unit"
-        onTambah={() => setIsAddZoneModalOpen(true)}
-        kategoriEkspor="hydrant-monthly"
-        jangkarEkspor={jangkarEkspor}
-        namaBerkas={period}
-        onCetak={handlePrint}
-      />
-
-      <HydrantStats
-        totalUnits={totalUnits}
-        jumlahZona={zones.length}
-        completed={completedUnits.length}
-      />
-
-      <FilterBar
-        filterTab={filterTab}
-        onFilterTab={setFilterTab}
-        total={totalUnits}
-        onProgress={onProgressUnits.length}
-        completed={completedUnits.length}
-        zona={zones}
-        zoneFilter={zoneFilter}
-        onZoneFilter={setZoneFilter}
-        searchQuery={searchQuery}
-        onSearchQuery={setSearchQuery}
-        viewMode={viewMode}
-        onViewMode={setViewMode}
-      />
-
-      {/* Main Hydrant Data Content */}
-      <div className="space-y-3 pb-8 flex-1">
-        {/* Section A Title (Visible in print) */}
-        <div className="hidden print:block mb-2">
-          <h2 className="text-xs font-bold text-black uppercase tracking-wider">
-            A. Hasil Pemeriksaan Fisik Unit Hydrant
-          </h2>
-        </div>
-        {filteredUnits.length === 0 ? (
-          <div className="py-16 text-center text-xs text-[var(--muted)] border border-dashed border-[var(--border)] rounded-[8px] bg-[var(--bg-sidebar)]/50">
-            <Flame size={32} className="mx-auto mb-2 text-[#eb5757]/40" />
-            <p className="font-semibold text-sm text-[var(--primary)]">Tidak ada unit hydrant yang cocok</p>
-            <p className="text-xs text-[var(--muted)] mt-1">
-              Coba sesuaikan tab filter atau kata kunci pencarian Anda.
-            </p>
-            <div className="mt-3 flex items-center justify-center gap-2">
-              {filterTab !== 'ALL' && (
-                <button
-                  type="button"
-                  onClick={() => setFilterTab('ALL')}
-                  className="px-3 py-1.5 text-xs font-semibold text-[#2f80ed] bg-[#2f80ed]/10 hover:bg-[#2f80ed]/20 rounded-[4px] cursor-pointer"
-                >
-                  Tampilkan Semua Unit
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setIsAddZoneModalOpen(true)}
-                className="px-3 py-1.5 text-xs font-semibold text-white bg-[#2f80ed] hover:bg-[#2b77d4] rounded-[4px] cursor-pointer"
-              >
-                + Tambah Unit Baru
-              </button>
-            </div>
+    <InspectionPageShell
+      config={KONFIG_HYDRANT}
+      namaProyek={lokasi.namaProyek}
+      siteName={lokasi.siteName}
+      isCollapsed={isCollapsed}
+      onToggleCollapsed={onToggleCollapsed}
+      bulan={selectedMonth}
+      tampilkanReset={!isCurrentMonth}
+      onResetBulan={handleResetToCurrentMonth}
+      onPilihBulan={setSelectedMonth}
+      onTambah={() => setIsAddZoneModalOpen(true)}
+      jangkarEkspor={jangkarEkspor}
+      namaBerkas={period}
+      onCetak={handlePrint}
+      kepalaCetak={<HydrantPrintHeader siteName={lokasi.siteName} monthLabel={monthLabel} />}
+      statistik={
+        <HydrantStats
+          totalUnits={totalUnits}
+          jumlahZona={zones.length}
+          completed={completedUnits.length}
+        />
+      }
+      saring={
+        <FilterBar
+          filterTab={filterTab}
+          onFilterTab={setFilterTab}
+          total={totalUnits}
+          onProgress={onProgressUnits.length}
+          completed={completedUnits.length}
+          zona={zones}
+          zoneFilter={zoneFilter}
+          onZoneFilter={setZoneFilter}
+          searchQuery={searchQuery}
+          onSearchQuery={setSearchQuery}
+          viewMode={viewMode}
+          onViewMode={setViewMode}
+        />
+      }
+      isi={
+        <div className="space-y-3 pb-8 flex-1">
+          <div className="hidden print:block mb-2">
+            <h2 className="text-xs font-bold text-black uppercase tracking-wider">
+              A. Hasil Pemeriksaan Fisik Unit Hydrant
+            </h2>
           </div>
-        ) : viewMode === 'TABLE' ? (
-          <HydrantTable units={filteredUnits} onBuka={setActiveInspectionUnit} onPindah={handlePindah} />
-        ) : (
-          <HydrantCards units={filteredUnits} onBuka={setActiveInspectionUnit} aksen={AKSEN} />
-        )}
-      </div>
+          {filteredUnits.length === 0 ? (
+            <EmptyUnits
+              ikon={<Flame size={32} />}
+              aksen={KONFIG_HYDRANT.aksen}
+              judul="Tidak ada unit hydrant yang cocok"
+              filterTab={filterTab}
+              onTampilkanSemua={() => setFilterTab('ALL')}
+              onTambah={() => setIsAddZoneModalOpen(true)}
+            />
+          ) : viewMode === 'TABLE' ? (
+            <HydrantTable units={filteredUnits} onBuka={setActiveInspectionUnit} onPindah={handlePindah} />
+          ) : (
+            <HydrantCards units={filteredUnits} onBuka={setActiveInspectionUnit} aksen={AKSEN} />
+          )}
+        </div>
+      }
+      tambahan={
+        <HydrantFindings
+          findings={findings}
+          onTambah={() => setIsAddFindingModalOpen(true)}
+          onHapus={handleDeleteFinding}
+          aksen={AKSEN}
+        />
+      }
+      tandaTangan={<HydrantPrintSignatures />}
+      modals={
+        <>
+          <AddZoneHydrantModal
+            isOpen={isAddZoneModalOpen}
+            onClose={() => setIsAddZoneModalOpen(false)}
+            existingZones={zones}
+            existingUnits={units.map((u) => ({ id: u.id, kode: u.kode, zoneName: u.zoneName }))}
+            lastUnitNumber={maxUnitNumber}
+            onAddZone={handleAddZone}
+            onAddHydrantUnits={handleAddHydrantUnits}
+            onReassignUnitZone={handleReassignUnitZone}
+          />
 
-      <HydrantFindings
-        findings={findings}
-        onTambah={() => setIsAddFindingModalOpen(true)}
-        onHapus={handleDeleteFinding}
-        aksen={AKSEN}
-      />
+          <HydrantInspectionModal
+            unit={activeInspectionUnit}
+            isOpen={Boolean(activeInspectionUnit)}
+            inspeksi={inspeksiAktif}
+            foto={inspeksiAktif ? buktiAktif : []}
+            mengunggah={unggahFoto.isPending}
+            onUnggahFoto={handleUnggahFoto}
+            onHapusFoto={handleHapusFoto}
+            onClose={() => setActiveInspectionUnit(null)}
+            onCompleteInspection={handleCompleteInspection}
+            onBatalkanTerbit={handleBatalkanTerbit}
+            onHapusBulan={handleHapusBulan}
+            menghapusBulan={hapusInspeksi.isPending}
+            onHapusUnit={handleHapusUnit}
+            menghapusUnit={hapusUnit.isPending}
+          />
 
-      <HydrantPrintSignatures />
-
-      {/* 1. Modal Tambah Zona & Unit Hydrant */}
-      <AddZoneHydrantModal
-        isOpen={isAddZoneModalOpen}
-        onClose={() => setIsAddZoneModalOpen(false)}
-        existingZones={zones}
-        existingUnits={units.map((u) => ({ id: u.id, kode: u.kode, zoneName: u.zoneName }))}
-        lastUnitNumber={maxUnitNumber}
-        onAddZone={handleAddZone}
-        onAddHydrantUnits={handleAddHydrantUnits}
-        onReassignUnitZone={handleReassignUnitZone}
-      />
-
-      {/* 2. Modal Inspeksi 6 Komponen Hydrant */}
-      <HydrantInspectionModal
-        unit={activeInspectionUnit}
-        isOpen={Boolean(activeInspectionUnit)}
-        inspeksi={inspeksiAktif}
-        foto={inspeksiAktif ? buktiAktif : []}
-        mengunggah={unggahFoto.isPending}
-        onUnggahFoto={handleUnggahFoto}
-        onHapusFoto={handleHapusFoto}
-        onClose={() => setActiveInspectionUnit(null)}
-        onCompleteInspection={handleCompleteInspection}
-        onBatalkanTerbit={handleBatalkanTerbit}
-        onHapusBulan={handleHapusBulan}
-        menghapusBulan={hapusInspeksi.isPending}
-        onHapusUnit={handleHapusUnit}
-        menghapusUnit={hapusUnit.isPending}
-      />
-
-      {/* 3. Modal Tambah Catatan Hasil Temuan */}
-      <AddFindingModal
-        isOpen={isAddFindingModalOpen}
-        onClose={() => setIsAddFindingModalOpen(false)}
-        onAddFinding={handleAddFinding}
-        existingUnits={units.map((u) => u.kode)}
-      />
-    </div>
+          <AddFindingModal
+            isOpen={isAddFindingModalOpen}
+            onClose={() => setIsAddFindingModalOpen(false)}
+            onAddFinding={handleAddFinding}
+            existingUnits={units.map((u) => u.kode)}
+          />
+        </>
+      }
+    />
   );
 };

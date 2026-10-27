@@ -1,12 +1,15 @@
 import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq, gt } from "drizzle-orm";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { auth } from "../auth/config.js";
 import { db } from "../db/client.js";
 import { member, organization } from "../db/auth-schema.js";
 import {
   aparUnits,
   companies,
   hydrantUnits,
+  projectPreferences,
   sites,
   zones,
 } from "../db/schema.js";
@@ -16,6 +19,7 @@ import {
   companyBodySchema,
   idParamSchema,
   listQuerySchema,
+  proyekAktifSchema,
   siteBodySchema,
   zoneBodySchema,
 } from "./schemas.js";
@@ -112,6 +116,62 @@ async function wajibAnggota(organizationId: string, userId: string): Promise<voi
   if (shots.length === 0) throw notFound("Proyek");
 }
 
+/** Catat proyek aktif pengguna. Upsert: satu baris per pengguna. */
+async function catatProyekAktif(userId: string, organizationId: string): Promise<void> {
+  await db
+    .insert(projectPreferences)
+    .values({ userId, projectId: organizationId })
+    .onConflictDoUpdate({
+      target: projectPreferences.userId,
+      set: { projectId: organizationId, updatedAt: new Date() },
+    });
+}
+
+/**
+ * Proyek aktif yang diingat server.
+ *
+ * Sesi Better Auth memang menyimpan `active_organization_id`, tetapi baris sesi
+ * dibuat ulang tiap kali masuk dan dihapus saat keluar — jadi pilihan pengguna
+ * hilang dan klien dulu menebak organisasi pertama (halaman selalu mendarat di
+ * proyek yang salah). Tabel `project_preferences` menjadikannya fakta server
+ * yang bertahan lintas sesi dan lintas peramban.
+ */
+export const proyekAktifApp = new Hono()
+  // GET sengaja TANPA requireSession: dipakai justru saat sesi belum punya
+  // organisasi aktif (pemulihan tepat setelah masuk).
+  .get("/", async (c) => {
+    const sesi = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!sesi?.user?.id) {
+      throw new HTTPException(401, { message: "Sesi tidak valid. Masuk terlebih dahulu." });
+    }
+    const rows = await db
+      .select({ projectId: projectPreferences.projectId })
+      .from(projectPreferences)
+      .where(eq(projectPreferences.userId, sesi.user.id))
+      .limit(1);
+    const tersimpan = rows[0]?.projectId ?? null;
+    if (!tersimpan) return c.json({ organizationId: null });
+    const anggota = await db
+      .select({ id: member.id })
+      .from(member)
+      .where(and(eq(member.organizationId, tersimpan), eq(member.userId, sesi.user.id)))
+      .limit(1);
+    if (anggota.length === 0) {
+      // Proyek sudah dihapus / keanggotaan dicabut: bersihkan catatan basi.
+      await db.delete(projectPreferences).where(eq(projectPreferences.userId, sesi.user.id));
+      return c.json({ organizationId: null });
+    }
+    return c.json({ organizationId: tersimpan });
+  })
+
+  .post("/", requireSession, zValidator("json", proyekAktifSchema), async (c) => {
+    const { organizationId } = c.req.valid("json");
+    const userId = pemintaId(c);
+    await wajibAnggota(organizationId, userId);
+    await catatProyekAktif(userId, organizationId);
+    return c.json({ organizationId });
+  });
+
 /**
  * Proyek = organisasi Better Auth + baris cermin companies (satu id).
  * Cermin wajib ada: sites.companyId FK ke companies.id, tanpanya
@@ -138,6 +198,9 @@ export const projectsApp = new Hono()
       role: "owner",
       createdAt: new Date(),
     });
+    // Proyek yang baru dibuat langsung dicatat sebagai proyek aktif pengguna,
+    // supaya catatan server tidak bergantung pada panggilan klien berikutnya.
+    await catatProyekAktif(pemintaId(c), id);
     return c.json({ id, name: nama }, 201);
   })
 
@@ -169,6 +232,8 @@ export const projectsApp = new Hono()
       .where(eq(sites.companyId, id))
       .limit(1);
     if (kids.length > 0) throw blockedByChildren("Proyek");
+    // Catatan proyek aktif ikut dibersihkan supaya tidak menunjuk proyek mati.
+    await db.delete(projectPreferences).where(eq(projectPreferences.projectId, id));
     // Cascade FK menghapus member + invitation; cermin companies dihapus eksplisit.
     await db.delete(organization).where(eq(organization.id, id));
     await db.delete(companies).where(eq(companies.id, id));

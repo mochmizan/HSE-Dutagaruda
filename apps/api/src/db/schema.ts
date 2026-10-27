@@ -374,6 +374,20 @@ export const settings = pgTable("settings", {
   value: text("value").notNull(),
 });
 
+/**
+ * Proyek aktif terakhir per pengguna. Sesi Better Auth menyimpan
+ * `active_organization_id`, tetapi baris sesi dibuat ulang (dan dihapus saat
+ * keluar) sehingga pilihan proyek hilang tiap masuk lagi — dulu klien menebak
+ * organisasi pertama. Tabel ini menjadikan pilihan itu fakta server.
+ */
+export const projectPreferences = pgTable("project_preferences", {
+  userId: text("user_id").primaryKey(),
+  projectId: text("project_id").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const pdfJobs = pgTable(
   "pdf_jobs",
   {

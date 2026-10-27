@@ -3,7 +3,17 @@
 Grid tahunan saja seperti formulir kertas (aksen `#27ae60`): 21 item × 12
 bulan, satu kolom tanda per bulan (√ / × / KD merah), baris `TANGGAL
 INSPEKSI` + `PARAF`, footnote Catatan, year switcher, Unit/Lokasi Kerja
-editable. Klik header bulan = form input (21 kuantitas + flag KD +
+editable. Kepala halaman lewat cangkang bersama
+`features/inspeksi/InspectionPageShell.tsx` + `KONFIG_P3K` (remah
+`Inspeksi P3K`, `p3k-yearly`, ikon BriefcaseMedical): poros tahun via slot
+`poros` (`YearSwitcher` berpil seperti `MonthSwitcher` + tombol `Tahun Ini`
+saat bukan tahun berjalan), tanpa tombol tambah, tombol `Cetak` netral
+(sebelumnya hijau — kini seragam keempat halaman). Statistik 2 kartu
+`KartuStatistik` (`grid-cols-2`, bentuk + ukuran angka sama dengan Hydrant:
+`Sel Di Bawah Standar` + `Selesai Diperiksa`; sebelumnya 3 kartu buatan
+sendiri di `grid-cols-3`) + grid + kop + Catatan + modal menempati slot
+shell; `P3kHeader.tsx` dihapus (satu-satunya pemakai sudah
+pindah). Klik header bulan = form input (21 kuantitas + flag KD +
 tanggal/paraf, aksi hapus-bulan). Cetak A4 landscape satu halaman.
 
 ## Sub-features
@@ -22,6 +32,10 @@ tanggal/paraf, aksi hapus-bulan). Cetak A4 landscape satu halaman.
   :refId` (kategori `p3k-yearly`, bukan `p3k`) → polling
   `GET /api/pdf-jobs/:id` hingga `done` + `downloadUrl`. Ada juga
   `Cetak` hijau (window.print, A4 landscape via `@page`).
+- `p3k-shell` (Okt 27): `P3kPage` dirender lewat `InspectionPageShell`
+  dengan `KONFIG_P3K`; tombol kembali `onBack` dihapus (Hydrant/APAR juga
+  tidak memakainya — navigasi lewat sidebar); judul shell baru
+  `Laporan Inspeksi P3K`. Tanpa perubahan perilaku.
 
 ## How to get to it (user POV)
 

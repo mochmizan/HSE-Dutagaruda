@@ -25,7 +25,7 @@ export const AparPrintHeader: React.FC<AparPrintHeaderProps> = ({
   <div className="hidden print:block pb-3 mb-4 border-b border-black">
     <div className="flex justify-between items-start pt-1">
       <div>
-        <h1 className="text-sm font-extrabold text-black">CHECKLIST BULANAN APAR — JPM Dukuh Atas</h1>
+        <h1 className="text-sm font-extrabold text-black">LEMBAR LAPORAN PEMERIKSAAN BERKALA APAR GEDUNG</h1>
         <p className="text-[10px] text-gray-700">
           Sesuai Standar K3 &amp; Permenakertrans No. 04/MEN/1980
         </p>
@@ -56,11 +56,8 @@ export const AparExpiry: React.FC<AparExpiryProps> = ({ groups }) => (
     className="scroll-mt-4 pt-4 bg-white dark:bg-[var(--bg-main)] print:bg-white print:break-before-page print:break-inside-avoid"
   >
     <h2 className="text-sm font-bold text-left text-[var(--primary)] tracking-tight print:text-black print:text-sm print:text-left">
-      Kadaluwarsa APAR
+      B. Rekap Kadaluwarsa APAR
     </h2>
-    <p className="no-print text-xs text-[var(--muted)] mt-0.5 mb-2">
-      Dihitung otomatis dari tanggal kedaluwarsa seluruh unit terdaftar
-    </p>
     <div className="overflow-x-auto border border-[var(--border)] print:border-black bg-[var(--bg-main)] dark:bg-[var(--bg-main)] print:bg-white shadow-2xs print:shadow-none rounded-[6px] print:rounded-none">
       <table className="w-full text-center border-collapse text-xs print:text-[10px]">
         <thead>
@@ -98,11 +95,11 @@ export const AparExpiry: React.FC<AparExpiryProps> = ({ groups }) => (
       </table>
     </div>
 
-    <div className="mt-3 print:mt-2 print:break-inside-avoid">
+    <div className="hidden print:block mt-3 print:mt-2 print:break-inside-avoid">
       <p className="text-xs print:text-[10px] font-bold text-[var(--primary)] print:text-black text-left">
         Catatan :
       </p>
-      <div className="hidden print:block mt-1 min-h-[56px] border border-black px-2 py-1.5" aria-hidden="true" />
+      <div className="mt-1 min-h-[56px] border border-black px-2 py-1.5" aria-hidden="true" />
     </div>
   </div>
 );

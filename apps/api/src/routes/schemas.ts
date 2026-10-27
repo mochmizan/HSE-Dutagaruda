@@ -13,6 +13,11 @@ export const companyBodySchema = z.object({
   name: z.string().min(1, "Nama perusahaan wajib diisi."),
 });
 
+/** Proyek aktif yang direkam server supaya bertahan lintas sesi. */
+export const proyekAktifSchema = z.object({
+  organizationId: z.string().min(1, "Proyek wajib diisi."),
+});
+
 export const siteBodySchema = z.object({
   companyId: z.string().min(1).optional(),
   name: z.string().min(1, "Nama lokasi wajib diisi."),
