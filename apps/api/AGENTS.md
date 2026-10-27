@@ -52,6 +52,20 @@ PDF storage, and Gotenberg PDF rendering.
   `photos` (exactly one owner inspection). `POST /api/uploads` (multipart,
   JPEG/PNG/WebP, 8 MB max), `GET /api/photos/:id` → 302 presigned 60s,
   `DELETE /api/photos/:id` removes object + row.
+- Peta proyek (`project_maps`, migration `0009_*`): gambar denah per PROYEK
+  (project id = `companyId(c)`), dibagi ke semua pengguna proyek, bukan per
+  pengguna. Bukan `photos` karena CHECK `num_nonnulls(...) = 1` di tabel itu
+  mewajibkan tepat satu inspeksi pemilik. Bytes di
+  `peta/<companyId>/<mapId>.<jpg|png|webp>` (JPEG/PNG/WebP, 10 MB, maks 20 peta
+  per proyek). Tepat satu baris `dipilih` per proyek, ditegakkan partial unique
+  index `project_maps_satu_dipilih`; peta pertama otomatis terpilih,
+  `PUT /api/project-maps/:id/dipilih` menukar pilihan dalam SATU transaksi
+  (kosongkan semua lalu set satu), dan `DELETE` peta terpilih mempromosikan sisa
+  terbaru (`urutan desc, createdAt desc`) di request yang sama.
+  `GET /api/project-maps` → `{ items }` urut `urutan` lalu `createdAt`,
+  `POST /api/project-maps` (multipart `file` + `nama?`, 201 baris),
+  `PATCH /api/project-maps/:id` `{ nama }`, `GET /api/project-maps/:id/berkas`
+  → 302 presigned 60s. Semua handler tenant-scoped; peta proyek lain → 404.
 - Inspection DELETE blocks with attached photos (409); delete the photo first.
 - PDF export: `POST /api/export/:category/:refId` creates a `pdfJobs` row
   (queued), renders synchronously in-request (v1; async queue is the follow-up),
@@ -130,8 +144,9 @@ PDF storage, and Gotenberg PDF rendering.
 
 - Full gate (runs inside the network so presigned fetches work):
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
-  — expect 68/68 (CRUD + upload round-trip + photo list + 5 exports +
-  pdf-job flow + proyek-aktif rekam/baca + typed-client probe `klien-tertipikasi`). The gate's
+  — expect 72/72 (CRUD + upload round-trip + photo list + 5 exports +
+  pdf-job flow + proyek-aktif rekam/baca + peta proyek unggah/pilih/daftar/hapus
+  + typed-client probe `klien-tertipikasi`). The gate's
   byte-fetch check maps the public storage origin onto `CHECK_BASE` so it
   validates the same Caddy `/storage` route.
 - Host variant `bun run --filter @viaannn/api check` now also passes the byte
@@ -140,9 +155,10 @@ PDF storage, and Gotenberg PDF rendering.
   `hc<AppType>` typing: check.ts calls `hc<AppType>(BASE).api.sites.$get`,
   which fails tsc if any sub-app loses its chained registration.
 - PDF orientation proof: portrait MediaBox ≈ 595×842 pt, landscape ≈ 842×595 pt.
-- Unit tests: `bun run test` from the repo root (63 tests). Covers
+- Unit tests: `bun run test` from the repo root (109 tests). Covers
   `packages/shared/src/status.ts` + `dates.ts`, `apps/web/src/lib/aparSync.ts` +
-  `dates.ts`, and the PDF template builders (`templates.test.ts`).
+  `dates.ts`, `apps/web/src/features/peta/petaTeks.test.ts` (size formatting),
+  and the PDF template builders (`templates.test.ts`).
 - PDF size/page proof: `bun scripts/bench/pdf.ts` renders all categories and
   `bun scripts/bench/cek-pdf.ts <file>` prints page count. Hydrant monthly must
   stay far below 100 KB (4,3 MB means the `temuan` photo filter regressed) and

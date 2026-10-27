@@ -69,6 +69,11 @@ export function livePhotoUrl(id: string): string {
   return `${API_BASE}/photos/${id}`;
 }
 
+/** Berkas peta proyek (denah) via GET /api/project-maps/:id/berkas (302 presigned). */
+export function livePetaUrl(id: string): string {
+  return `${API_BASE}/project-maps/${encodeURIComponent(id)}/berkas`;
+}
+
 export function liveApiBase(): string {
   return API_BASE;
 }

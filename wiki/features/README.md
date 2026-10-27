@@ -68,3 +68,5 @@ stabil, state yang dibutuhkan, perintah, dan bukti teramati.
   paraf, cetak landscape.
 - [Patroli K3](./patroli.md) — feed foto tunggal, terbaru dulu, tambah
   temuan + hapus hover.
+- [Peta Proyek](./peta.md) — unggah banyak denah per proyek, satu dipilih
+  server, picker thumbnail, lightbox.

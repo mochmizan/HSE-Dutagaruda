@@ -499,6 +499,39 @@ export const ambilFotoInspeksi = (
     `/photos?inspectionKind=${inspectionKind}&inspectionId=${encodeURIComponent(inspectionId)}`,
   );
 
+// ── Peta proyek (denah terunggah, /api/project-maps) ──
+
+export interface ApiPeta {
+  id: string;
+  nama: string;
+  mime: string;
+  bytes: number;
+  urutan: number;
+  /** `true` = denah acuan tampilan; hanya satu peta terpilih per proyek. */
+  dipilih: boolean;
+  createdAt: string;
+}
+
+/** Daftar peta proyek aktif, sudah berurutan menurut `urutan`. */
+export const ambilPetaProyek = () => liveGet<{ items: ApiPeta[] }>('/project-maps');
+
+/** Unggah denah (multipart: file, nama?). */
+export const unggahPeta = (file: File, nama?: string) => {
+  const form = new FormData();
+  form.append('file', file, file.name);
+  if (nama?.trim()) form.append('nama', nama.trim());
+  return livePostForm<ApiPeta>('/project-maps', form);
+};
+
+/** Tandai satu peta sebagai denah terpilih. */
+export const pilihPeta = (id: string) =>
+  livePut<{ ok: boolean }>(`/project-maps/${id}/dipilih`, {});
+
+export const ubahNamaPeta = (id: string, nama: string) =>
+  livePatch<ApiPeta>(`/project-maps/${id}`, { nama });
+
+export const hapusPeta = (id: string) => liveDelete<{ ok: boolean }>(`/project-maps/${id}`);
+
 // ── Ekspor PDF (pdfJobs, v1 sinkron) ──
 
 export type KategoriEkspor =

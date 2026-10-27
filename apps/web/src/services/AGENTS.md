@@ -20,6 +20,10 @@ the Hono API through these hooks.
   (`eksporPdf`, `ambilPdfJob`) contracts, plus the project switch pair
   `ambilProyekAktif` / `rekamProyekAktif` (`/projects/aktif`) that makes the
   chosen project a server fact instead of a per-session client guess.
+  Project maps (uploaded denah) live here too: `ambilPetaProyek`,
+  `unggahPeta` (multipart via `livePostForm`), `pilihPeta`, `ubahNamaPeta`,
+  `hapusPeta`, with `livePetaUrl` in `liveClient.ts` for the presigned
+  `GET /api/project-maps/:id/berkas`.
 - `api/queries.ts`: barrel only. The TanStack Query hooks live in per-domain
   modules so no single file grows past ~200 lines. Every existing import from
   `@/services/api/queries` still resolves.
@@ -31,6 +35,9 @@ the Hono API through these hooks.
   - `api/queries-hidran.ts`, `api/queries-apar.ts`, `api/queries-p3k.ts`,
     `api/queries-patroli.ts`: mutations per category.
   - `api/queries-foto.ts`: `useUnggahFoto`, `useHapusFoto`, `useFotoInspeksi`.
+  - `api/queries-peta.ts`: project maps (uploaded denah) — `usePetaProyek`,
+    `useUnggahPeta`, `usePilihPeta`, `useUbahNamaPeta`, `useHapusPeta`; one
+    cache prefix `['peta']`, every mutation invalidates it on settle.
   - `api/pemetaan.ts`: barrel over `pemetaan-unit.ts` (unit + year card) and
     `pemetaan-umpan.ts` (patrol findings + dashboard feed). Both are pinned by
     `pemetaan-unit.test.ts` / `pemetaan-umpan.test.ts` (33 tests): DRAFT stays

@@ -11,5 +11,6 @@ export * from './queries-hidran';
 export * from './queries-apar';
 export * from './queries-p3k';
 export * from './queries-foto';
+export * from './queries-peta';
 export * from './queries-patroli';
 export * from './pemetaan';

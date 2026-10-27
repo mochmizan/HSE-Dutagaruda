@@ -10,6 +10,7 @@ import { aparUnitsApp, hydrantUnitsApp, p3kBoxesApp } from "./routes/units.js";
 import { dashboardApp, feedApp, settingsApp } from "./routes/feed.js";
 import { usersApp } from "./routes/users.js";
 import { photosApp, uploadsApp } from "./routes/uploads.js";
+import { petaApp } from "./routes/peta.js";
 import { exportsApp, pdfJobsApp } from "./routes/exports.js";
 
 export const app = new Hono()
@@ -48,6 +49,7 @@ export const app = new Hono()
   .route("/api/users", usersApp)
   .route("/api/uploads", uploadsApp)
   .route("/api/photos", photosApp)
+  .route("/api/project-maps", petaApp)
   .route("/api/export", exportsApp)
   .route("/api/pdf-jobs", pdfJobsApp);
 

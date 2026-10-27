@@ -6,8 +6,15 @@ the §02 fix list. Behavior below is the contract.
 ## Dashboard
 
 - 3 panes: sidebar (nav + category filters + theme), center (breadcrumb, calendar,
-  4 KPI squares), right feed (monthly reports, search, date filter).
+  map card below the calendar), right feed (monthly reports, search, date filter).
 - Calendar: compact month grid, per-day category chips, Indonesian dates.
+- Peta proyek (owner-approved Oct 27): one card directly AFTER the calendar in
+  the center pane. It shows the uploaded denah for the active project, not the
+  active site — switching sites does not change it. Header `Peta Lokasi Proyek`
+  + count + upload action. Multiple images: a thumbnail picker selects which one
+  fills the frame; the selection is recorded server-side per project, so every
+  member and every reload sees the same denah. Empty state offers the upload
+  action. Clicking the frame opens a lightbox (Esc + backdrop, zoom toggle).
 - KPI squares open their pages (Hydrant/APAR/P3K/Patrol). APAR square carries
   the expiry badge. Fix accent drift (§02.1).
 - Feed items open the record modal (badge, metadata, details, photos, Edit).

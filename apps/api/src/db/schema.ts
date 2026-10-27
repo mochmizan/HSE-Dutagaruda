@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -366,6 +367,40 @@ export const photos = pgTable(
       "photos_single_owner_check",
       sql`num_nonnulls("hydrant_inspection_id", "apar_inspection_id") = 1`,
     ),
+  ],
+);
+
+/**
+ * Peta proyek: gambar denah yang diunggah per proyek (organisasi), dipakai
+ * bersama oleh semua pengguna proyek tersebut. Tepat satu baris per proyek
+ * berstatus `dipilih` — peta itulah yang ditampilkan — dan partial unique index
+ * di bawah menegakkan itu di level basis data, bukan hanya di kode.
+ *
+ * Sengaja dipisah dari `photos`: tabel itu punya CHECK `num_nonnulls(...) = 1`
+ * yang mewajibkan tepat satu inspeksi pemilik, sedangkan peta proyek tidak
+ * dimiliki inspeksi mana pun.
+ */
+export const projectMaps = pgTable(
+  "project_maps",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    s3Key: text("s3_key").notNull(),
+    nama: text("nama").notNull(),
+    mime: text("mime").notNull(),
+    bytes: integer("bytes").notNull(),
+    sha256: text("sha256").notNull(),
+    urutan: integer("urutan").notNull().default(0),
+    dipilih: boolean("dipilih").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("project_maps_company_id_idx").on(t.companyId),
+    uniqueIndex("project_maps_satu_dipilih").on(t.companyId).where(sql`${t.dipilih}`),
   ],
 );
 

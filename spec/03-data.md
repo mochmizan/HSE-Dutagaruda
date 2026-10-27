@@ -40,6 +40,13 @@ Workers: verify every table against ctx7 Drizzle docs (`pgTable`, uniques, RLS).
   mime?, bytes?, sha256?, locationNote?.
 - `photos`: id, companyId, s3Key, mime?, bytes?, sha256?, caption?,
   hydrantInspectionId?, aparInspectionId? (exactly one set).
+- `projectMaps` (new, owner-approved Oct 27): id, companyId→companies, s3Key,
+  nama, mime, bytes, sha256, urutan, dipilih(bool), createdAt. Denah/layout
+  images for the whole project, NOT per site and NOT in `photos` (that table's
+  CHECK allows exactly one inspection owner). One image is `dipilih` per
+  company — enforced by a partial unique index `(company_id) WHERE dipilih`, so
+  the shared selection can never have two winners. Object key
+  `peta/<companyId>/<mapId>.<ext>`.
 - `settings`: key(text pk), value. Seed `apar_expiry_alert_days = "30"`.
 - `pdfJobs` (new, for async export): id, companyId, category, refId, status
   (queued|done|failed), s3Key?, createdAt.

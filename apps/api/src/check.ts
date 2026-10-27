@@ -336,6 +336,66 @@ async function main(): Promise<void> {
   const fotoTemuanDel = await req(authed, "DELETE", `/api/safety-patrol-reports/findings/${fotoTemuanId}`);
   record("hapus-temuan-foto", fotoTemuanDel.status === 200, `(${fotoTemuanDel.status})`);
 
+  // Peta proyek: unggah -> pilih -> daftar -> hapus (bersih sampai kosong).
+  const petaPertama = await reqForm(
+    authed,
+    "/api/project-maps",
+    { nama: "Peta Uji" },
+    { name: "peta.png", type: "image/png", content: fotoUji() },
+  );
+  const petaPertamaJson = petaPertama.json as { id?: string; dipilih?: boolean } | null;
+  const petaPertamaId = petaPertamaJson?.id ?? "";
+  ids.petaPertama = petaPertamaId;
+  record(
+    "peta-unggah",
+    petaPertama.status === 201 && petaPertamaId !== "" && petaPertamaJson?.dipilih === true,
+    `(${petaPertama.status})`,
+  );
+
+  const petaKedua = await reqForm(
+    authed,
+    "/api/project-maps",
+    { nama: "Peta Uji 2" },
+    { name: "peta2.png", type: "image/png", content: fotoUji() },
+  );
+  const petaKeduaJson = petaKedua.json as { id?: string; dipilih?: boolean } | null;
+  const petaKeduaId = petaKeduaJson?.id ?? "";
+  const petaPilih = await req(authed, "PUT", `/api/project-maps/${petaPertamaId}/dipilih`);
+  record(
+    "peta-pilih",
+    petaKedua.status === 201 && petaKeduaId !== "" && petaPilih.status === 200,
+    `(${petaKedua.status}, ${petaPilih.status})`,
+  );
+
+  const petaDaftar = await req(authed, "GET", "/api/project-maps");
+  const petaDaftarJson = petaDaftar.json as
+    | { items?: { id: string; dipilih: boolean }[] }
+    | null;
+  const petaItems = petaDaftarJson?.items ?? [];
+  record(
+    "peta-daftar",
+    petaDaftar.status === 200 &&
+      petaItems.length === 2 &&
+      petaItems[0]?.id === petaPertamaId &&
+      petaItems[0]?.dipilih === true &&
+      petaItems[1]?.id === petaKeduaId &&
+      petaItems[1]?.dipilih === false,
+    `(${petaDaftar.status}, ${petaItems.length} peta)`,
+  );
+
+  const petaHapusSatu = await req(authed, "DELETE", `/api/project-maps/${petaPertamaId}`);
+  const petaHapusDua = await req(authed, "DELETE", `/api/project-maps/${petaKeduaId}`);
+  const petaSisa = await req(authed, "GET", "/api/project-maps");
+  const petaSisaJson = petaSisa.json as { items?: unknown[] } | null;
+  record(
+    "peta-hapus",
+    petaHapusSatu.status === 200 &&
+      petaHapusDua.status === 200 &&
+      petaSisa.status === 200 &&
+      (petaSisaJson?.items ?? []).length === 0,
+    `(${petaHapusSatu.status}, ${petaHapusDua.status}, sisa=${(petaSisaJson?.items ?? []).length})`,
+  );
+
   const feed = await req(authed, "GET", "/api/inspections?month=2026-09");
   const feedJson = feed.json as Record<string, unknown> | null;
   const feedKeysOk =

@@ -6,6 +6,7 @@ import { HseSidebar, TombolPerluas } from '@/features/navigation';
 import { LoginScreen, useSesi, useKeluar, usePulihkanProyek } from '@/features/auth';
 import { PenyediaLokasi, useKonteksLokasi } from '@/features/konteksLokasi';
 import { HseCalendar } from '@/features/calendar';
+import { PetaProyek } from '@/features/peta';
 import { MonthlyReportsPanel, ReportDetailModal } from '@/features/reports';
 import { useUmpan, petakanUmpanKeLaporan, useUnitHidran, useUnitApar, useKotakP3k } from '@/services/api/queries';
 import { InspectionCategory, InspectionReport } from '@/types';
@@ -211,6 +212,11 @@ function AppIsi() {
                 reports={reports}
                 activeCategoryFilter={activeCategoryFilter}
               />
+            </div>
+
+            {/* Peta proyek (denah terunggah): tepat di bawah kalender dasbor */}
+            <div className="mt-4">
+              <PetaProyek />
             </div>
           </main>
 

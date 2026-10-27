@@ -33,6 +33,19 @@ uploads go to Garage (not Vercel Blob); PDFs via Gotenberg jobs (not react-pdf).
   return key. `GET /api/photos/:id` — tenant check, 302 to short-lived
   presigned GET. Never expose the bucket.
 
+## Project maps (denah per project, owner-approved Oct 27)
+
+- `GET /api/project-maps` — list the active project's images, `dipilih` flag
+  included, ordered by `urutan` then `createdAt`.
+- `POST /api/project-maps` — multipart `file` (+ optional `nama`),
+  JPEG/PNG/WebP, max 10 MB, max 20 images per project; first upload is
+  selected automatically.
+- `GET /api/project-maps/:id/berkas` — tenant check, 302 to a 60s presigned GET.
+- `PUT /api/project-maps/:id/dipilih` — one transaction clears siblings and sets
+  this image; the choice is per project, shared by every member.
+- `PATCH /api/project-maps/:id` (`nama`), `DELETE /api/project-maps/:id` (object
+  then row; deleting the chosen image promotes the newest remaining one).
+
 ## PDF export (async via Gotenberg, private network only)
 
 - `POST /api/export/:category/:refId` — queue job, render Chromium template
