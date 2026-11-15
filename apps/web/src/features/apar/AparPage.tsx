@@ -434,10 +434,23 @@ export const AparPage: React.FC<AparPageProps> = ({
       }
       isi={
         <div className="space-y-3 pb-8 flex-1">
-          <div className="hidden print:block mb-2">
-            <h2 className="text-xs font-bold text-black uppercase tracking-wider">
-              A. Hasil Pemeriksaan Fisik Unit APAR
-            </h2>
+          <div className="flex items-center justify-between gap-2">
+            <div className="hidden print:block mb-2">
+              <h2 className="text-xs font-bold text-black uppercase tracking-wider">
+                A. Hasil Pemeriksaan Fisik Unit APAR
+              </h2>
+            </div>
+            {/* Affordance kedua: pratinjau kertas demo-faithful (?cetak=apar).
+              Di luar PageHeader supaya urutan Unduh PDF → Cetak kepala tidak berubah. */}
+            <div className="no-print ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.open(`?cetak=apar&bulan=${period}`, '_blank', 'noopener')}
+                className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
+              >
+                Pratinjau Cetak
+              </button>
+            </div>
           </div>
           {filteredUnits.length === 0 ? (
             <EmptyUnits

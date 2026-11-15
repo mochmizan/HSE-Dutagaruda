@@ -97,6 +97,16 @@ kepala cetak + tanda tangan statis 3 kolom, modals.
   + Section B + Section C (rekap, `break-before-page` → hal. 2) + Section D
   (kartu tahunan) + tanda tangan statis 3 kolom (`AparPrintSignatures`);
   `no-print` pada toolbar/stats/toggle kartu dan kontrol cip/tahun/cetak-kartu.
+- `apar-printview` pratinjau demo-faithful `AparPrintPreview` (deep-link
+  `?cetak=apar&bulan=YYYY-MM`, tombol `Pratinjau Cetak` di Section A cermin
+  Hydrant): markup + CSS `#print-template-styles` demo EXACT (paginasi 5+6
+  baris, thead hanya hal. 1, blok Kadaluwarsa prosedural + Catatan + tanda
+  tangan 3 kolom di hal. tabel terakhir ala `4-page`); data live: units →
+  rows, `expiredDate` ISO → Indonesia multiline, foto caption `Kartu APAR` /
+  `Penimbangan CO2` (landscape) / `Pengecekan fisik` (+ekstra) per rekam
+  bulan, tanggal = `createdAt` terbaru, catatan = gabungan notes unik.
+  GAP: logo kop kiri JPM (pakai banner bersama kanan saja), nama penandatangan
+  (jabatan fallback demo), foto/unit tanpa rekam bulan = sel kosong.
 - apar-kertas-pdf: `aparMonthly()` di `apps/api/src/pdf/templates.ts`
   mengikuti kertas bulanan milik owner (kop banner JPM + kotak judul tengah
   `CHECKLIST BULANAN APAR` + tabel checklist tata-letak tetap tinta hitam +

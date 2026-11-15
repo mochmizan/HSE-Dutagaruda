@@ -13,6 +13,7 @@ export { AparFindings } from './AparFindings';
 export { AparExpiryRecap } from './AparExpiryRecap';
 export { AparYearCard } from './AparYearCard';
 export { AparPrintHeader, AparPrintSignatures } from './AparPrintChrome';
+export { AparPrintPreview } from './AparPrintPreview';
 export { KOMPONEN_APAR } from './komponenApar';
 export type { KunciKomponenApar, NilaiKomponenApar } from './komponenApar';
 export { susunCatatanApar, uraiCatatanApar } from './catatanApar';

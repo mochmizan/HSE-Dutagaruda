@@ -12,14 +12,15 @@ import { useUmpan, petakanUmpanKeLaporan, useUnitHidran, useUnitApar, useKotakP3
 import { InspectionCategory, InspectionReport } from '@/types';
 import { Agentation } from 'agentation';
 
-type AppView = 'dashboard' | 'hydrant' | 'hydrant-cetak' | 'apar' | 'p3k' | 'patrol';
+type AppView = 'dashboard' | 'hydrant' | 'hydrant-cetak' | 'apar' | 'apar-cetak' | 'p3k' | 'patrol';
 
-/** Deep-link pratinjau cetak: `?cetak=hydrant` (+ opsional `?bulan=YYYY-MM`). */
+/** Deep-link pratinjau cetak: `?cetak=hydrant|apar` (+ opsional `?bulan=YYYY-MM`). */
 function bacaCetakAwal(): AppView {
   try {
-    return new URLSearchParams(window.location.search).get('cetak') === 'hydrant'
-      ? 'hydrant-cetak'
-      : 'dashboard';
+    const cetak = new URLSearchParams(window.location.search).get('cetak');
+    if (cetak === 'hydrant') return 'hydrant-cetak';
+    if (cetak === 'apar') return 'apar-cetak';
+    return 'dashboard';
   } catch {
     return 'dashboard';
   }
@@ -51,6 +52,9 @@ const HydrantPrintPreview = lazy(() =>
   import('@/features/hydrant').then((m) => ({ default: m.HydrantPrintPreview }))
 );
 const AparPage = lazy(() => import('@/features/apar').then((m) => ({ default: m.AparPage })));
+const AparPrintPreview = lazy(() =>
+  import('@/features/apar').then((m) => ({ default: m.AparPrintPreview }))
+);
 const P3kPage = lazy(() => import('@/features/p3k').then((m) => ({ default: m.P3kPage })));
 const PatrolPage = lazy(() => import('@/features/patrol').then((m) => ({ default: m.PatrolPage })));
 
@@ -194,7 +198,7 @@ function AppIsi() {
         onSelectCategoryFilter={setActiveCategoryFilter}
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
-        currentView={currentView === 'hydrant-cetak' ? 'hydrant' : currentView}
+        currentView={currentView === 'hydrant-cetak' ? 'hydrant' : currentView === 'apar-cetak' ? 'apar' : currentView}
         onNavigateView={setCurrentView}
         namaPengguna={sesi.data.nama}
         onKeluar={() => keluar.mutate()}
@@ -289,6 +293,22 @@ function AppIsi() {
             onSuntingSelesai={() => setBukaSunting(null)}
             isCollapsed={isCollapsed}
             onToggleCollapsed={toggleCollapsed}
+          />
+        </Suspense>
+      ) : currentView === 'apar-cetak' ? (
+        <Suspense fallback={<HalamanMemuat />}>
+          <AparPrintPreview
+            bulan={bulanCetak}
+            onKembali={() => {
+              try {
+                const u = new URL(window.location.href);
+                u.searchParams.delete('cetak');
+                window.history.replaceState(null, '', u.toString());
+              } catch {
+                /* abaikan */
+              }
+              setCurrentView('apar');
+            }}
           />
         </Suspense>
       ) : currentView === 'p3k' ? (
