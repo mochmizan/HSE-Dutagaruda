@@ -366,6 +366,18 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     hapusFoto.mutate({ id, inspectionId: jangkarTemuan });
   };
 
+  // Pratinjau cetak: bangun URL bersih dari origin+pathname dengan
+  // URLSearchParams baru ({cetak, bulan}) — jangan menempel ke href yang
+  // sudah berquery agar tidak ganda (`?a? a`).
+  const bukaPratinjauCetak = () => {
+    const params = new URLSearchParams({ cetak: 'hydrant', bulan: period });
+    window.open(
+      `${window.location.origin}${window.location.pathname}?${params.toString()}`,
+      '_blank',
+      'noopener',
+    );
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -436,7 +448,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             <div className="no-print ml-auto flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => window.open(`?cetak=hydrant&bulan=${period}`, '_blank', 'noopener')}
+                onClick={bukaPratinjauCetak}
                 className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
               >
                 Pratinjau Cetak

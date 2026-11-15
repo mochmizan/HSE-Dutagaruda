@@ -14,10 +14,25 @@ import { Agentation } from 'agentation';
 
 type AppView = 'dashboard' | 'hydrant' | 'hydrant-cetak' | 'apar' | 'apar-cetak' | 'p3k' | 'patrol';
 
-/** Deep-link pratinjau cetak: `?cetak=hydrant|apar` (+ opsional `?bulan=YYYY-MM`). */
+/** Deep-link pratinjau cetak: `?cetak=hydrant|apar` (+ opsional `?bulan=YYYY-MM`).
+ * Tahan bentuk ganda (`?cetak=apar&bulan=X?cetak=apar&bulan=X`): pecah tiap
+ * segmen `?` lalu ambil pasangan valid pertama. */
+function ambilParamCetak(nama: string): string | null {
+  try {
+    const mentah = window.location.search.replace(/^\?/, '');
+    for (const bagian of mentah.split('?')) {
+      const nilai = new URLSearchParams(bagian).get(nama);
+      if (nilai) return nilai;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function bacaCetakAwal(): AppView {
   try {
-    const cetak = new URLSearchParams(window.location.search).get('cetak');
+    const cetak = ambilParamCetak('cetak');
     if (cetak === 'hydrant') return 'hydrant-cetak';
     if (cetak === 'apar') return 'apar-cetak';
     return 'dashboard';
@@ -28,7 +43,7 @@ function bacaCetakAwal(): AppView {
 
 function bacaBulanCetak(): string | undefined {
   try {
-    const b = new URLSearchParams(window.location.search).get('bulan');
+    const b = ambilParamCetak('bulan');
     return /^\d{4}-\d{2}$/.test(b ?? '') ? (b as string) : undefined;
   } catch {
     return undefined;
