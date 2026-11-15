@@ -1,3 +1,12 @@
 export * from './types';
 export { P3kPage } from './P3kPage';
 export { P3kInspectionModal } from './P3kInspectionModal';
+export { P3kInspectionShell } from './P3kInspectionShell';
+export { P3kInspectionHeader } from './P3kInspectionHeader';
+export { P3kInspectionBody, ringkasanDraf } from './P3kInspectionBody';
+export { P3kInspectionFooter, P3kDeleteConfirmation } from './P3kInspectionFooter';
+export { P3kTabel } from './P3kTabel';
+export { P3kStatistik } from './P3kStatistik';
+export { P3kKepala } from './P3kKepala';
+export { P3kPrintHeader, P3kPrintSignatures } from './P3kPrintChrome';
+export { petakanGridP3k } from './petaApi';

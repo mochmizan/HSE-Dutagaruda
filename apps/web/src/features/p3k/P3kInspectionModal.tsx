@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { X, Trash2 } from 'lucide-react';
-import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
-import { markFor, type P3kMonthData, type P3kMonthItemData } from './types';
+import type { ApiInspeksiP3k } from '@/services/api/klien';
+import { P3kInspectionBody, ringkasanDraf } from './P3kInspectionBody';
+import { P3kDeleteConfirmation, P3kInspectionFooter } from './P3kInspectionFooter';
+import { P3kInspectionHeader } from './P3kInspectionHeader';
+import { P3kInspectionShell } from './P3kInspectionShell';
+import type { P3kMonthData, P3kMonthItemData } from './types';
 
 interface P3kInspectionModalProps {
   isOpen: boolean;
   monthLabel: string;
   initial: P3kMonthData;
+  /** Rekam tersimpan bulan ini; null = belum ada (belum terbit). */
+  rekam: ApiInspeksiP3k | null;
+  menyimpan: boolean;
+  menghapusBulan: boolean;
   onClose: () => void;
-  onSave: (data: P3kMonthData) => void;
+  onSave: (data: P3kMonthData) => Promise<void>;
   onClear: () => void;
 }
 
@@ -20,11 +27,25 @@ function cloneItems(src: Record<number, P3kMonthItemData>): ItemState {
   return next;
 }
 
-/** Monthly input form for one P3K box: 21 actual quantities + expiry flags. */
+/**
+ * Form input satu bulan kotak P3K: 21 kuantitas aktual + flag KD +
+ * tanggal/paraf. Semua state + efek di sini; anak-anak presentasional.
+ *
+ * Potret terbit adalah cerminan rekam tersimpan (ada rekam = terbit =
+ * baca-saja), bukan state bebas: satu-satunya penulis `terbit` adalah efek
+ * di bawah (`[isOpen, rekam?.id]`). Penerbitan yang gagal tak boleh
+ * menyisakan potret "Terbit" untuk rekam yang tak ada. `Edit` membuka kunci
+ * lokal (rekam P3K tidak membawa `approval_status` seperti Hydrant, jadi
+ * batal-terbit tak menulis apa pun ke server) sampai Terbitkan menyimpan
+ * ulang.
+ */
 export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   isOpen,
   monthLabel,
   initial,
+  rekam,
+  menyimpan,
+  menghapusBulan,
   onClose,
   onSave,
   onClear,
@@ -32,7 +53,13 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   const [items, setItems] = useState<ItemState>({});
   const [tanggal, setTanggal] = useState('');
   const [paraf, setParaf] = useState('');
+  /** Rekam sudah tersimpan: potret baca-saja; tombol berubah menjadi Edit. */
+  const [terbit, setTerbit] = useState(false);
+  /** `Terbitkan` menulis ke API dulu; potret mengikuti rekam. */
+  const [menerbitkan, setMenerbitkan] = useState(false);
+  const [konfirmasiHapus, setKonfirmasiHapus] = useState(false);
 
+  // Isi form dari rekam/draf saat dibuka.
   useEffect(() => {
     if (!isOpen) return;
     setItems(cloneItems(initial.items));
@@ -40,27 +67,35 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
     setParaf(initial.paraf);
   }, [isOpen, initial]);
 
+  // Potret terbit mencerminkan rekam: hanya efek ini yang boleh menulis
+  // `terbit` dari rekam, jadi layar tak bisa lebih maju dari server.
+  useEffect(() => {
+    if (isOpen) setTerbit(Boolean(rekam));
+  }, [isOpen, rekam?.id]);
+
+  // Esc + kunci scroll badan saat terbuka. WAJIB di atas
+  // `if (!isOpen) return null`: efek harus dipanggil setiap render.
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const draft: P3kMonthData = { items, tanggal, paraf };
-  let lengkap = 0;
-  let kurang = 0;
-  let kd = 0;
-  for (const item of STANDARD_P3K_ITEMS) {
-    const mark = markFor(item.id, item.standardQty, draft);
-    if (mark === 'standar') lengkap += 1;
-    else if (mark === 'kurang') kurang += 1;
-    else if (mark === 'kd') kd += 1;
-  }
+  const { lengkap, kurang, kd } = ringkasanDraf(draft);
+
+  /** Rekam yang sedang tampil; `terbit` hanya benar bila rekam ini ada. */
+  const idRekam = rekam?.id ?? null;
 
   const setActual = (id: number, raw: string) => {
     setItems((prev) => {
@@ -78,111 +113,62 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
     });
   };
 
+  const handleTerbitkan = async () => {
+    setMenerbitkan(true);
+    try {
+      // Gagal simpan = hook sudah mengingatkan (alert Indonesia); modal
+      // tetap terbuka dalam modus sunting, tanpa potret Terbit palsu.
+      await onSave(draft);
+      onClose();
+    } finally {
+      setMenerbitkan(false);
+    }
+  };
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <P3kInspectionShell
+      onSubmit={handleTerbitkan}
+      onClose={onClose}
+      header={
+        <P3kInspectionHeader
+          monthLabel={monthLabel}
+          terbit={terbit}
+          lengkap={lengkap}
+          kurang={kurang}
+          kd={kd}
+          onClose={onClose}
+        />
+      }
+      konfirmasi={
+        <P3kDeleteConfirmation
+          terbuka={konfirmasiHapus}
+          monthLabel={monthLabel}
+          onTutup={() => setKonfirmasiHapus(false)}
+          onKonfirmasi={onClear}
+        />
+      }
     >
-      <div className="w-full max-w-lg max-h-[90vh] flex flex-col bg-[var(--bg-main)] border border-[var(--border)] rounded-[8px] shadow-xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
-          <div>
-            <h2 className="text-sm font-bold text-[var(--primary)]">Isi Pemeriksaan – {monthLabel}</h2>
-            <p className="text-[11px] text-[var(--muted)] tabular-nums">
-              {lengkap}/21 lengkap · {kurang} kurang · {kd} kadaluarsa
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup"
-            className="p-1.5 rounded-[4px] text-[var(--muted)] hover:bg-[var(--bg-hover)] pressable cursor-pointer"
-          >
-            <X size={16} />
-          </button>
-        </div>
+      <P3kInspectionBody
+        draft={draft}
+        lengkap={lengkap}
+        kurang={kurang}
+        kd={kd}
+        terbit={terbit}
+        onUbahActual={setActual}
+        onUbahExpired={setExpired}
+        onUbahTanggal={setTanggal}
+        onUbahParaf={setParaf}
+      />
 
-        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-1">
-          {STANDARD_P3K_ITEMS.map((item) => {
-            const row = items[item.id] ?? { actual: '', expired: false };
-            return (
-              <div
-                key={item.id}
-                className="flex items-center gap-2 py-1.5 border-b border-[var(--border)]/60 last:border-none"
-              >
-                <span className="w-6 text-[11px] text-[var(--muted)] tabular-nums">{item.id}</span>
-                <span className="flex-1 text-xs text-[var(--primary)]">
-                  {item.name}
-                  <span className="block text-[10px] text-[var(--muted)] tabular-nums">
-                    Standar: {item.standardQty} {item.unit}
-                  </span>
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={row.actual}
-                  onChange={(e) => setActual(item.id, e.target.value)}
-                  placeholder="0"
-                  aria-label={`Jumlah aktual ${item.name}`}
-                  className="w-16 text-center text-xs bg-transparent border border-[var(--border)] rounded-[4px] px-1.5 py-1 tabular-nums focus:outline-none focus:border-[#27ae60]"
-                />
-                <label className="flex items-center gap-1 text-[10px] text-[var(--muted)] cursor-pointer whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    checked={row.expired}
-                    onChange={(e) => setExpired(item.id, e.target.checked)}
-                    className="accent-[#eb5757] w-3.5 h-3.5 cursor-pointer"
-                  />
-                  KD
-                </label>
-              </div>
-            );
-          })}
-
-          <div className="grid grid-cols-2 gap-2 pt-3">
-            <label className="block text-[11px] text-[var(--secondary)]">
-              Tanggal Inspeksi
-              <input
-                type="date"
-                value={tanggal}
-                onChange={(e) => setTanggal(e.target.value)}
-                className="mt-1 w-full text-xs bg-transparent border border-[var(--border)] rounded-[4px] px-2 py-1.5 tabular-nums focus:outline-none focus:border-[#27ae60]"
-              />
-            </label>
-            <label className="block text-[11px] text-[var(--secondary)]">
-              Paraf &amp; Inisial
-              <input
-                type="text"
-                value={paraf}
-                onChange={(e) => setParaf(e.target.value)}
-                placeholder="Nama pemeriksa"
-                className="mt-1 w-full text-xs bg-transparent border border-[var(--border)] rounded-[4px] px-2 py-1.5 focus:outline-none focus:border-[#27ae60]"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
-          <div />
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClear}
-              className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer"
-            >
-              <Trash2 size={12} /> Hapus Bulan Ini
-            </button>
-            <button
-              type="button"
-              onClick={() => onSave(draft)}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#2f80ed] hover:bg-[#2b77d4] rounded-[4px] shadow-xs pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Terbitkan
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      <P3kInspectionFooter
+        adaInspeksi={Boolean(rekam)}
+        menghapusBulan={menghapusBulan || menyimpan}
+        terbit={terbit}
+        menerbitkan={menerbitkan || menyimpan}
+        idRekam={idRekam}
+        onMintaKonfirmasi={() => setKonfirmasiHapus(true)}
+        onBatalkanTerbit={() => setTerbit(false)}
+      />
+    </P3kInspectionShell>
   );
 };

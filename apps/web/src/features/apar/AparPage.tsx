@@ -1,33 +1,21 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import type { AparUnitItem, AparYearGrid, InspectionReport } from '../../types/hse';
-import type { OverallStatus } from '../../types/domain';
-import { AddZoneAparModal, type AparCreationItem } from './AddZoneAparModal';
+import { AparUnitItem, InspectionReport } from '../../types/hse';
 import { AparInspectionModal } from './AparInspectionModal';
-import { ReportDetailModal } from '../reports/ReportDetailModal';
-import {
-  emptyYearGrid,
-  resolveReportCell,
-  countChecked,
-  type AparCardsState,
-} from '../../lib/aparSync';
-import { computeAparOverallStatus } from '../../lib/statusCalculator';
-import { formatIndonesianDate } from '../../lib/dates';
-import { AparYearCard } from './AparYearCard';
-import { PrintButton, UnduhPdfButton } from '@/components/ui';
-import { FilterBar, KartuStatistik } from '@/features/pageChrome';
-import { EmptyUnits, InspectionPageShell, KONFIG_APAR } from '@/features/inspeksi';
-import { AparPrintHeader, AparExpiry, AparSignatures } from './AparPrintChrome';
-import {
-  unitHasIssue,
-} from './AparBadges';
 import { AparTable } from './AparTable';
 import { AparCards } from './AparCards';
+import { AparFindings } from './AparFindings';
+import { AparPrintHeader, AparPrintSignatures } from './AparPrintChrome';
+import { AparStats } from './AparStats';
+import { FilterBar } from '@/features/pageChrome';
+import { EmptyUnits, InspectionPageShell, KONFIG_APAR } from '@/features/inspeksi';
+import { AddZoneAparModal, AparCreationItem } from './AddZoneAparModal';
+import { AddFindingAparModal } from './AddFindingAparModal';
+import { AparFindingItem } from './types';
 import {
   petakanUnitApar,
-  petakanKartuApar,
   useUnitApar,
   useInspeksiApar,
   useSimpanInspeksiApar,
@@ -45,42 +33,9 @@ import { useKonteksLokasi } from '@/features/konteksLokasi';
 import { susunUrutanBaru } from '@/lib/urutanUnit';
 import type { ApiInspeksiApar } from '@/services/api/klien';
 
-// ─────────────────────────────────────────────────────────────
-// DATA — konstanta tampilan khusus halaman APAR (UI-only)
-// ─────────────────────────────────────────────────────────────
+/** Aksen halaman APAR, satu tempat. */
+const AKSEN = '#f2994a';
 
-const APAR_ACCENT = '#f2994a';
-
-/**
- * Periode awal = bulan kalender nyata.
- *
- * Sebelumnya dipatok `2026-09`, jadi aplikasi selalu membuka September 2026
- * walau hari ini Oktober. Dihitung saat modul dimuat; `resetPeriode()` memakai
- * nilai yang sama supaya tombol `Bulan Ini` kembali ke bulan berjalan.
- */
-const bulanBerjalan = (): string => format(new Date(), 'yyyy-MM');
-const DEFAULT_PERIOD = bulanBerjalan();
-
-/** Tanda tangan dokumen bawaan (gaya kertas; dapat diketik di layar). */
-const sekarangIso = () => new Date().toISOString();
-
-const APAR_SIGNATURES = {
-  dibuat: { nama: 'Alex Chen', jabatan: 'Staff HSE / Teknisi K3' },
-  diketahui: { nama: 'Budi Santoso', jabatan: 'HSE Officer & Koordinator' },
-  disetujui: { nama: 'Ir. Hendra Wijaya', jabatan: 'Kepala Operasional Logistik' },
-} as const;
-
-/**
- * Tanggal inspeksi contoh pada gaya kertas — HANYA untuk periode September 2026
- * (data contoh PRD). Periode lain memakai tanggal rekam nyata dari API.
- */
-const APAR_INSPECTION_DATES_SEPT_2026 = ['2026-09-16', '2026-09-18'];
-
-/** Sisa hari menuju tanggal kedaluwarsa (negatif = sudah kedaluwarsa). */
-const daysToExpiry = (iso: string) =>
-  Math.ceil((new Date(`${iso}T00:00:00`).getTime() - Date.now()) / 86_400_000);
-
-export type { AparCardsState } from '../../lib/aparSync';
 interface AparPageProps {
   onBack: () => void;
   /** Permintaan sunting dari dasbor: buka modal inspeksi rekam dengan id ini. */
@@ -90,7 +45,12 @@ interface AparPageProps {
   onToggleCollapsed: () => void;
 }
 
-export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSelesai, isCollapsed, onToggleCollapsed }) => {
+export const AparPage: React.FC<AparPageProps> = ({
+  suntingRefId,
+  onSuntingSelesai,
+  isCollapsed,
+  onToggleCollapsed,
+}) => {
   const lokasi = useKonteksLokasi();
   const unitQuery = useUnitApar();
   const inspeksiQuery = useInspeksiApar();
@@ -101,53 +61,6 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
   const buatUnit = useBuatUnitApar();
   const ubahUnit = useUbahUnitApar();
 
-  // ─────────────────────────────────────────────────────────
-  // STATE (units + kartu tahunan dari API — satu sumber data)
-  // ─────────────────────────────────────────────────────────
-  const [period, setPeriod] = useState<string>(DEFAULT_PERIOD);
-  const [filterTab, setFilterTab] = useState<'ALL' | 'ON_PROGRESS' | 'COMPLETED'>('ALL');
-  const [zoneFilter, setZoneFilter] = useState<string>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'TABLE' | 'CARDS'>('TABLE');
-  // Selalu ada satu kartu terbuka — default APAR 01, tidak pernah menunggu klik.
-  const [selectedKode, setSelectedKode] = useState<string>('01');
-  // Tahun kartu diangkat ke halaman agar sinkronisasi tahu konteks tahun.
-  const [cardYear, setCardYear] = useState<string>(() => String(new Date().getFullYear()));
-
-  // Foto dokumentasi per inspeksi (id baris inspeksi → daftar foto sesi).
-  // Foto dokumentasi dibaca dari API (lihat `fotoAktif`), bukan disimpan per
-  // sesi: tutup/buka ulang modal atau muat ulang halaman tetap menampilkan foto.
-  const unggahFoto = useUnggahFoto();
-  const hapusFoto = useHapusFoto();
-
-  // Tanda tangan dokumen (UI-only, dapat diketik; default dari APAR_SIGNATURES)
-  const [sigNames, setSigNames] = useState<string[]>([
-    APAR_SIGNATURES.dibuat.nama,
-    APAR_SIGNATURES.diketahui.nama,
-    APAR_SIGNATURES.disetujui.nama,
-  ]);
-  const [sigRoles, setSigRoles] = useState<string[]>([
-    APAR_SIGNATURES.dibuat.jabatan,
-    APAR_SIGNATURES.diketahui.jabatan,
-    APAR_SIGNATURES.disetujui.jabatan,
-  ]);
-
-  // Modal tambah zona & unit APAR (UI-only)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const cardAnchorRef = useRef<HTMLDivElement>(null);
-
-  // Modal inspeksi per baris (klik baris tabel → modal → simpan → tabel + kartu ikut baru)
-  const [activeInspectionUnit, setActiveInspectionUnit] = useState<AparUnitItem | null>(null);
-
-  // Tampilan rekam hasil inspeksi setelah “Selesaikan & Terbitkan” (gaya Hydrant)
-  const [detailReport, setDetailReport] = useState<InspectionReport | null>(null);
-
-  const [year, month] = period.split('-').map(Number);
-  const monthDate = new Date(year || new Date().getFullYear(), (month || new Date().getMonth() + 1) - 1, 1);
-  const monthLabel = format(monthDate, 'MMMM yyyy', { locale: idLocale });
-  const isDefaultPeriod = period === bulanBerjalan();
-
-  // Unit + hasil inspeksi bulan terpilih dari API; kartu tahunan turunan inspeksi tersimpan.
   // Lokasi aktif memilih barisnya: unit + inspeksi lokasi lain tidak tampil.
   const unitSite = useMemo(
     () => (unitQuery.data ?? []).filter((u) => u.siteId === lokasi.siteId),
@@ -157,28 +70,68 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
     const idUnit = new Set(unitSite.map((u) => u.id));
     return (inspeksiQuery.data ?? []).filter((i) => idUnit.has(i.unitId));
   }, [inspeksiQuery.data, unitSite]);
-  const units = useMemo(
-    () => petakanUnitApar(unitSite, inspeksiSite, lokasi.zonaIdKeNama, period),
-    [unitSite, inspeksiSite, lokasi.zonaIdKeNama, period],
-  );
-  // Kartu tahunan menghitung 12 bulan untuk setiap unit. Tanpa memo, ini
-  // berjalan pada setiap ketikan di kotak pencarian dan setiap render ulang.
-  const cards: AparCardsState = useMemo(
-    () => petakanKartuApar(unitSite, inspeksiSite),
-    [unitSite, inspeksiSite],
-  );
 
-  // Bersihkan kelas cetak setiap dialog cetak ditutup
-  useEffect(() => {
-    const cleanup = () => document.body.classList.remove('printing-report', 'printing-card');
-    window.addEventListener('afterprint', cleanup);
-    return () => window.removeEventListener('afterprint', cleanup);
-  }, []);
+  const [filterTab, setFilterTab] = useState<'ON_PROGRESS' | 'ALL' | 'COMPLETED'>('ALL');
+  const [zoneFilter, setZoneFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'TABLE' | 'CARDS'>('TABLE');
 
-  // ── Turunan: zona, hitungan, filter ──
-  const zones = useMemo(() => [...new Set(units.map((u) => u.zoneName))].sort(), [units]);
+  // Modals state
+  const [activeInspectionUnit, setActiveInspectionUnit] = useState<AparUnitItem | null>(null);
+  const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
+  const [isAddFindingModalOpen, setIsAddFindingModalOpen] = useState(false);
 
-  // Sunting dari dasbor: buka modal inspeksi rekam dengan id diminta (bulan ikut rekam).
+  // Foto bukti dibaca dari API (lihat `fotoBukti` di bawah), bukan disimpan per
+  // sesi: tutup/buka ulang modal atau muat ulang halaman harus tetap menampilkan
+  // foto yang sama.
+  const unggahFoto = useUnggahFoto();
+  const hapusFoto = useHapusFoto();
+  // Month navigation state (di atas: inspeksiAktif memakai period).
+  // Bawaan = bulan kalender nyata agar data bulan berjalan langsung tampil.
+  const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
+    const kini = new Date();
+    return new Date(kini.getFullYear(), kini.getMonth(), 1);
+  });
+  const handleResetToCurrentMonth = () => {
+    const kini = new Date();
+    setSelectedMonth(new Date(kini.getFullYear(), kini.getMonth(), 1));
+  };
+  const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: idLocale });
+  const isCurrentMonth = (() => {
+    const kini = new Date();
+    return selectedMonth.getFullYear() === kini.getFullYear() && selectedMonth.getMonth() === kini.getMonth();
+  })();
+  const period = format(selectedMonth, 'yyyy-MM');
+
+  const inspeksiAktif: ApiInspeksiApar | null = activeInspectionUnit
+    ? inspeksiSite.find(
+        (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
+      ) ?? null
+    : null;
+
+  // Bukti inspeksi unit yang sedang dibuka, dibaca dari API — bukan state sesi,
+  // jadi tutup/buka ulang atau muat ulang tidak menghilangkan foto. Rekam ini
+  // juga bisa memuat foto temuan (bila unit ini jangkar Section B): saring.
+  const fotoAktif = useFotoInspeksi(inspeksiAktif?.id ?? null, 'apar');
+  const buktiAktif = (fotoAktif.data ?? []).filter((f) => !f.temuan);
+
+  // Hapus rekam inspeksi bulan ini: hook membersihkan foto anak dulu (cegah 409),
+  // laman sekadar menutup modal.
+  const handleHapusBulan = () => {
+    if (!inspeksiAktif) return;
+    hapusInspeksi.mutate(inspeksiAktif.id);
+    setActiveInspectionUnit(null);
+  };
+
+  // Hapus unit sebaris seluruh datanya (dipakai popup bulan tanpa rekam:
+  // belum dimulai = tidak ada rekam bulan untuk dihapus).
+  const handleHapusUnit = () => {
+    if (!activeInspectionUnit) return;
+    hapusUnit.mutate(activeInspectionUnit.id);
+    setActiveInspectionUnit(null);
+  };
+
+  // Sunting dari dasbor: bila rekamnya bulan terpilih, buka modal inspeksinya.
   useEffect(() => {
     if (!suntingRefId || suntingRefId.kategori !== 'apar') return;
     const insp = (inspeksiQuery.data ?? []).find((i) => i.id === suntingRefId.refId);
@@ -186,42 +139,100 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
     const unit = (unitQuery.data ?? []).find((u) => u.id === insp.unitId);
     if (unit) {
       if (unit.siteId !== lokasi.siteId) lokasi.pilihLokasi(unit.siteId);
-      setPeriod(insp.period.slice(0, 7));
-      setActiveInspectionUnit(petakanUnitApar([unit], [insp], lokasi.zonaIdKeNama, insp.period.slice(0, 7))[0] ?? null);
+      setSelectedMonth(new Date(Number(insp.period.slice(0, 4)), Number(insp.period.slice(5, 7)) - 1, 1));
+      setActiveInspectionUnit({
+        id: unit.id,
+        kode: unit.kode,
+        siteId: unit.siteId,
+        zoneId: unit.zoneId,
+        zoneName: lokasi.zonaIdKeNama(unit.zoneId),
+        status: 'SELESAI',
+        period,
+        inspectorName: 'Pengawas K3',
+        jenis: unit.jenis === 'CO2' ? 'CO2' : 'POWDER',
+        ukuran: unit.ukuran ?? '',
+        tahunPembuatan: unit.tahun ?? 0,
+        expiredDate: unit.expiredDate,
+        componentsCheckedCount: 7,
+        componentsTotal: 7,
+        scheduledDate: 'Bulan Ini',
+      });
       onSuntingSelesai?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- satu kali per permintaan sunting
   }, [suntingRefId, inspeksiQuery.data, unitQuery.data]);
-  const completedUnits = useMemo(() => units.filter((u) => u.status === 'SELESAI'), [units]);
-  const inProgressUnits = useMemo(() => units.filter((u) => u.status === 'SEDANG_BERJALAN'), [units]);
 
-  // Persentase untuk bilah di kartu "Selesai Diperiksa". Kartu total tidak
-  // memakai bilah: angkanya sudah muncul di kartu sebelah.
-  const persenSelesai = units.length
-    ? Math.round((completedUnits.length / units.length) * 100)
-    : 0;
-
-  const filteredUnits = useMemo(
+  // Unit + hasil inspeksi bulan terpilih dari API, dipetakan ke model UI.
+  // Memoized: identitas objek unit stabil antar-render — efek init modal
+  // tidak boleh menyala setiap refetch (mematikan mode terbit / menimpa
+  // ketikan yang sedang berjalan).
+  const units = useMemo(
     () =>
-      units.filter((unit) => {
-        if (filterTab === 'ON_PROGRESS' && unit.status === 'SELESAI') return false;
-        if (filterTab === 'COMPLETED' && unit.status !== 'SELESAI') return false;
-        if (zoneFilter !== 'ALL' && unit.zoneName !== zoneFilter) return false;
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const matchKode =
-            unit.kode.toLowerCase().includes(q) || `apar ${unit.kode}`.includes(q);
-          const matchZone = unit.zoneName.toLowerCase().includes(q);
-          const matchInspector = unit.inspectorName?.toLowerCase().includes(q) || false;
-          if (!matchKode && !matchZone && !matchInspector) return false;
-        }
-        return true;
-      }),
-    [units, filterTab, zoneFilter, searchQuery]
+      petakanUnitApar(
+        unitSite,
+        inspeksiSite,
+        lokasi.zonaIdKeNama,
+        period,
+      ),
+    [unitSite, inspeksiSite, lokasi.zonaIdKeNama, period],
+  );
+  const zones = lokasi.zonaNamaList;
+
+  // B. Catatan hasil temuan = HANYA foto bertanda `temuan` pada rekam jangkar
+  // bulan terpilih. Foto bukti inspeksi (unggahan dari modal) bukan temuan.
+  const jangkarTemuan =
+    inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
+  const fotoTemuan = useFotoInspeksi(jangkarTemuan, 'apar');
+  const findings: AparFindingItem[] = useMemo(
+    () =>
+      (fotoTemuan.data ?? [])
+        .filter((f) => f.temuan)
+        .map((f) => ({
+          id: f.id,
+          imageUrl: f.url,
+          description: f.caption || 'Temuan dokumentasi',
+        })),
+    [fotoTemuan.data],
   );
 
-  // Pindah baris: daftar yang dikirim adalah SEMUA unit lokasi, karena server
-  // menuntut daftar lengkap; posisi baris disisipkan ke sana.
+  // Derived counts
+  const totalUnits = units.length;
+  const onProgressUnits = units.filter(
+    (u) => u.status === 'SEDANG_BERJALAN' || u.status === 'BELUM_DIPERIKSA'
+  );
+  const completedUnits = units.filter((u) => u.status === 'SELESAI');
+
+  // Max unit number for auto-incrementing new units
+  const maxUnitNumber = units.reduce((max, u) => {
+    const num = parseInt(u.kode.replace(/\D/g, ''), 10) || 0;
+    return Math.max(max, num);
+  }, 0);
+
+  // Filtered units based on tab, zone, and search query
+  const filteredUnits = units.filter((unit) => {
+    // Tab filter: ON_PROGRESS shows unfinished units
+    if (filterTab === 'ON_PROGRESS' && unit.status === 'SELESAI') return false;
+    if (filterTab === 'COMPLETED' && unit.status !== 'SELESAI') return false;
+
+    // Zone filter
+    if (zoneFilter !== 'ALL' && unit.zoneName !== zoneFilter) return false;
+
+    // Search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchKode = unit.kode.toLowerCase().includes(q);
+      const matchZone = unit.zoneName.toLowerCase().includes(q);
+      const matchInspector = unit.inspectorName?.toLowerCase().includes(q) || false;
+      const matchNotes = unit.draftDetails?.notes?.toLowerCase().includes(q) || false;
+      if (!matchKode && !matchZone && !matchInspector && !matchNotes) return false;
+    }
+
+    return true;
+  });
+
+  // Pindah baris: urutan disimpan per lokasi, jadi daftar yang dikirim adalah
+  // SEMUA unit lokasi — bukan hanya baris yang lolos saringan. `susunUrutanBaru`
+  // menyisipkan baris ke posisi tetangganya di daftar penuh.
   const urutkan = useUrutkanUnit('apar');
   const handlePindah = (unitId: string, arah: -1 | 1) => {
     const ids = susunUrutanBaru(
@@ -233,105 +244,18 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
     if (ids) urutkan.mutate({ siteId: lokasi.siteId, ids });
   };
 
-  // ── Turunan: rekap kedaluwarsa dikelompokkan per tanggal ──
-  const expiryGroups = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const u of units) {
-      const list = map.get(u.expiredDate) ?? [];
-      list.push(u.kode);
-      map.set(u.expiredDate, list);
+  // Terbit menyimpan inspeksi ke API (modal selalu mengisi 7 komponen).
+  // Promise-nya dikembalikan: modal menunggu tulisan, dan potret terbit hanya
+  // muncul setelah rekamnya ada.
+  const handleCompleteInspection = async (newReport: InspectionReport) => {
+    const unit = units.find((u) => u.kode === newReport.assetCode);
+    if (!unit) {
+      window.alert(
+        `Unit ${newReport.assetCode} tidak ditemukan di lokasi ini. Muat ulang halaman lalu coba lagi.`,
+      );
+      throw new Error(`Unit ${newReport.assetCode} tidak ditemukan.`);
     }
-    return [...map.entries()]
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([date, kodes]) => ({ date, kodes: kodes.sort() }));
-  }, [units]);
-
-  const selectedUnit = (selectedKode ? units.find((u) => u.kode === selectedKode) : undefined) ?? units[0] ?? null;
-  const activeKode = selectedUnit?.kode ?? '01';
-  const [reportYear, reportMonth] = period.split('-');
-  // Grid aktif: isian kartu menang; bila baris bulan laporan masih kosong, ikuti
-  // draft unit agar tabel bulanan dan kartu tahunan menampilkan data yang sama.
-  const storedGrid: AparYearGrid = cards[activeKode]?.[cardYear] ?? emptyYearGrid();
-  const activeGrid: AparYearGrid =
-    selectedUnit && cardYear === reportYear
-      ? { ...storedGrid, [reportMonth]: resolveReportCell(storedGrid[reportMonth], selectedUnit) }
-      : storedGrid;
-
-  // Tanggal inspeksi di kop: pakai tanggal rekam nyata bulan terpilih
-  // (`createdAt` adalah tanggal inspeksi tersimpan). Data contoh September 2026
-  // hanya dipakai bila memang tidak ada rekam, karena kop kertas lama mencetak
-  // tanggal contoh itu.
-  const inspectionDatesLabel = (() => {
-    const tanggal = [
-      ...new Set(
-        inspeksiSite
-          .filter((i) => i.period.startsWith(period))
-          .map((i) => (i.createdAt ?? '').slice(0, 10))
-          .filter(Boolean),
-      ),
-    ].sort();
-    if (tanggal.length > 0) {
-      return tanggal.map((d) => formatIndonesianDate(parseISO(d))).join(' & ');
-    }
-    if (period === '2026-09') {
-      return APAR_INSPECTION_DATES_SEPT_2026.map((d) => formatIndonesianDate(parseISO(d))).join(' & ');
-    }
-    return '–';
-  })();
-
-  // ─────────────────────────────────────────────────────────
-  // EVENTS
-  // ─────────────────────────────────────────────────────────
-
-  const scrollToCard = () => {
-    requestAnimationFrame(() =>
-      cardAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    );
-  };
-
-  const handleSelectUnit = (kode: string) => {
-    setSelectedKode(kode);
-    scrollToCard();
-  };
-
-  // Klik baris tabel → pilih kartu; modal inspeksi mengatur kunci suntingan sendiri.
-  const handleOpenInspection = (unit: AparUnitItem) => {
-    setSelectedKode(unit.kode);
-    setActiveInspectionUnit(unit);
-  };
-
-  // Cip yang sama tidak menutup kartu — kartu selalu tampil satu.
-  const handleToggleCard = (kode: string) => {
-    setSelectedKode(kode);
-    scrollToCard();
-  };
-
-  // ── Satu arah: modal inspeksi menulis unit + sel kartu bulan laporan ──
-  // (Kartu hanya-tampil; sunting selalu lewat modal klik-baris.)
-
-  const countDraftComponents = (draft: NonNullable<AparUnitItem['draftDetails']>): number =>
-    countChecked({
-      safetyPin: draft.safetyPin,
-      corong: draft.corong,
-      segel: draft.segel,
-      tekanan: draft.tekanan,
-      tabung: draft.tabung,
-      selang: draft.selang,
-      katupTuas: draft.katupTuas,
-    });
-
-  // Satu arah: modal inspeksi menyimpan ke API; tabel + kartu mengikuti hasil query.
-  // `approvalStatus` eksplisit — `Simpan Draft` menulis DRAFT, `Terbitkan`
-  // menulis DIAJUKAN — dan promise-nya dikembalikan agar pemanggil bisa menunggu
-  // tulisan sebelum menutup popup.
-  const kirimInspeksi = async (
-    unit: AparUnitItem,
-    draft: NonNullable<AparUnitItem['draftDetails']>,
-    overall: OverallStatus | undefined,
-    overridden: boolean,
-    approvalStatus: 'DRAFT' | 'DIAJUKAN',
-    onTersimpan?: () => void,
-  ) => {
+    const d = newReport.aparDetails;
     const existing = inspeksiSite.find(
       (i) => i.unitId === unit.id && i.period.startsWith(period),
     );
@@ -339,126 +263,66 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
       id: existing?.id,
       unitId: unit.id,
       month: period,
-      safetyPin: draft.safetyPin ?? 'NA',
-      corong: draft.corong ?? 'NA',
-      segel: draft.segel ?? 'NA',
-      tekanan: draft.tekanan ?? 'NA',
-      tabung: draft.tabung ?? 'NA',
-      selang: draft.selang ?? 'NA',
-      katupTuas: draft.katupTuas ?? 'NA',
-      overallStatus: overall,
-      overallOverridden: overridden,
-      approvalStatus,
-      notes: draft.notes,
-    });
-    onTersimpan?.();
-  };
-
-  const handleSaveInspectionDraft = (unitId: string, draft: NonNullable<AparUnitItem['draftDetails']>) => {
-    const unit = units.find((u) => u.id === unitId);
-    if (!unit) return;
-    const checked = countDraftComponents(draft);
-    const overall =
-      draft.overallStatus ??
-      (checked > 0
-        ? computeAparOverallStatus({
-            safetyPin: draft.safetyPin ?? 'NA',
-            corong: draft.corong ?? 'NA',
-            segel: draft.segel ?? 'NA',
-            tekanan: draft.tekanan ?? 'NA',
-            tabung: draft.tabung ?? 'NA',
-            selang: draft.selang ?? 'NA',
-            katupTuas: draft.katupTuas ?? 'NA',
-          })
-        : undefined);
-    // Draft tetap `DRAFT`, jadi baris tidak pindah ke "Selesai Diperiksa" dan
-    // popup buka-ulang tetap bisa disunting. Tutup saat tulisan berhasil.
-    void kirimInspeksi(unit, draft, overall, Boolean(draft.overallStatus), 'DRAFT', () =>
-      setActiveInspectionUnit(null),
-    ).catch(() => {
-      // onError mutasi sudah melaporkan pesannya; modal tetap terbuka.
+      safetyPin: d?.safetyPin ?? 'BAIK',
+      corong: d?.corong ?? 'BAIK',
+      segel: d?.segel ?? 'BAIK',
+      tekanan: d?.tekanan ?? 'BAIK',
+      tabung: d?.tabung ?? 'BAIK',
+      selang: d?.selang ?? 'BAIK',
+      katupTuas: d?.katupTuas ?? 'BAIK',
+      overallStatus: newReport.overallStatus,
+      overallOverridden: true,
+      approvalStatus: 'DIAJUKAN',
+      notes: newReport.summaryNotes,
     });
   };
 
-  // ── Selesaikan dari modal → simpan ke API + tampil rekam hasil ──
-  const handleCompleteInspection = async (
-    unit: AparUnitItem,
-    draft: NonNullable<AparUnitItem['draftDetails']>,
-    overall: OverallStatus
-  ): Promise<void> => {
-    // Terbit ditunggu: rekam harus `DIAJUKAN` sebelum modal ditutup dan laporan
-    // ditampilkan. Tulisan gagal = promise menolak, modal tetap terbuka.
-    await kirimInspeksi(unit, draft, overall, true, 'DIAJUKAN');
-    setSelectedKode(unit.kode);
-    const berikut: InspectionReport = {
-      id: `rep-apar-${unit.id}`,
-      category: 'APAR',
-      date: sekarangIso(),
-      period,
-      siteId: unit.siteId,
-      siteName: lokasi.siteName,
-      zoneName: unit.zoneName,
-      assetCode: unit.kode,
-      inspectorName: draft.namaPemeriksa || unit.inspectorName || 'Pengawas K3',
-      overallStatus: overall,
-      summaryNotes: draft.notes || 'Pemeriksaan 7 komponen selesai dan diverifikasi.',
-      aparDetails: {
-        jenis: unit.jenis,
-        ukuran: unit.ukuran,
-        expiredDate: unit.expiredDate,
-        ...(unit.beratCo2Kg !== undefined ? { beratCo2Kg: unit.beratCo2Kg } : {}),
-        safetyPin: draft.safetyPin ?? 'NA',
-        corong: draft.corong ?? 'NA',
-        segel: draft.segel ?? 'NA',
-        tekanan: draft.tekanan ?? 'NA',
-        tabung: draft.tabung ?? 'NA',
-        selang: draft.selang ?? 'NA',
-        katupTuas: draft.katupTuas ?? 'NA',
-      },
-    };
-    setDetailReport(berikut);
-    scrollToCard();
-  };
-
-  // ── Foto dokumentasi: unggahan nyata per slot (Kartu, Berat, Pengecekan) ──
-
-  const inspeksiAktif: ApiInspeksiApar | null = activeInspectionUnit
-    ? inspeksiSite.find(
-        (i) => i.unitId === activeInspectionUnit.id && i.period.startsWith(period),
-      ) ?? null
-    : null;
-
-  // Foto dokumentasi unit yang sedang dibuka, dibaca dari API (bukan state sesi).
-  const fotoAktif = useFotoInspeksi(inspeksiAktif?.id ?? null, 'apar');
-
-  // Batalkan terbit (tombol `Edit`): satu medan `approval_status` → DRAFT,
-  // ditunggu pemanggil supaya potret mengikuti rekam.
+  // `Edit` pada rekam terbit = batalkan terbit rekam itu saja (satu medan,
+  // `approval_status` → DRAFT). Rekam yang sama turun jadi DRAF, jadi barisnya
+  // keluar dari "Selesai Diperiksa" dan tombolnya kembali ke `Terbitkan`.
   const handleBatalkanTerbit = async (inspectionId: string): Promise<void> => {
     await batalkanTerbit.mutateAsync(inspectionId);
   };
 
-  // Hapus rekam inspeksi bulan ini: hook membersihkan foto dokumentasi dulu
-  // (cegah 409), laman sekadar menutup modal.
-  const handleHapusBulan = () => {
-    if (!inspeksiAktif) return;
-    hapusInspeksi.mutate(inspeksiAktif.id);
-    setActiveInspectionUnit(null);
+  const handleAddZone = (_zoneName: string) => {
+    // Zona dibuat bersama unit pada handleAddAparUnits (butuh siteId).
   };
 
-  // Hapus unit sebaris seluruh datanya (dipakai popup bulan tanpa rekam).
-  const handleHapusUnit = () => {
+  // Bukti inspeksi (`temuan: false`) — dipisahkan dari catatan hasil temuan
+  // supaya unggahan baris ini tidak muncul di Section B.
+  const handleUnggahFoto = (file: File, caption: string, nilai?: AparUnitItem['draftDetails']) => {
     if (!activeInspectionUnit) return;
-    hapusUnit.mutate(activeInspectionUnit.id);
-    setActiveInspectionUnit(null);
-  };
-
-  const handleUnggahFoto = (slot: 'Kartu' | 'Berat' | 'Pengecekan', file: File) => {
-    if (!inspeksiAktif) return;
-    const inspectionId = inspeksiAktif.id;
-    const caption =
-      slot === 'Kartu' ? 'Kartu APAR' : slot === 'Berat' ? 'Penimbangan CO2' : 'Pengecekan fisik';
-    // `temuan: false` = bukti inspeksi, bukan catatan hasil temuan.
-    unggahFoto.mutate({ kind: 'apar', inspectionId, file, caption, temuan: false });
+    const unggah = (inspectionId: string) =>
+      unggahFoto.mutate({
+        kind: 'apar',
+        inspectionId,
+        file,
+        caption,
+        temuan: false,
+      });
+    if (inspeksiAktif) {
+      unggah(inspeksiAktif.id);
+      return;
+    }
+    // Belum ada rekam: buat baris inspeksi sebagai jangkar foto — unggah foto
+    // tidak menunggu tombol Terbitkan.
+    simpanInspeksi.mutate(
+      {
+        unitId: activeInspectionUnit.id,
+        month: period,
+        safetyPin: nilai?.safetyPin ?? 'BAIK',
+        corong: nilai?.corong ?? 'BAIK',
+        segel: nilai?.segel ?? 'BAIK',
+        tekanan: nilai?.tekanan ?? 'BAIK',
+        tabung: nilai?.tabung ?? 'BAIK',
+        selang: nilai?.selang ?? 'BAIK',
+        katupTuas: nilai?.katupTuas ?? 'BAIK',
+        overallStatus: nilai?.overallStatus,
+        overallOverridden: Boolean(nilai?.overallStatus),
+        notes: nilai?.notes,
+      },
+      { onSuccess: (baru) => unggah(baru.id) },
+    );
   };
 
   const handleHapusFoto = (fotoId: string) => {
@@ -466,36 +330,9 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
     hapusFoto.mutate({ id: fotoId, inspectionId: inspeksiAktif.id });
   };
 
-  const handlePrintReport = () => {
-    document.body.classList.add('printing-report');
-    window.print();
-  };
-
-  const handlePrintCard = () => {
-    if (!selectedUnit) return;
-    document.body.classList.add('printing-card');
-    window.print();
-  };
-
-  // Jangkar ekspor PDF: laporan bulanan (rekam pertama bulan ini) + kartu tahunan
-  // (rekam unit terpilih pada tahun kartu; jangkar menentukan unit+tahun ekspor).
-  const jangkarBulanan =
-    inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
-  const jangkarKartu =
-    selectedUnit
-      ? (inspeksiSite.find(
-          (i) => i.unitId === selectedUnit.id && i.period.startsWith(cardYear),
-        )?.id ?? null)
-      : null;
-
-  // ── Modal tambah zona & unit APAR (menyimpan ke API) ──
-  const handleAddZone = (_zoneName: string) => {
-    // Zona dibuat bersama unit pada handleAddAparUnits (butuh siteId).
-  };
-
-  const handleAddAparUnits = (items: AparCreationItem[]) => {
+  const handleAddAparUnits = (newItems: AparCreationItem[]) => {
     if (!lokasi.siteId) return;
-    items.forEach((item) => {
+    newItems.forEach((item) => {
       buatUnit.mutate({
         siteId: lokasi.siteId,
         zoneName: item.zoneName,
@@ -508,18 +345,52 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
         },
       });
     });
+    if (filterTab === 'COMPLETED') {
+      setFilterTab('ON_PROGRESS');
+    }
   };
 
-  const handleReassignUnitZone = (unitId: string, newZone: string) => {
+  const handleReassignUnitZone = (unitId: string, newZoneName: string) => {
     ubahUnit.mutate({
       id: unitId,
-      body: { zoneId: lokasi.zonaNamaKeId(newZone) || newZone },
+      body: { zoneId: lokasi.zonaNamaKeId(newZoneName) || newZoneName },
     });
   };
 
-  // ─────────────────────────────────────────────────────────
-  // RENDER — halaman
-  // ─────────────────────────────────────────────────────────
+  // Tambah temuan = unggah foto nyata bertanda `temuan` ke rekam jangkar bulan
+  // terpilih, sehingga hanya foto ini yang tampil di Section B.
+  const handleAddFinding = (item: { file: File; description: string; unitCode?: string }) => {
+    if (!jangkarTemuan) {
+      window.alert('Belum ada inspeksi bulan ini — simpan inspeksi satu unit dahulu.');
+      return;
+    }
+    unggahFoto.mutate(
+      {
+        kind: 'apar',
+        inspectionId: jangkarTemuan,
+        file: item.file,
+        caption: item.description,
+        temuan: true,
+      },
+      {
+        onError: () => {},
+      },
+    );
+  };
+
+  const handleDeleteFinding = (id: string) => {
+    if (!jangkarTemuan) return;
+    hapusFoto.mutate({ id, inspectionId: jangkarTemuan });
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  // Jangkar ekspor PDF: rekam inspeksi pertama bulan terpilih (lalu berisi).
+  const jangkarEkspor =
+    inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
+
   return (
     <InspectionPageShell
       config={KONFIG_APAR}
@@ -527,51 +398,28 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
       siteName={lokasi.siteName}
       isCollapsed={isCollapsed}
       onToggleCollapsed={onToggleCollapsed}
-      bulan={monthDate}
-      tampilkanReset={!isDefaultPeriod}
-      onResetBulan={() => setPeriod(bulanBerjalan())}
-      onPilihBulan={(d) => setPeriod(format(d, 'yyyy-MM'))}
-      onTambah={() => setIsAddModalOpen(true)}
-      jangkarEkspor={jangkarBulanan}
+      bulan={selectedMonth}
+      tampilkanReset={!isCurrentMonth}
+      onResetBulan={handleResetToCurrentMonth}
+      onPilihBulan={setSelectedMonth}
+      onTambah={() => setIsAddZoneModalOpen(true)}
+      jangkarEkspor={jangkarEkspor}
       namaBerkas={period}
-      onCetak={handlePrintReport}
+      onCetak={handlePrint}
+      kepalaCetak={<AparPrintHeader siteName={lokasi.siteName} monthLabel={monthLabel} />}
       statistik={
-        <div className="no-print grid grid-cols-2 gap-3 mb-4">
-          <KartuStatistik
-            nada="netral"
-            judul="Total APAR Terdaftar"
-            nilai={units.length}
-            rincian={`${zones.length} Zona Terpantau`}
-            ikon="🧯"
-            kaki="Wajib periksa 1x per bulan"
-          />
-          <KartuStatistik
-            nada="hijau"
-            judul="Selesai Diperiksa"
-            nilai={completedUnits.length}
-            rincian={`dari ${units.length} unit terdaftar`}
-            ikon="✅"
-            lencana="Lengkap"
-            kaki="Laporan telah diterbitkan"
-            isi={
-              <div className="mt-2">
-                <div className="flex h-1.5 rounded-full overflow-hidden bg-emerald-500/15">
-                  <div className="bg-emerald-500" style={{ width: `${persenSelesai}%` }} />
-                </div>
-                <div className="mt-1.5 text-[10px] text-[var(--muted)] tabular-nums">
-                  {persenSelesai}% unit sudah punya laporan terbit
-                </div>
-              </div>
-            }
-          />
-        </div>
+        <AparStats
+          totalUnits={totalUnits}
+          jumlahZona={zones.length}
+          completed={completedUnits.length}
+        />
       }
       saring={
         <FilterBar
           filterTab={filterTab}
           onFilterTab={setFilterTab}
-          total={units.length}
-          onProgress={inProgressUnits.length}
+          total={totalUnits}
+          onProgress={onProgressUnits.length}
           completed={completedUnits.length}
           zona={zones}
           zoneFilter={zoneFilter}
@@ -583,159 +431,72 @@ export const AparPage: React.FC<AparPageProps> = ({ suntingRefId, onSuntingSeles
         />
       }
       isi={
-        <div className="space-y-3 pb-8">
-          <div id="apar-report-print" className="space-y-3">
-            <div className="apar-report-part space-y-3">
-              <AparPrintHeader
-                siteName={lokasi.siteName}
-                monthLabel={monthLabel}
-                inspectionDatesLabel={inspectionDatesLabel}
-              />
-              <div className="apar-report-part space-y-3">
-                <div className="hidden print:block mb-2">
-                  <h2 className="text-xs font-bold text-black uppercase tracking-wider">
-                    A. Hasil Pemeriksaan Fisik Unit APAR
-                  </h2>
-                </div>
-
-                {filteredUnits.length === 0 ? (
-                  <EmptyUnits
-                    ikon={<ShieldCheck size={32} />}
-                    aksen={KONFIG_APAR.aksen}
-                    judul="Tidak ada unit APAR yang cocok"
-                    filterTab={filterTab}
-                    onTampilkanSemua={() => setFilterTab('ALL')}
-                  />
-                ) : viewMode === 'TABLE' ? (
-                  <AparTable units={filteredUnits} onBuka={handleOpenInspection} onPindah={handlePindah} />
-                ) : (
-                  <AparCards units={filteredUnits} onPilihKartu={handleSelectUnit} aksen={APAR_ACCENT} />
-                )}
-              </div>
-
-              <AparExpiry groups={expiryGroups} />
-            </div>
-
-            <AparSignatures
-              names={sigNames}
-              roles={sigRoles}
-              onName={(i, v) => setSigNames((prev) => prev.map((x, k) => (k === i ? v : x)))}
-              onRole={(i, v) => setSigRoles((prev) => prev.map((x, k) => (k === i ? v : x)))}
-            />
-
-            <div className="no-print pt-4">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">
-                  Pilih APAR
-                </p>
-                <UnduhPdfButton
-                  category="apar-card"
-                  refId={jangkarKartu}
-                  label="Unduh PDF Kartu"
-                  namaBerkas={`${activeKode}-${cardYear}`}
-                />
-                <PrintButton
-                  onClick={handlePrintCard}
-                  label="Cetak Kartu"
-                  disabled={!selectedUnit}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {units.map((unit) => {
-                  const remaining = daysToExpiry(unit.expiredDate);
-                  const issue = unitHasIssue(unit);
-                  const allGood = unit.status === 'SELESAI' && !issue;
-                  const isSelected = activeKode === unit.kode;
-                  return (
-                    <button
-                      key={unit.id}
-                      type="button"
-                      onClick={() => handleToggleCard(unit.kode)}
-                      title={
-                        `APAR ${unit.kode} — ${unit.zoneName} — ` +
-                        (issue ? 'ada komponen tidak baik' : allGood ? 'semua komponen baik' : 'belum diperiksa') +
-                        (remaining < 0 ? ' — sudah kedaluwarsa' : remaining <= 90 ? ` — kedaluwarsa ${remaining} hari lagi` : '')
-                      }
-                      className="relative w-10 h-10 rounded-full border font-mono text-xs font-bold tabular-nums cursor-pointer pressable transition-all bg-[var(--bg-main)] text-[var(--primary)]"
-                      style={{
-                        borderColor: isSelected ? APAR_ACCENT : remaining < 0 ? '#ef4444' : remaining <= 90 ? '#f59e0b' : 'var(--border)',
-                        borderWidth: isSelected ? 2 : 1,
-                        boxShadow: isSelected ? `0 0 0 2px ${APAR_ACCENT}55` : undefined,
-                      }}
-                    >
-                      {unit.kode}
-                      <span
-                        className={`absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] leading-4 text-center font-bold ${
-                          issue
-                            ? 'bg-amber-500 text-white'
-                            : allGood
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-[var(--bg-hover)] text-[var(--muted)] border border-[var(--border)]'
-                        }`}
-                      >
-                        {issue ? '!' : allGood ? '✓' : '○'}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div id="apar-card-print">
-              <div className="hidden print:block pb-2 mb-3 border-b border-black">
-                <h2 className="text-xs font-bold text-black uppercase tracking-wider">
-                  B. Kartu Kontrol Tahunan APAR{selectedUnit ? ` — APAR ${selectedUnit.kode}` : ''}
-                </h2>
-              </div>
-              <div ref={cardAnchorRef} className="scroll-mt-4 pt-2">
-                {selectedUnit && (
-                  <AparYearCard
-                    unit={selectedUnit}
-                    period={period}
-                    year={cardYear}
-                    onYearChange={setCardYear}
-                    grid={activeGrid}
-                  />
-                )}
-              </div>
-            </div>
+        <div className="space-y-3 pb-8 flex-1">
+          <div className="hidden print:block mb-2">
+            <h2 className="text-xs font-bold text-black uppercase tracking-wider">
+              A. Hasil Pemeriksaan Fisik Unit APAR
+            </h2>
           </div>
+          {filteredUnits.length === 0 ? (
+            <EmptyUnits
+              ikon={<ShieldCheck size={32} />}
+              aksen={KONFIG_APAR.aksen}
+              judul="Tidak ada unit APAR yang cocok"
+              filterTab={filterTab}
+              onTampilkanSemua={() => setFilterTab('ALL')}
+              onTambah={() => setIsAddZoneModalOpen(true)}
+            />
+          ) : viewMode === 'TABLE' ? (
+            <AparTable units={filteredUnits} onBuka={setActiveInspectionUnit} onPindah={handlePindah} />
+          ) : (
+            <AparCards units={filteredUnits} onBuka={setActiveInspectionUnit} aksen="#2f80ed" />
+          )}
         </div>
       }
+      tambahan={
+        <AparFindings
+          findings={findings}
+          onTambah={() => setIsAddFindingModalOpen(true)}
+          onHapus={handleDeleteFinding}
+          aksen={AKSEN}
+        />
+      }
+      tandaTangan={<AparPrintSignatures />}
       modals={
         <>
+          <AddZoneAparModal
+            isOpen={isAddZoneModalOpen}
+            onClose={() => setIsAddZoneModalOpen(false)}
+            existingZones={zones}
+            existingUnits={units.map((u) => ({ id: u.id, kode: u.kode, zoneName: u.zoneName }))}
+            lastUnitNumber={maxUnitNumber}
+            onAddZone={handleAddZone}
+            onAddAparUnits={handleAddAparUnits}
+            onReassignUnitZone={handleReassignUnitZone}
+          />
+
           <AparInspectionModal
             unit={activeInspectionUnit}
-            isOpen={activeInspectionUnit !== null}
+            isOpen={Boolean(activeInspectionUnit)}
             inspeksi={inspeksiAktif}
-            foto={inspeksiAktif ? (fotoAktif.data ?? []) : []}
+            foto={inspeksiAktif ? buktiAktif : []}
             mengunggah={unggahFoto.isPending}
             onUnggahFoto={handleUnggahFoto}
             onHapusFoto={handleHapusFoto}
             onClose={() => setActiveInspectionUnit(null)}
-            onSaveDraft={handleSaveInspectionDraft}
             onCompleteInspection={handleCompleteInspection}
             onBatalkanTerbit={handleBatalkanTerbit}
             onHapusBulan={handleHapusBulan}
             menghapusBulan={hapusInspeksi.isPending}
             onHapusUnit={handleHapusUnit}
             menghapusUnit={hapusUnit.isPending}
-            menyimpanDraf={simpanInspeksi.isPending}
           />
 
-          <ReportDetailModal
-            report={detailReport}
-            onClose={() => setDetailReport(null)}
-          />
-
-          <AddZoneAparModal
-            isOpen={isAddModalOpen}
-            onClose={() => setIsAddModalOpen(false)}
-            existingZones={zones}
-            existingUnits={units.map((u) => ({ id: u.id, kode: u.kode, zoneName: u.zoneName }))}
-            onAddZone={handleAddZone}
-            onAddAparUnits={handleAddAparUnits}
-            onReassignUnitZone={handleReassignUnitZone}
+          <AddFindingAparModal
+            isOpen={isAddFindingModalOpen}
+            onClose={() => setIsAddFindingModalOpen(false)}
+            onAddFinding={handleAddFinding}
+            existingUnits={units.map((u) => u.kode)}
           />
         </>
       }

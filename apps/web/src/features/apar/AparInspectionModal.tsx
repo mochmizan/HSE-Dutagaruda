@@ -1,14 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import type { AparComponentStatus, OverallStatus } from '../../types/domain';
+import React, { useState, useEffect } from 'react';
+import type { AparComponentStatus } from '../../types/hse';
+import type { OverallStatus } from '../../types/hse';
 import { computeAparOverallStatus } from '../../lib/statusCalculator';
+import { susunCatatanApar } from './catatanApar';
+import { potretDrafApar, buatLaporanApar, batalkanTerbitRekam } from './drafApar';
+import { ambilKomponen, buatPengubahKomponen } from './komponenApar';
 import { AparInspectionShell } from './AparInspectionShell';
 import { AparInspectionHeader } from './AparInspectionHeader';
-import { AparInspectionPhotos } from './AparInspectionPhotos';
-import { AparComponentChecklist } from './AparComponentChecklist';
-import { AparInspectionOutcome } from './AparInspectionOutcome';
-import { AparInspectionFooter, AparDeleteConfirm } from './AparInspectionFooter';
-import { buatDrafApar, inisialisasiDrafApar } from './AparInspectionFields';
-import type { AparDraft, AparInspectionModalProps } from './AparInspectionTypes';
+import { AparInspectionBody } from './AparInspectionBody';
+import { AparDeleteConfirmation } from './AparInspectionFooter';
+import type { AparInspectionModalProps } from './AparInspectionTypes';
+import {
+  buatPengubahCatatan,
+  buatPengubahStatusAkhir,
+  buatKonfirmasiHapus,
+  terbitkanLaporan,
+} from './penangananApar';
 
 export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   unit,
@@ -19,60 +26,90 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   onUnggahFoto,
   onHapusFoto,
   onClose,
-  onSaveDraft,
   onCompleteInspection,
   onBatalkanTerbit,
   onHapusBulan,
   menghapusBulan = false,
   onHapusUnit,
   menghapusUnit = false,
-  menyimpanDraf = false,
 }) => {
-  const [values, setValues] = useState<Record<string, AparComponentStatus>>({});
+  const [safetyPin, setSafetyPin] = useState<AparComponentStatus>('BAIK');
+  const [corong, setCorong] = useState<AparComponentStatus>('BAIK');
+  const [segel, setSegel] = useState<AparComponentStatus>('BAIK');
+  const [tekanan, setTekanan] = useState<AparComponentStatus>('BAIK');
+  const [tabung, setTabung] = useState<AparComponentStatus>('BAIK');
+  const [selang, setSelang] = useState<AparComponentStatus>('BAIK');
+  const [katupTuas, setKatupTuas] = useState<AparComponentStatus>('BAIK');
   const [notes, setNotes] = useState('');
-  const [catatanKomponen, setCatatanKomponen] = useState<Record<string, string>>({});
   const [tindakLanjut, setTindakLanjut] = useState('');
+  const [catatanKomponen, setCatatanKomponen] = useState<Record<string, string>>({});
   const [overallStatus, setOverallStatus] = useState<OverallStatus>('LAYAK');
   const [isOverridden, setIsOverridden] = useState(false);
   const [konfirmasi, setKonfirmasi] = useState<'UNIT' | 'BULAN' | null>(null);
-  /** Potret baca-saja: cermin `approval_status` rekam, bukan dugaan lokal. */
+  /** Rekam sudah diterbitkan: potret baca-saja; tombol berubah menjadi Edit. */
   const [terbit, setTerbit] = useState(false);
+  /** `Edit` / `Terbitkan` menulis ke API dulu; potret baru mengikuti rekam. */
   const [membatalkanTerbit, setMembatalkanTerbit] = useState(false);
   const [menerbitkan, setMenerbitkan] = useState(false);
 
-  // Init dari draftDetails, fallback ke completedReport.aparDetails (draft menang).
+  // Rekam terbit (approval_status != DRAFT) = potret baca-saja yang bertahan
+  // lintas buka-tutup. Bergantung pada id + status, bukan identitas objek:
+  // refetch latar saat pengguna menekan Edit tidak menendangnya kembali ke
+  // baca-saja dan membuang suntingan yang sedang berjalan.
+  // Hanya efek ini yang boleh menulis `terbit`: potret terbit selalu cerminan
+  // rekam, jadi layar tak bisa lebih maju dari server.
   useEffect(() => {
+    setMembatalkanTerbit(false);
+    if (isOpen) setTerbit(Boolean(inspeksi && inspeksi.approvalStatus !== 'DRAFT'));
+  }, [isOpen, inspeksi?.id, inspeksi?.approvalStatus]);
+
+  // Initialize form with unit draft or defaults
+  useEffect(() => {
+    setCatatanKomponen({});
+    setTindakLanjut('');
     if (!unit) return;
-    const init = inisialisasiDrafApar(unit);
-    setValues(init.values);
-    setCatatanKomponen(init.catatanKomponen);
-    setNotes(init.notes);
-    setTindakLanjut(init.tindakLanjut);
-    if (init.overallStatus) {
-      setOverallStatus(init.overallStatus);
+    const potret = potretDrafApar(unit);
+    setSafetyPin(potret.komponen.safetyPin);
+    setCorong(potret.komponen.corong);
+    setSegel(potret.komponen.segel);
+    setTekanan(potret.komponen.tekanan);
+    setTabung(potret.komponen.tabung);
+    setSelang(potret.komponen.selang);
+    setKatupTuas(potret.komponen.katupTuas);
+    setCatatanKomponen(potret.catatanKomponen);
+    setNotes(potret.notes);
+    setTindakLanjut(potret.tindakLanjut);
+    if (potret.overallStatus) {
+      setOverallStatus(potret.overallStatus);
       setIsOverridden(true);
     } else {
       setIsOverridden(false);
     }
-  }, [unit]);
+  }, [unit, isOpen]);
 
-  // PRD §3.3 — status akhir otomatis dari 7 komponen (kritis: tekanan, tabung, selang, katupTuas).
+  /*
+   * BACKEND AGENT CONTRACT / BUSINESS RULE:
+   * Status akhir otomatis dihitung dari 7 komponen APAR (PRD §3.3).
+   */
   useEffect(() => {
-    if (isOverridden) return;
-    setOverallStatus(
-      computeAparOverallStatus({
-        safetyPin: values.safetyPin ?? 'NA',
-        corong: values.corong ?? 'NA',
-        segel: values.segel ?? 'NA',
-        tekanan: values.tekanan ?? 'NA',
-        tabung: values.tabung ?? 'NA',
-        selang: values.selang ?? 'NA',
-        katupTuas: values.katupTuas ?? 'NA',
-      })
-    );
-  }, [values, isOverridden]);
+    if (!isOverridden) {
+      const computed = computeAparOverallStatus({
+        safetyPin,
+        corong,
+        segel,
+        tekanan,
+        tabung,
+        selang,
+        katupTuas,
+      });
+      setOverallStatus(computed);
+    }
+  }, [safetyPin, corong, segel, tekanan, tabung, selang, katupTuas, isOverridden]);
 
   // Esc + kunci scroll badan saat terbuka.
+  //
+  // WAJIB di atas `if (!isOpen || !unit) return null` di bawah: efek ini harus
+  // dipanggil pada setiap render, sama seperti hook lain.
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -87,133 +124,97 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
     };
   }, [isOpen, onClose]);
 
-  // Mode terbit = properti rekam. Satu-satunya penulis `terbit` adalah efek ini,
-  // jadi popup tak bisa menampilkan keadaan yang tidak dimiliki rekam: terbit
-  // yang gagal tak menyisakan potret palsu, `Edit` yang gagal tak menyisakan
-  // form terbuka di atas rekam terbit. Flag proses dibersihkan saat popup
-  // dibuka / identitas rekam berubah supaya permintaan yang menggantung tidak
-  // mengunci tombol pada pembukaan berikutnya.
-  useEffect(() => {
-    if (!isOpen) return;
-    setMembatalkanTerbit(false);
-    setMenerbitkan(false);
-    setTerbit(Boolean(inspeksi && inspeksi.approvalStatus !== 'DRAFT'));
-  }, [isOpen, inspeksi?.id, inspeksi?.approvalStatus]);
-
   if (!isOpen || !unit) return null;
 
   /** Rekam yang sedang tampil; `terbit` hanya benar bila rekam ini ada. */
   const idRekam = inspeksi?.id ?? null;
 
-  const isPowder = unit.jenis === 'POWDER';
+  const nilaiKomponen = ambilKomponen(safetyPin, corong, segel, tekanan, tabung, selang, katupTuas);
 
-  const buildDraft = (): AparDraft =>
-    buatDrafApar(unit, values, catatanKomponen, notes, tindakLanjut, overallStatus);
+  const catatanGabung = susunCatatanApar(
+    { safetyPin, corong, segel, tekanan, tabung, selang, katupTuas },
+    catatanKomponen,
+    notes,
+    tindakLanjut,
+  );
 
-  const handleSaveDraft = () => {
-    // Laman menutup modal saat mutasi berhasil; gagal = tetap terbuka + alarm.
-    if (terbit) return;
-    onSaveDraft(unit.id, buildDraft());
-  };
-
-  // Terbit ditunggu: popup baru ditutup setelah rekam benar-benar `DIAJUKAN`,
-  // dan bila tulisan gagal form tetap terbuka (mutasi melaporkan pesannya).
   const handleComplete = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (terbit || menerbitkan) return;
-    setMenerbitkan(true);
-    try {
-      await onCompleteInspection(unit, buildDraft(), overallStatus);
-      onClose();
-    } catch {
-      // onError mutasi sudah melaporkan pesannya.
-    } finally {
-      setMenerbitkan(false);
-    }
+    await terbitkanLaporan(
+      buatLaporanApar(unit, nilaiKomponen, overallStatus, catatanGabung),
+      onCompleteInspection,
+      setMenerbitkan,
+    );
   };
 
-  const setValue = (key: string, v: AparComponentStatus) => {
-    setValues((prev) => ({ ...prev, [key]: v }));
-    setIsOverridden(false);
-  };
+  const ubahStatus = buatPengubahKomponen({
+    safetyPin: setSafetyPin,
+    corong: setCorong,
+    segel: setSegel,
+    tekanan: setTekanan,
+    tabung: setTabung,
+    selang: setSelang,
+    katupTuas: setKatupTuas,
+  });
 
-  // Batalkan terbit: satu medan DRAF ditulis ke rekam yang tampil, baris cache
-  // ditulis dari balasan server, dan efek `terbit` yang mengembalikan popup ke
-  // bentuk pra-terbit.
-  const handleBatalkanTerbit = async () => {
-    if (!idRekam) return;
-    setMembatalkanTerbit(true);
-    try {
-      await onBatalkanTerbit(idRekam);
-    } catch {
-      // onError mutasi sudah melaporkan pesannya.
-    } finally {
-      setMembatalkanTerbit(false);
-    }
-  };
+  const ubahCatatan = buatPengubahCatatan(setCatatanKomponen);
+  const ubahOverallStatus = buatPengubahStatusAkhir(setOverallStatus, setIsOverridden);
+  const konfirmasiHapus = buatKonfirmasiHapus(onHapusBulan, onHapusUnit);
+  const handleBatalkanTerbit = () =>
+    batalkanTerbitRekam(idRekam, onBatalkanTerbit, setMembatalkanTerbit);
 
   return (
-    <AparInspectionShell kode={unit.kode} onClose={onClose}>
-      {/* Kepala */}
-      <AparInspectionHeader unit={unit} terbit={terbit} onClose={onClose} />
-
-      {/* Isi formulir */}
-      <form onSubmit={handleComplete} className="flex-1 overflow-y-auto p-4">
-        <fieldset disabled={terbit} className="min-w-0 w-full space-y-4">
-          <AparInspectionPhotos
-            foto={foto}
-            inspeksi={inspeksi}
-            mengunggah={mengunggah}
-            onUnggahFoto={onUnggahFoto}
-            onHapusFoto={onHapusFoto}
-            isPowder={isPowder}
-            kode={unit.kode}
-          />
-
-          <AparComponentChecklist
-            values={values}
-            catatanKomponen={catatanKomponen}
-            setValue={setValue}
-            setCatatanKomponen={setCatatanKomponen}
-          />
-
-          <AparInspectionOutcome
-            overallStatus={overallStatus}
-            setOverallStatus={setOverallStatus}
-            isOverridden={isOverridden}
-            setIsOverridden={setIsOverridden}
-            notes={notes}
-            setNotes={setNotes}
-            tindakLanjut={tindakLanjut}
-            setTindakLanjut={setTindakLanjut}
-          />
-
-        </fieldset>
-
-        {/* Kaki */}
-        <AparInspectionFooter
+    <AparInspectionShell
+      onSubmit={handleComplete}
+      onClose={onClose}
+      header={
+        <AparInspectionHeader
+          kode={unit.kode}
+          zoneName={unit.zoneName}
+          period={unit.period}
           terbit={terbit}
-          onSaveDraftClick={handleSaveDraft}
-          menyimpanDraf={menyimpanDraf}
-          onHapusUnit={onHapusUnit}
-          onHapusBulan={onHapusBulan}
-          inspeksi={inspeksi}
-          menghapusBulan={menghapusBulan}
-          menghapusUnit={menghapusUnit}
-          onMintaKonfirmasi={setKonfirmasi}
-          idRekam={idRekam}
-          membatalkanTerbit={membatalkanTerbit}
-          onBatalkanTerbitClick={handleBatalkanTerbit}
-          menerbitkan={menerbitkan}
+          onClose={onClose}
         />
-      </form>
-
-      <AparDeleteConfirm
-        konfirmasi={konfirmasi}
+      }
+      konfirmasi={
+        <AparDeleteConfirmation
+          konfirmasi={konfirmasi}
+          unitKode={unit.kode}
+          onTutup={() => setKonfirmasi(null)}
+          onKonfirmasi={konfirmasiHapus}
+        />
+      }
+    >
+      <AparInspectionBody
+        foto={foto}
+        mengunggah={mengunggah}
+        terbit={terbit}
+        komponen={nilaiKomponen}
+        catatanKomponen={catatanKomponen}
+        catatanGabung={catatanGabung}
+        overallStatus={overallStatus}
+        isOverridden={isOverridden}
+        notes={notes}
+        tindakLanjut={tindakLanjut}
+        powder={unit.jenis === 'POWDER'}
         kode={unit.kode}
-        onClose={() => setKonfirmasi(null)}
-        onHapusBulan={onHapusBulan}
+        inspeksi={inspeksi}
+        menghapusBulan={menghapusBulan}
+        menghapusUnit={menghapusUnit}
+        menerbitkan={menerbitkan}
+        membatalkanTerbit={membatalkanTerbit}
+        idRekam={idRekam}
+        onUnggahFoto={onUnggahFoto}
+        onHapusFoto={onHapusFoto}
+        onUbahStatus={ubahStatus}
+        onUbahCatatan={ubahCatatan}
+        onUbahOverallStatus={ubahOverallStatus}
+        onUbahNotes={setNotes}
+        onUbahTindakLanjut={setTindakLanjut}
+        onBatalkanTerbit={handleBatalkanTerbit}
+        onMintaKonfirmasi={setKonfirmasi}
         onHapusUnit={onHapusUnit}
+        onHapusBulan={onHapusBulan}
       />
     </AparInspectionShell>
   );

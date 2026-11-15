@@ -1,18 +1,22 @@
 import React, { useMemo, useState } from 'react';
-import { Camera } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Camera, Search } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { AddPatrolFindingModal } from './AddPatrolFindingModal';
+import { ConfirmModal } from '@/components/ui';
+import { InspectionPageShell, KONFIG_PATROLI } from '@/features/inspeksi';
+import { useKonteksLokasi } from '@/features/konteksLokasi';
 import {
   petakanTemuanPatroli,
+  useHapusTemuanPatroli,
   useLaporanPatroli,
   useUnggahFotoTemuanPatroli,
-  useHapusTemuanPatroli,
 } from '@/services/api/queries';
-import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { PhotoCard, EmptyState } from '@/components/ui';
-import { KartuStatistik } from '@/features/pageChrome';
-import { InspectionPageShell, KONFIG_PATROLI } from '@/features/inspeksi';
+import { AddPatrolFindingModal } from './AddPatrolFindingModal';
+import { PatrolFeed } from './PatrolFeed';
+import { PatrolPrintHeader, PatrolPrintSignatures } from './PatrolPrintChrome';
+import { PatrolStats } from './PatrolStats';
+import type { DrafFotoPatroli } from './types';
 import type { ApiLaporanPatroli } from '@/services/api/klien';
 
 interface PatrolPageProps {
@@ -20,85 +24,104 @@ interface PatrolPageProps {
   onToggleCollapsed: () => void;
 }
 
-const bulanLabel = (d: Date) => format(d, 'MMMM yyyy', { locale: idLocale });
-
-function fmtTanggal(iso: string): string {
-  if (!iso) return '–';
-  try {
-    return format(parseISO(iso), 'd MMMM yyyy', { locale: idLocale });
-  } catch {
-    return iso;
-  }
-}
-
 /**
- * Patroli K3 — single photo feed.
- * Reuses the Hydrant Section B card grid. Newest first. UI-only.
+ * Patroli K3 — orkestrasi umpan foto per bulan. Semua hook + state hidup di
+ * sini (pola `HydrantPage`); anak-anak (`PatrolStats`, `PatrolFeed`, modal)
+ * presentasional.
+ *
+ * Poros = pengalih bulan bawaan shell (posisi Hydrant: `Bulan Ini` →
+ * `MonthSwitcher`); umpan disaring ke bulan terpilih, terbaru dulu. API
+ * patroli tidak membawa status terbit, jadi `Terbitkan` = simpan tanpa
+ * cerminan status kedua. Hapus lewat `ConfirmModal`, bukan hover langsung.
  */
 export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCollapsed }) => {
   const lokasi = useKonteksLokasi();
+  const qc = useQueryClient();
   const laporanQuery = useLaporanPatroli();
   const unggahFoto = useUnggahFotoTemuanPatroli();
   const hapusTemuan = useHapusTemuanPatroli();
 
-  const [lokasiInput, setLokasiInput] = useState('ITJ JPM Dukuh Atas');
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  // Bulan acuan = bulan kalender nyata, sama seperti halaman Hydrant. Umpan
-  // disaring ke bulan terpilih supaya poros kanan atas berperilaku identik.
+  // Poros bulan = bulan kalender nyata, sama seperti Hydrant.
   const [bulan, setBulan] = useState<Date>(() => {
     const kini = new Date();
     return new Date(kini.getFullYear(), kini.getMonth(), 1);
   });
-  const resetBulan = () => {
+  const handleResetBulan = () => {
     const kini = new Date();
     setBulan(new Date(kini.getFullYear(), kini.getMonth(), 1));
   };
   const periode = format(bulan, 'yyyy-MM');
+  const labelBulan = format(bulan, 'MMMM yyyy', { locale: idLocale });
   const isBulanIni = (() => {
     const kini = new Date();
     return bulan.getFullYear() === kini.getFullYear() && bulan.getMonth() === kini.getMonth();
   })();
 
-  // Temuan dari API (laporan + findings), terbaru lebih dulu — lokasi aktif saja.
+  // Saring caption + lokasi kerja (catatan unggahan + kop cetak).
+  const [cari, setCari] = useState('');
+  const [lokasiInput, setLokasiInput] = useState('');
+  const lokasiKerja = lokasiInput.trim() || lokasi.siteName;
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [konfirmasiHapusId, setKonfirmasiHapusId] = useState<string | null>(null);
+
+  // Temuan dari API (laporan + findings) — lokasi aktif saja.
   const laporanSite = useMemo(
     () => (laporanQuery.data ?? []).filter((l) => l.siteId === lokasi.siteId),
     [laporanQuery.data, lokasi.siteId],
   );
-  const findings = useMemo(
-    () => petakanTemuanPatroli(laporanSite),
-    [laporanSite],
-  );
+  const findings = useMemo(() => petakanTemuanPatroli(laporanSite), [laporanSite]);
 
-  // Laporan terbaru (rekam patroli tersimpan) — jangkar ekspor PDF.
-  const laporanTerbaru: ApiLaporanPatroli | null = useMemo(() => {
-    const daftar = laporanSite;
-    return [...daftar].sort((a, b) => b.patrolDate.localeCompare(a.patrolDate))[0] ?? null;
-  }, [laporanSite]);
-
-  const sorted = useMemo(
+  // Umpan bulan terpilih, terbaru dulu.
+  const umpanBulan = useMemo(
     () =>
       findings
         .filter((f) => f.tanggal.startsWith(periode))
         .sort((a, b) => b.tanggal.localeCompare(a.tanggal)),
-    [findings, periode]
+    [findings, periode],
   );
 
-  const handleAdd = (draft: { file: File; caption: string; tanggal: string }) => {
-    if (!lokasi.siteId) return;
+  // Saring caption tetap di dalam bulan terpilih.
+  const tampil = useMemo(() => {
+    const q = cari.trim().toLowerCase();
+    if (!q) return umpanBulan;
+    return umpanBulan.filter((f) => f.caption.toLowerCase().includes(q));
+  }, [umpanBulan, cari]);
+
+  // Laporan terbaru (rekam patroli tersimpan) — jangkar ekspor PDF.
+  const laporanTerbaru: ApiLaporanPatroli | null = useMemo(() => {
+    const daftar = [...laporanSite].sort((a, b) => b.patrolDate.localeCompare(a.patrolDate));
+    return daftar[0] ?? null;
+  }, [laporanSite]);
+
+  const handleAdd = (draf: DrafFotoPatroli) => {
+    if (!lokasi.siteId) {
+      window.alert('Lokasi belum dipilih. Pilih lokasi dahulu.');
+      return;
+    }
     unggahFoto.mutate(
       {
         siteId: lokasi.siteId,
-        patrolDate: draft.tanggal,
-        file: draft.file,
-        description: draft.caption,
-        locationNote: lokasiInput || undefined,
+        patrolDate: draf.tanggal,
+        file: draf.file,
+        description: draf.caption,
+        locationNote: lokasiKerja || undefined,
       },
       { onSuccess: () => setIsAddOpen(false) },
     );
   };
 
-  const handleDelete = (id: string) => {
-    hapusTemuan.mutate(id);
+  const handleKonfirmasiHapus = () => {
+    if (!konfirmasiHapusId) return;
+    const id = konfirmasiHapusId;
+    setKonfirmasiHapusId(null);
+    // Hook sudah invalidasi `laporan-patroli` saat settle; umpan kalender
+    // ikut disegarkan di sini (kontrak mutasi: laporan + ['umpan']).
+    hapusTemuan.mutate(id, {
+      onSettled: () => {
+        void qc.invalidateQueries({ queryKey: ['umpan'] });
+      },
+    });
   };
 
   return (
@@ -110,114 +133,79 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
       onToggleCollapsed={onToggleCollapsed}
       bulan={bulan}
       tampilkanReset={!isBulanIni}
-      onResetBulan={resetBulan}
+      onResetBulan={handleResetBulan}
       onPilihBulan={setBulan}
       onTambah={() => setIsAddOpen(true)}
       ikonTambah={<Camera size={13} strokeWidth={2.2} />}
       jangkarEkspor={laporanTerbaru?.id ?? null}
-      namaBerkas={laporanTerbaru?.patrolDate.slice(0, 10)}
+      namaBerkas={laporanTerbaru?.patrolDate.slice(0, 10) ?? periode}
       onCetak={() => window.print()}
-      statistik={
-        <div className="no-print grid grid-cols-2 gap-3 mb-4">
-          <KartuStatistik
-            nada="netral"
-            judul="Total Foto Terdaftar"
-            nilai={findings.length}
-            satuan="Foto"
-            rincian={`${bulanLabel(bulan)} dipilih`}
-            ikon="📷"
-            kaki="Dokumentasi seluruh periode"
-          />
-          <KartuStatistik
-            nada="hijau"
-            judul="Foto Bulan Ini"
-            nilai={sorted.length}
-            satuan="Foto"
-            rincian={`dari ${findings.length} foto terdaftar`}
-            ikon="✅"
-            lencana="Terbaru"
-            kaki="Umpan bulan terpilih"
-            isi={
-              <div className="mt-2">
-                <div className="flex h-1.5 rounded-full overflow-hidden bg-emerald-500/15">
-                  <div
-                    className="bg-emerald-500"
-                    style={{
-                      width: `${findings.length ? Math.round((sorted.length / findings.length) * 100) : 0}%`,
-                    }}
-                  />
-                </div>
-                <div className="mt-1.5 text-[10px] text-[var(--muted)] tabular-nums">
-                  {findings.length ? Math.round((sorted.length / findings.length) * 100) : 0}% foto
-                  ada di bulan ini
-                </div>
-              </div>
-            }
-          />
+      kepalaCetak={
+        <PatrolPrintHeader
+          lokasi={lokasiKerja}
+          labelBulan={labelBulan}
+          tanggalTerbaru={umpanBulan[0]?.tanggal ?? ''}
+        />
+      }
+      statistik={<PatrolStats total={findings.length} bulanIni={umpanBulan.length} labelBulan={labelBulan} />}
+      saring={
+        <div className="no-print flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pb-3 mb-3 border-b border-[var(--border)]">
+          <p className="text-xs text-[var(--muted)]">
+            Menampilkan{' '}
+            <span className="font-bold text-[var(--primary)] tabular-nums">{tampil.length}</span>{' '}
+            dari <span className="tabular-nums">{umpanBulan.length}</span> foto — {labelBulan}
+          </p>
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="relative min-w-[170px] flex-1 sm:flex-initial">
+              <Search
+                size={12}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+              />
+              <input
+                type="text"
+                placeholder="Cari keterangan foto…"
+                value={cari}
+                onChange={(e) => setCari(e.target.value)}
+                aria-label="Cari keterangan foto"
+                className="w-full pl-7 pr-2.5 py-1.5 text-xs bg-[var(--bg-main)] border border-[var(--border)] rounded-[4px] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2f80ed]"
+              />
+            </div>
+            <input
+              type="text"
+              value={lokasiInput}
+              onChange={(e) => setLokasiInput(e.target.value)}
+              placeholder={lokasi.siteName}
+              aria-label="Lokasi Kerja"
+              title="Lokasi kerja untuk unggahan dan kop cetak"
+              className="min-w-[150px] flex-1 sm:flex-initial text-xs px-2.5 py-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2f80ed]"
+            />
+          </div>
         </div>
       }
       isi={
-        <div className="bg-white dark:bg-[var(--bg-main)] print:bg-white">
-          <div className="text-center print:text-black">
-            <h2 className="text-base font-bold text-[var(--primary)] print:text-black tracking-tight">
-              LAPORAN KEGIATAN
-            </h2>
-            <p className="text-sm font-bold text-[var(--primary)] print:text-black tracking-tight">
-              SAFETY PATROL
-            </p>
-            <p className="mt-1 text-xs font-semibold text-[var(--secondary)] print:text-black">
-              <input
-                value={lokasiInput}
-                onChange={(e) => setLokasiInput(e.target.value)}
-                aria-label="Lokasi Kerja"
-                className="no-print w-52 text-center bg-transparent border-b border-[var(--border)] focus:outline-none focus:border-[#2f80ed] px-1"
-              />
-              <span className="hidden print:inline">{lokasiInput}</span>
-            </p>
-            <p className="text-[11px] text-[var(--muted)] print:text-black tabular-nums">
-              {sorted.length > 0 ? fmtTanggal(sorted[0].tanggal) : '–'}
-            </p>
-          </div>
-          <p className="no-print text-[11px] text-[var(--muted)] mt-1.5 mb-2">
-            Satu umpan foto, terbaru di atas. Klik “Tambah Foto” untuk menambah dokumentasi.
-          </p>
-
-          {/* Photo grid (Hydrant Section B pattern) */}
-          {sorted.length === 0 ? (
-            <div className="no-print">
-              <EmptyState
-                icon={<Camera size={24} />}
-                title="Belum ada foto patroli"
-                hint="Klik tombol “Tambah Foto” untuk menambah dokumentasi lapangan."
-              />
-            </div>
-          ) : (
-            <div className="max-w-4xl mx-auto w-full px-2 sm:px-4">
-              <div
-                className="grid grid-cols-1 sm:grid-cols-2 gap-y-10 sm:gap-y-12 print:max-w-none print:grid-cols-2 print:gap-x-24 print:gap-y-10"
-                style={{ columnGap: 'clamp(3.5rem, 7vw, 6.5rem)' }}
-              >
-                {sorted.map((finding) => (
-                  <div key={finding.id} className="flex flex-col items-center">
-                    <PhotoCard
-                      imageUrl={finding.photoUrl}
-                      caption={finding.caption}
-                      onDelete={() => handleDelete(finding.id)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        <div className="space-y-3 pb-8 flex-1">
+          <PatrolFeed findings={tampil} totalBulan={umpanBulan.length} onHapus={setKonfirmasiHapusId} />
         </div>
       }
+      tandaTangan={<PatrolPrintSignatures />}
       modals={
-        <AddPatrolFindingModal
-          isOpen={isAddOpen}
-          onClose={() => setIsAddOpen(false)}
-          onAddFinding={handleAdd}
-          isMenyimpan={unggahFoto.isPending}
-        />
+        <>
+          <AddPatrolFindingModal
+            isOpen={isAddOpen}
+            onClose={() => setIsAddOpen(false)}
+            onAddFinding={handleAdd}
+            isMenyimpan={unggahFoto.isPending}
+          />
+          <ConfirmModal
+            isOpen={konfirmasiHapusId !== null}
+            title="Hapus Foto Patroli"
+            message="Foto patroli ini beserta keterangannya akan dihapus permanen. Lanjutkan?"
+            confirmLabel="Ya, hapus"
+            accent="#eb5757"
+            onClose={() => setKonfirmasiHapusId(null)}
+            onConfirm={handleKonfirmasiHapus}
+          />
+        </>
       }
     />
   );
