@@ -7,7 +7,6 @@ interface P3kInspectionBodyProps {
   lengkap: number;
   kurang: number;
   kd: number;
-  terbit: boolean;
   onUbahActual: (id: number, raw: string) => void;
   onUbahExpired: (id: number, value: boolean) => void;
   onUbahTanggal: (value: string) => void;
@@ -66,7 +65,6 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
   lengkap,
   kurang,
   kd,
-  terbit,
   onUbahActual,
   onUbahExpired,
   onUbahTanggal,
@@ -76,7 +74,7 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
   const penuh = lengkap === STANDARD_P3K_ITEMS.length;
 
   return (
-    <fieldset disabled={terbit} className="space-y-4 min-w-0 border-0 m-0 p-0">
+    <fieldset className="space-y-4 min-w-0 border-0 m-0 p-0">
       {/* Masukan: 21 kuantitas aktual + flag kadaluarsa */}
       <section aria-label="Jumlah aktual 21 item">
         {STANDARD_P3K_ITEMS.map((item) => {

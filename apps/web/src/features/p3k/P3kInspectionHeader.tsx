@@ -3,17 +3,15 @@ import { BriefcaseMedical, X } from 'lucide-react';
 
 interface P3kInspectionHeaderProps {
   monthLabel: string;
-  terbit: boolean;
   lengkap: number;
   kurang: number;
   kd: number;
   onClose: () => void;
 }
 
-/** Kepala modal: identitas bulan, penanda Terbit, dan tombol tutup. */
+/** Kepala modal: identitas bulan, ringkasan, dan tombol tutup (statis). */
 export const P3kInspectionHeader: React.FC<P3kInspectionHeaderProps> = ({
   monthLabel,
-  terbit,
   lengkap,
   kurang,
   kd,
@@ -29,11 +27,6 @@ export const P3kInspectionHeader: React.FC<P3kInspectionHeaderProps> = ({
           <h3 className="text-sm font-semibold text-[var(--primary)] tracking-tight">
             Formulir Pemeriksaan: {monthLabel}
           </h3>
-          {terbit && (
-            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              Terbit
-            </span>
-          )}
         </div>
         <p className="text-[11px] text-[var(--muted)] tabular-nums">
           {lengkap}/21 lengkap · {kurang} kurang · {kd} kadaluarsa · Standar inspeksi 21 item kotak P3K

@@ -10,7 +10,16 @@ export { AparTable, detailKomponen, unitTidakLayak, tanggalTampil } from './Apar
 export { AparCards } from './AparCards';
 export { AparStats } from './AparStats';
 export { AparFindings } from './AparFindings';
+export { AparExpiryRecap } from './AparExpiryRecap';
+export { AparYearCard } from './AparYearCard';
 export { AparPrintHeader, AparPrintSignatures } from './AparPrintChrome';
 export { KOMPONEN_APAR } from './komponenApar';
 export type { KunciKomponenApar, NilaiKomponenApar } from './komponenApar';
 export { susunCatatanApar, uraiCatatanApar } from './catatanApar';
+export {
+  daftarTahunKartu,
+  formatNoList,
+  hariMenujuKedaluwarsa,
+  petakanKartuTahunan,
+  tandaUntukStatus,
+} from './kartuApar';

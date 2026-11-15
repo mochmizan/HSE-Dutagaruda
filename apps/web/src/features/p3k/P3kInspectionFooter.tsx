@@ -3,60 +3,39 @@ import { Trash2 } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui';
 
 interface P3kInspectionFooterProps {
-  adaInspeksi: boolean;
   menghapusBulan: boolean;
-  terbit: boolean;
-  menerbitkan: boolean;
-  idRekam: string | null;
+  menyimpan: boolean;
   onMintaKonfirmasi: () => void;
-  onBatalkanTerbit: () => void;
 }
 
-/** Kontrol bawah formulir: hapus bulan ini + tombol Terbitkan/Edit. */
+/** Kontrol bawah formulir: kiri Hapus Bulan Ini selalu tampil, kanan Terbitkan selalu submit. */
 export const P3kInspectionFooter: React.FC<P3kInspectionFooterProps> = ({
-  adaInspeksi,
   menghapusBulan,
-  terbit,
-  menerbitkan,
-  idRekam,
+  menyimpan,
   onMintaKonfirmasi,
-  onBatalkanTerbit,
 }) => (
   /* Footer Controls */
   <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between">
     <div>
-      {adaInspeksi && (
-        <button
-          type="button"
-          onClick={onMintaKonfirmasi}
-          disabled={menghapusBulan}
-          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
-        >
-          <Trash2 size={12} /> {menghapusBulan ? 'Menghapus…' : 'Hapus Bulan Ini'}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onMintaKonfirmasi}
+        disabled={menghapusBulan}
+        className="inline-flex items-center gap-1.5 text-[11px] font-medium text-red-600 dark:text-red-400 hover:underline pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:no-underline"
+      >
+        <Trash2 size={12} /> {menghapusBulan ? 'Menghapus…' : 'Hapus Bulan Ini'}
+      </button>
     </div>
 
     <div className="flex items-center gap-2">
-      {terbit ? (
-        <button
-          type="button"
-          disabled={!idRekam}
-          onClick={onBatalkanTerbit}
-          className="px-4 py-1.5 rounded-[4px] border border-[#2f80ed]/40 bg-[#2f80ed]/10 text-[#2f80ed] hover:bg-[#2f80ed]/20 text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Edit
-        </button>
-      ) : (
-        <button
-          type="submit"
-          disabled={menerbitkan}
-          aria-busy={menerbitkan}
-          className="px-4 py-1.5 rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {menerbitkan ? 'Menerbitkan…' : 'Terbitkan'}
-        </button>
-      )}
+      <button
+        type="submit"
+        disabled={menyimpan}
+        aria-busy={menyimpan}
+        className="px-4 py-1.5 rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white text-xs font-semibold shadow-xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {menyimpan ? 'Menerbitkan…' : 'Terbitkan'}
+      </button>
     </div>
   </div>
 );

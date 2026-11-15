@@ -7,7 +7,10 @@ editable. Kepala halaman lewat cangkang bersama
 `features/inspeksi/InspectionPageShell.tsx` + `KONFIG_P3K` (remah
 `Inspeksi P3K`, `p3k-yearly`, ikon BriefcaseMedical): poros tahun via slot
 `poros` (`YearSwitcher` berpil seperti `MonthSwitcher` + tombol `Tahun Ini`
-saat bukan tahun berjalan), tanpa tombol tambah, tombol `Cetak` netral
+saat bukan tahun berjalan), tombol tambah `Isi Inspeksi Bulan Berjalan`
+(biru `#2f80ed` di slot aksi yang sama seperti Hydrant/APAR — membuka form
+bulan berjalan; sebelumnya tanpa tombol tambah sehingga grid kosong tak
+punya pintu masuk), tombol `Cetak` netral
 (sebelumnya hijau — kini seragam keempat halaman). Statistik 2 kartu
 `KartuStatistik` (`grid-cols-2`, bentuk + ukuran angka sama dengan Hydrant:
 `Sel Di Bawah Standar` + `Selesai Diperiksa`; sebelumnya 3 kartu buatan
@@ -17,7 +20,11 @@ cari, tanpa salinan komponen — JSX inline di `P3kPage`, menyaring baris
 item; status baris = tanda terburuk setahun: KD > kurang > baik). Grid +
 kop + Catatan + modal menempati slot shell; `P3kHeader.tsx` dihapus
 (satu-satunya pemakai sudah pindah). Klik header bulan = form input bulan
-itu. Cetak A4 landscape satu halaman.
+itu (tetap berfungsi di samping tombol tambah). Satu baris petunjuk di
+bawah grid (`Klik singkatan bulan pada kepala tabel untuk mengisi bulan
+lain.`); status kosong (belum ada bulan terisi) memuat CTA gaya
+`EmptyUnits` (`Belum ada inspeksi tahun …` + tombol primer yang sama
+membuka form bulan berjalan). Cetak A4 landscape satu halaman.
 
 Grid dibangun di atas disiplin tabel Hydrant: kolom `No.` angka posisi
 (mono + tabular, tanpa panah — urutan katalog tetap), kolom `ITEM` rata
@@ -28,22 +35,23 @@ Pemeriksaan Kotak P3K` (`print-only`, posisi badan Section A Hydrant).
 Urutan kolom, jumlah sel, dan teks baris sama seperti sebelumnya.
 
 Modal dipecah seperti Hydrant: `P3kInspectionModal.tsx` memegang SEMUA state
-+ efek (isi awal `[isOpen, initial]`, cermin-terbit `[isOpen, rekam?.id]`,
-Esc + kunci scroll badan) dengan urutan asli; anak-anak presentasional
-tanpa hook: `P3kInspectionShell.tsx` (backdrop `fixed inset-0 z-50`,
++ efek (isi awal `[isOpen, initial]`, Esc + kunci scroll badan) dengan
+urutan asli; anak-anak presentasional tanpa hook:
+`P3kInspectionShell.tsx` (backdrop `fixed inset-0 z-50`,
 tutup bila `target === currentTarget`, panel `emil-modal` + `<form>`),
 `P3kInspectionHeader.tsx` (cip ikon + `Formulir Pemeriksaan: <Bulan Tahun>`
-+ lencana `Terbit` + ringkasan + X), `P3kInspectionBody.tsx` (masukan 21
-kuantitas + flag KD → hasil: cip `LENGKAP`/`PERLU ISI ULANG` + hitungan +
-tanggal/paraf; tanpa blok foto — P3K tidak punya foto per domain; tanpa
-catatan per komponen), `P3kInspectionFooter.tsx` (kiri `Hapus Bulan Ini`,
-kanan satu primer `Terbitkan` ↔ `Edit`) + `P3kDeleteConfirmation`
-(`ConfirmModal` portal `z-[60]`, escape-only). Potret terbit mencerminkan
-rekam tersimpan (ada rekam = terbit = fieldset terkunci); `Edit` membuka
-kunci lokal — rekam P3K tidak membawa `approval_status` seperti Hydrant,
-jadi batal-terbit tak menulis apa pun ke server sampai Terbitkan menyimpan
-ulang. Terbitkan yang gagal tak menyisakan potret Terbit palsu (modal tetap
-terbuka dalam modus sunting; hook sudah mengingatkan via alert Indonesia).
++ ringkasan + X, statis tanpa cermin rekam), `P3kInspectionBody.tsx`
+(masukan 21 kuantitas + flag KD → hasil: cip `LENGKAP`/`PERLU ISI ULANG` +
+hitungan + tanggal/paraf; tanpa blok foto — P3K tidak punya foto per
+domain; tanpa catatan per komponen; fieldset tak pernah terkunci —
+selalu mod sunting), `P3kInspectionFooter.tsx` (kiri `Hapus Bulan Ini`
+selalu tampil, kanan `Terbitkan` selalu submit; pending hanya label
+`Menerbitkan…`/nonaktif, tanpa tukar tombol) + `P3kDeleteConfirmation`
+(`ConfirmModal` portal `z-[60]`, escape-only). Alur isi = alur lama:
+bulan terisi dibuka dengan nilai yang langsung bisa diubah (tanpa klik
+`Edit`), `Terbitkan` menyimpan ulang via upsert async lalu modal menutup;
+gagal simpan = modal tetap terbuka dalam modus sunting (hook sudah
+mengingatkan via alert Indonesia).
 
 Kop kertas + tanda tangan lewat slot cangkang yang sama seperti Hydrant:
 `P3kPrintChrome.tsx` (`P3kPrintHeader` logo + `LEMBAR LAPORAN PEMERIKSAAN
@@ -61,7 +69,9 @@ memaksa A4 landscape via injeksi `@page`.
   tetap 409 (`duplicateMonth`) — upsert hanya di jalur UI. Tombol modal
   `Terbitkan` (biru `#2f80ed`); `Hapus Bulan Ini` di kiri berdampingan;
   tombol `Batal` tidak ada. Tanpa kotak terdaftar, simpan mengingatkan
-  (alert Indonesia) dan tidak menulis apa pun.
+  (alert Indonesia) dan tidak menulis apa pun — namun kotak kini
+  ter-provisioning otomatis saat laman dibuka (lihat Gotchas), jadi jalur
+  ini hanya jaring pengaman.
 - `p3k-clear` menghapus satu bulan penuh via aksi hapus-bulan (konfirmasi
   dulu, lalu modal menutup).
 - `p3k-print` mengunduh PDF landscape via `POST /api/export/p3k-yearly/
@@ -79,8 +89,13 @@ memaksa A4 landscape via injeksi `@page`.
 ## How to get to it (user POV)
 
 - Pilih `Inspeksi P3K` di sidebar.
+- Tombol `Isi Inspeksi Bulan Berjalan` di baris aksi kepala halaman →
+  form bulan berjalan langsung (pintu masuk utama saat grid masih kosong).
 - Klik header bulan pada grid tahunan → form input bulan itu (isi →
-  `Terbitkan`; buka ulang bulan terisi → potret baca-saja + `Edit`).
+  `Terbitkan`; buka ulang bulan terisi → nilai langsung sunting, tanpa
+  klik `Edit`).
+- Status kosong (0 bulan terisi) → CTA `Isi Inspeksi Bulan Berjalan` di
+  bawah grid, membuka form bulan berjalan yang sama.
 - Tab `Kurang`/`Kadaluarsa` atau kata kunci menyaring baris item.
 - Year switcher pindah tahun; Unit/Lokasi Kerja disunting langsung.
 - Tombol `Unduh PDF` (draft muat satu halaman landscape).
@@ -104,7 +119,8 @@ Preconditions:
   tetap 409.
 - **Form browser.** Klik header bulan → form 21 kuantitas + flag KD +
   tanggal/paraf muncul. Isi tanggal + paraf, simpan, buka ulang: nilai
-  bertahan ( silent-drop check); potret baca-saja + tombol `Edit`.
+  bertahan ( silent-drop check) dan langsung sunting (tanpa potret
+  baca-saja / tombol `Edit`).
 - **Bukti.** `inspections.json`, snapshot form terisi + `PROOF.md` di
   `wiki/artifacts/<run-id>/p3k/`.
 
@@ -116,5 +132,15 @@ Preconditions:
   di PDF, bukan di layar.
 - Box key = nama site; site ganda = box ganda. Jangan asert satu box
   global.
-- Potret terbit P3K = keberadaan rekam (tanpa `approval_status`):
-  bulan terisi selalu terbuka baca-saja; sunting via `Edit`.
+- Auto-provision: `P3kPage` mendaftarkan box bernama site aktif sekali per
+  `siteId` (guard `useRef<Set>` — StrictMode double-effect tidak boleh
+  double-create; hook `useBuatKotakP3k` yang sama, 409/duplikat ditelan
+  karena API tidak unique-guard nama, daftar dimuat ulang via invalidasi).
+  Tanpa ini simpan selalu gagal (`Kotak P3K lokasi ini belum terdaftar…`)
+  karena DB live + seed mulai dengan 0 box. Provisioning hanya jalan
+  setelah `kotakQuery.isSuccess` (bukan saat daftar masih memuat) dan
+  butuh `siteId` non-kosong.
+- Potret terbit P3K TIDAK dipakai: tidak ada `approval_status` dan tidak
+  ada cermin-terbit — bulan terisi selalu terbuka langsung sunting;
+  `Terbitkan` = simpan ulang (upsert), `Hapus Bulan Ini` selalu tampil
+  di kiri (konfirmasi `ConfirmModal` tetap ada sebagai pengaman).

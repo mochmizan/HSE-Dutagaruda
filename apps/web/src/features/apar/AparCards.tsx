@@ -1,7 +1,9 @@
 import React from 'react';
 import { Check, CheckCircle2, ChevronRight, Clock, ExternalLink, X } from 'lucide-react';
 import type { AparUnitItem } from '../../types/hse';
+import { formatIndonesianDate } from '@/lib/dates';
 import { detailKomponen, tanggalTampil, unitTidakLayak } from './AparTable';
+import { hariMenujuKedaluwarsa } from './kartuApar';
 
 interface AparCardsProps {
   units: AparUnitItem[];
@@ -63,6 +65,28 @@ export const AparCards: React.FC<AparCardsProps> = ({ units, onBuka, aksen }) =>
                   Belum Dimulai
                 </span>
               )}
+            </div>
+
+            <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+              <span className="font-medium text-[var(--secondary)]">
+                {unit.jenis && unit.ukuran ? `${unit.jenis} • ${unit.ukuran}` : '–'}
+              </span>
+              {(() => {
+                const teksExpired = unit.expiredDate ? formatIndonesianDate(unit.expiredDate) : '';
+                const sisa = unit.expiredDate ? hariMenujuKedaluwarsa(unit.expiredDate) : null;
+                const segera = sisa !== null && sisa <= 90;
+                return teksExpired ? (
+                  <span
+                    className={`font-mono tabular-nums ${
+                      segera ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-[var(--muted)]'
+                    }`}
+                  >
+                    {teksExpired}
+                  </span>
+                ) : (
+                  <span className="font-mono tabular-nums text-[var(--muted)]">–</span>
+                );
+              })()}
             </div>
 
             <div className="mt-3 pt-2 border-t border-[var(--border)]">

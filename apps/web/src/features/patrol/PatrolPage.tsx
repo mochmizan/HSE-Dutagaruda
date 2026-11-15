@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Camera, Search } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -58,8 +58,18 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
   })();
 
   // Saring caption + lokasi kerja (catatan unggahan + kop cetak).
+  // Lokasi terisi bawaan nama site aktif (dinamis, bukan string paten),
+  // tetap bisa disunting; kosong = nama lokasi aktif.
   const [cari, setCari] = useState('');
   const [lokasiInput, setLokasiInput] = useState('');
+  const siteTersinkron = React.useRef<string | null>(null);
+  useEffect(() => {
+    if (!lokasi.siteId) return;
+    if (siteTersinkron.current !== lokasi.siteId) {
+      siteTersinkron.current = lokasi.siteId;
+      setLokasiInput(lokasi.siteName ?? '');
+    }
+  }, [lokasi.siteId, lokasi.siteName]);
   const lokasiKerja = lokasiInput.trim() || lokasi.siteName;
 
   const [isAddOpen, setIsAddOpen] = useState(false);

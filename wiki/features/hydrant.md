@@ -103,6 +103,10 @@ presentasional saja.
   variant `[&_th]:border … [&_td]:border …` pada `<table>`, token
   `--border`, `border-collapse` menggabung jadi garis tunggal) — Okt 18,
   sama di tabel utama APAR.
+- Kunci lebar tabel (Nov 15): tabel memakai table-fixed + colgroup 7 kolom
+  (64/96/120/224/140/200/184px, total 1028px, sama dengan APAR); div isi sel
+  Verifikasi dibatasi max-w-[224px] sehingga chip membungkus bukan melar;
+  Keterangan sudah capped 3 baris via KeteranganTeks, tanpa max-w tambahan.
 
 ## How to get to it (user POV)
 

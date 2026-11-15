@@ -2,7 +2,9 @@ import React from 'react';
 import { AlertCircle, Check, CheckCircle2, Clock, X } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { formatIndonesianDate } from '@/lib/dates';
 import { KeteranganTeks, NoUrut } from '@/features/pageChrome';
+import { hariMenujuKedaluwarsa } from './kartuApar';
 import type { AparUnitItem } from '../../types/hse';
 
 /** Tujuh komponen APAR, urut sesuai kertas. */
@@ -48,28 +50,42 @@ interface AparTableProps {
 }
 
 /**
- * Tabel Section A halaman APAR: satu baris per unit, tujuh kolom.
+ * Tabel Section A halaman APAR: satu baris per unit, sembilan kolom.
  *
- * Bentuk Hydrant (Verifikasi → Status → Petugas → Keterangan, 55/45 split),
- * diisi konten APAR. Jenis/Ukuran/Expired adalah ekstra domain: tempatnya di
- * modal dan kartu tahunan, bukan di tabel.
+ * Disiplin lebar Hydrant (total 1028px, `table-fixed` + `<colgroup>`),
+ * diisi konten APAR: No. 64 | Kode APAR 80 | Zona 80 | Jenis / Ukuran 110
+ * | Periode Expired 120 | Verifikasi 145 | Status 140 | Petugas 170 |
+ * Keterangan 119. Sel membungkus, bukan meregang.
  */
 export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah }) => (
   <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
-    <table className="w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
+    <table className="table-fixed w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
+      <colgroup>
+        <col style={{ width: 64 }} />
+        <col style={{ width: 80 }} />
+        <col style={{ width: 80 }} />
+        <col style={{ width: 110 }} />
+        <col style={{ width: 120 }} />
+        <col style={{ width: 145 }} />
+        <col style={{ width: 140 }} />
+        <col style={{ width: 170 }} />
+        <col style={{ width: 119 }} />
+      </colgroup>
       <thead>
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
           <th className="py-2.5 px-3 w-16 text-center align-middle">No.</th>
-          <th className="py-2.5 px-3 min-w-[96px] text-center align-middle">Kode APAR</th>
-          <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Zona</th>
-          <th className="py-2.5 px-3 min-w-[224px] text-center align-middle">
+          <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Kode APAR</th>
+          <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Zona</th>
+          <th className="py-2.5 px-3 min-w-[110px] text-center align-middle">Jenis / Ukuran</th>
+          <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Periode Expired</th>
+          <th className="py-2.5 px-3 min-w-[145px] text-center align-middle">
             <div className="flex items-center justify-center gap-1 text-center">
               <span>Verifikasi 7 Komponen</span>
             </div>
           </th>
           <th className="py-2.5 px-3 min-w-[140px] text-center align-middle">Status Kelayakan</th>
-          <th className="py-2.5 px-3 min-w-[200px] text-center align-middle">Petugas &amp; Tanggal</th>
-          <th className="py-2.5 px-3 min-w-[184px] text-center align-middle">Keterangan</th>
+          <th className="py-2.5 px-3 min-w-[170px] text-center align-middle">Petugas &amp; Tanggal</th>
+          <th className="py-2.5 px-3 min-w-[119px] text-center align-middle">Keterangan</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-[var(--border)] text-xs">
@@ -113,8 +129,35 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah })
                 <span>{unit.zoneName}</span>
               </td>
 
+              <td className="py-2.5 px-3 text-center align-middle text-[11px] font-medium text-[var(--secondary)] break-words">
+                {unit.jenis && unit.ukuran ? (
+                  <span>
+                    {unit.jenis} • {unit.ukuran}
+                  </span>
+                ) : (
+                  <span>–</span>
+                )}
+              </td>
+
+              {(() => {
+                const teksExpired = unit.expiredDate ? formatIndonesianDate(unit.expiredDate) : '';
+                const sisa = unit.expiredDate ? hariMenujuKedaluwarsa(unit.expiredDate) : null;
+                const segera = sisa !== null && sisa <= 90;
+                return (
+                  <td className="py-2.5 px-3 text-center align-middle text-[11px] tabular-nums break-words">
+                    {teksExpired ? (
+                      <span className={segera ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-[var(--secondary)]'}>
+                        {teksExpired}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--secondary)]">–</span>
+                    )}
+                  </td>
+                );
+              })()}
+
               <td className="py-2.5 px-3 text-left align-middle">
-                <div className="flex items-center justify-start gap-1 flex-wrap">
+                <div className="flex items-center justify-start gap-1 flex-wrap break-words">
                   {komponen.map((item) => {
                     const isOk = item.status === 'BAIK';
                     const isNotLayak = item.status === 'TIDAK_BAIK' || item.status === 'NA';
@@ -178,7 +221,7 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah })
 
               <td className="py-2.5 px-3 text-center align-middle text-[11px] text-[var(--secondary)]">
                 <div className="leading-tight text-center flex flex-col items-center justify-center">
-                  <p className="font-medium text-[var(--primary)] truncate max-w-[190px] text-center">
+                  <p className="font-medium text-[var(--primary)] truncate max-w-[150px] text-center">
                     {unit.inspectorName || 'Pengawas K3'}
                   </p>
                   <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 text-center tabular-nums">

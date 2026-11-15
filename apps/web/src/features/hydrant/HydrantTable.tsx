@@ -55,7 +55,16 @@ interface HydrantTableProps {
  */
 export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka, onPindah }) => (
   <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
-    <table className="w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
+    <table className="w-full table-fixed text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
+      <colgroup>
+        <col className="w-[64px]" />
+        <col className="w-[96px]" />
+        <col className="w-[120px]" />
+        <col className="w-[224px]" />
+        <col className="w-[140px]" />
+        <col className="w-[200px]" />
+        <col className="w-[184px]" />
+      </colgroup>
       <thead>
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
           <th className="py-2.5 px-3 w-16 text-center align-middle">No.</th>
@@ -113,7 +122,7 @@ export const HydrantTable: React.FC<HydrantTableProps> = ({ units, onBuka, onPin
               </td>
 
               <td className="py-2.5 px-3 text-left align-middle">
-                <div className="flex items-center justify-start gap-1 flex-wrap">
+                <div className="flex items-center justify-start gap-1 flex-wrap max-w-[224px]">
                   {komponen.map((item) => {
                     const isOk = item.status === 'LAYAK';
                     const isNotLayak = item.status === 'TIDAK_LAYAK' || item.status === 'HILANG';

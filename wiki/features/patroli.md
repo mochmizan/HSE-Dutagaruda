@@ -86,5 +86,6 @@ Preconditions:
 - Lencana `Tersimpan` netral per kartu = rekam sudah tersimpan; bukan
   status terbit (API patroli tidak punya `approval_status`, tidak seperti
   Hydrant — tidak ada cerminan terbit, tidak ada badge `Terbit`).
-- Lokasi kerja kosong = nama lokasi aktif; suntingan di baris saring
-  dipakai untuk unggahan (`locationNote`) dan kop cetak.
+- Lokasi kerja terisi bawaan nama lokasi aktif (dinamis, tetap bisa disunting;
+  suntingan dipakai untuk unggahan (`locationNote`) dan kop cetak; kosong =
+  nama lokasi aktif); hapus foto tetap via `ConfirmModal`, bukan langsung.

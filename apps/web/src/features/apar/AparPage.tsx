@@ -7,6 +7,8 @@ import { AparInspectionModal } from './AparInspectionModal';
 import { AparTable } from './AparTable';
 import { AparCards } from './AparCards';
 import { AparFindings } from './AparFindings';
+import { AparExpiryRecap } from './AparExpiryRecap';
+import { AparYearCard } from './AparYearCard';
 import { AparPrintHeader, AparPrintSignatures } from './AparPrintChrome';
 import { AparStats } from './AparStats';
 import { FilterBar } from '@/features/pageChrome';
@@ -454,12 +456,16 @@ export const AparPage: React.FC<AparPageProps> = ({
         </div>
       }
       tambahan={
-        <AparFindings
-          findings={findings}
-          onTambah={() => setIsAddFindingModalOpen(true)}
-          onHapus={handleDeleteFinding}
-          aksen={AKSEN}
-        />
+        <>
+          <AparFindings
+            findings={findings}
+            onTambah={() => setIsAddFindingModalOpen(true)}
+            onHapus={handleDeleteFinding}
+            aksen={AKSEN}
+          />
+          <AparExpiryRecap units={units} />
+          <AparYearCard units={units} inspeksi={inspeksiSite} onCetak={handlePrint} />
+        </>
       }
       tandaTangan={<AparPrintSignatures />}
       modals={

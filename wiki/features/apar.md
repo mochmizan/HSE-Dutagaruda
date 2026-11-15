@@ -17,17 +17,47 @@ kepala cetak + tanda tangan statis 3 kolom, modals.
   `TIDAK_BAIK` / `NA`; `NA` tampil sebagai `HILANG` merah). Komentar per
   komponen SELALU dirender — nonaktif abu-abu saat `BAIK`, dapat diisi saat
   `TIDAK BAIK` / `HILANG`.
-- `apar-table` Section A 7 kolom bentuk Hydrant: No. (`NoUrut`, panah
-  `print:hidden` + `stopPropagation`) | Kode APAR | Zona | Verifikasi 7
+- `apar-recap` Section C `AparExpiryRecap` (di bawah temuan, di atas kartu):
+  kartu netral: ringkasan `Kedaluwarsa` (merah) / `Segera Habis ≤ 90 Hari`
+  (amber) / `Aman` + daftar kode via `formatNoList` (`A, B, dan C`), lalu
+  tabel `Kode APAR` | `Zona` | `Tgl Isi Ulang` | `Sisa Hari` | `Status`.
+  Dihitung dari `expiredDate` unit (`hariMenujuKedaluwarsa`, negatif = lewat;
+  tanggal tak-terurai = `–`). `print:break-before-page` (hal. 2 = rekap +
+  kartu + tanda tangan).
+- `apar-yearcard` Section D `AparYearCard` (paling bawah, posisi Section B
+  Hydrant): kartu tahunan 12 bulan per unit, HANYA-BACA. Cip `Pilih APAR`
+  (independen dari pilihan tabel) + pengalih tahun ±1 (tahun berjalan ±1,
+  `daftarTahunKartu`; tombol mati di ujung) + `Cetak Kartu` (→ cetak laman,
+  nonaktif bila belum ada unit). Grid `Bulan` | `Tanggal` | `Kondisi 7
+  Komponen` (cip ✓/X/–; `NA` = X merah) | `Tindak Lanjut`; baris bertanda X
+  merah + teks tindak lanjut merah. Kaki `Tgl Isi Ulang` (dari `expiredDate`)
+  + legenda. Sel diturunkan dari rekam inspeksi via `petakanKartuTahunan`
+  (lokal `kartuApar.ts`, tanpa impor berkas terhapus); tindak lanjut via
+  `uraiCatatanApar`. Tampilan kartu tidak pernah membajak: `AparCards` tetap
+  `Lihat Laporan` / `Mulai Inspeksi` / `Lanjutkan` → modal.
+- `apar-reportview` potret terbit di dalam `AparInspectionModal` (cermin
+  Hydrant): buka-ulang rekam terbit = baca-saja (`fieldset` nonaktif, badge
+  `Terbit`, metadata + verifikasi 7 komponen + catatan + foto, tanpa
+  `Hapus`); tombol utama `Edit` = batalkan terbit (`approvalStatus: 'DRAFT'`
+  pada id tampil, ditunggu; label `Membatalkan…`) → kembali ke mode sunting.
+  Alur: klik baris → modal → `Terbitkan` → potret terbit (modal tetap
+  terbuka, mengikuti refetch) → `Edit` → formulir. Tanpa tombol mati.
+- `apar-table` Section A 9 kolom disiplin Hydrant, kunci lebar `table-fixed` +
+  `<colgroup>` 64/80/80/110/120/145/140/170/119 (total 1028px = Hydrant;
+  sel membungkus, bukan meregang): No. (`NoUrut`, panah
+  `print:hidden` + `stopPropagation`) | Kode APAR | Zona | Jenis / Ukuran
+  (`{jenis} • {ukuran}`, `–` bila kosong) | Periode Expired
+  (`formatIndonesianDate(expiredDate)`, `tabular-nums`, amber-600 semibold
+  bila `hariMenujuKedaluwarsa ≤ 90`, `–` bila tak-terurai) | Verifikasi 7
   Komponen (chip rata-kiri, `BAIK` emerald / `TIDAK_BAIK`+`HILANG` merah) |
   Status Kelayakan (`TIDAK LAYAK` / `LAYAK` / `Berjalan` / `Belum Dimulai`)
   | Petugas & Tanggal | Keterangan (`KeteranganTeks` 3-baris, `–` bila kosong).
-  Split 55/45 Verifikasi/Keterangan sama seperti Hydrant; tanpa kolom
-  Jenis/Ukuran/Expired — ekstra domain (jenis powder, berat CO2, expired)
-  tinggal di modal, bukan tabel. Helper `detailKomponen` /
+  Helper `detailKomponen` /
   `unitTidakLayak` / `tanggalTampil` diekspor dari `AparTable` dan dipakai
   `AparCards` supaya tabel dan kartu tidak bisa berbeda pendapat.
-- `apar-cards` grid 3 kolom: header kode+zona / badge status, chip via helper
+- `apar-cards` grid 3 kolom: header kode+zona / badge status, baris
+  jenis•ukuran + tanggal expired (amber bila ≤ 90 hari, urutan sama seperti
+  tabel), chip via helper
   tabel, footer tanggal + `Lihat Laporan` (selesai, netral) atau
   `Mulai Inspeksi`/`Lanjutkan` (solid `#2f80ed`).
 - `apar-publish` (terbit = sifat REKAM TERPERSISTENSI, bukan state lokal):
@@ -64,8 +94,9 @@ kepala cetak + tanda tangan statis 3 kolom, modals.
   foto anak dulu (cegah 409).
 - `apar-print`: kepala cetak (`AparPrintHeader`: logo + judul + lokasi +
   periode + tanggal cetak sistem) + `h2` Section A khusus-cetak + tabel penuh
-  + Section B + tanda tangan statis 3 kolom (`AparPrintSignatures`);
-  `no-print` pada toolbar/stats/toggle kartu.
+  + Section B + Section C (rekap, `break-before-page` → hal. 2) + Section D
+  (kartu tahunan) + tanda tangan statis 3 kolom (`AparPrintSignatures`);
+  `no-print` pada toolbar/stats/toggle kartu dan kontrol cip/tahun/cetak-kartu.
 - Aksen biru `#2f80ed` seragam untuk aksi utama (tambah, `Terbitkan`,
   kartu `Mulai`/`Lanjutkan`); aksen `#f2994a` untuk ikon judul + tombol
   `Tambah Temuan`. Tab aktif pil putih tipis seragam; badge jumlah tab
@@ -80,10 +111,13 @@ kepala cetak + tanda tangan statis 3 kolom, modals.
 ## How to get to it (user POV)
 
 - Pilih `Inspeksi APAR` di sidebar.
-- Klik baris tabel → modal 7 komponen → `Terbitkan`; rekam terbit baca-saja +
-  badge `Terbit`, `Edit` membatalkan terbit.
+- Klik baris tabel → modal 7 komponen → `Terbitkan` → potret terbit baca-saja +
+  badge `Terbit`; `Edit` membatalkan terbit → kembali ke formulir.
 - Tab filter + zona + cari + toggle Tabel/Kartu; panah No. menyusun ulang.
 - Section B: `Tambah Temuan` (foto + deskripsi).
+- Section C: rekap kedaluwarsa dari `expiredDate` unit (merah/amber/aman).
+- Section D: kartu tahunan 12 bulan — cip `Pilih APAR` + pengalih tahun ±1 +
+  `Cetak Kartu`; hanya-baca, turunan rekam inspeksi.
 - Kepala halaman: `Bulan Ini` (bila bukan bulan berjalan) → pengalih bulan →
   `Tambah Zona & Unit` → `Unduh PDF` → `Cetak`.
 
@@ -110,11 +144,12 @@ Preconditions:
 
 ## Gotchas
 
-- Kartu tahunan 12 bulan, rekap kedaluwarsa, tanda tangan ketik, dan
-  `ReportDetailModal` DIHAPUS pada remake Nov 15 (kontrak 7-komponen Hydrant):
-  tabel 7 kolom tanpa Jenis/Ukuran/Expired; file `AparYearCard.tsx`,
-  `AparBadges.tsx`, `AparInspectionFields.ts` dibuang. Jangan membangun
-  ulang tanpa perintah owner.
+- Kartu tahunan 12 bulan + rekap kedaluwarsa DIKEMBALIKAN Nov 15 dalam bahasa
+  Hydrant (bukan hijack tampilan kartu): Section C `AparExpiryRecap` +
+  Section D `AparYearCard` di slot `tambahan` (temuan → rekap → kartu);
+  pemetaan lokal `kartuApar.ts` (`petakanKartuTahunan`, `formatNoList`,
+  `hariMenujuKedaluwarsa`); tanpa `AparBadges.tsx` / `AparInspectionFields.ts`
+  / `ReportDetailModal` — potret terbit tetap di dalam modal inspeksi.
 - Foto di dalam modal inspeksi (slot Kartu/Berat/Pengecekan per caption);
   Section B HANYA foto bertanda `temuan` pada rekam jangkar bulan terpilih.
 - `NA` = HILANG: chip merah, dihitung tidak-layak, komentar wajib-diisi

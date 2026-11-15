@@ -31,13 +31,9 @@ function cloneItems(src: Record<number, P3kMonthItemData>): ItemState {
  * Form input satu bulan kotak P3K: 21 kuantitas aktual + flag KD +
  * tanggal/paraf. Semua state + efek di sini; anak-anak presentasional.
  *
- * Potret terbit adalah cerminan rekam tersimpan (ada rekam = terbit =
- * baca-saja), bukan state bebas: satu-satunya penulis `terbit` adalah efek
- * di bawah (`[isOpen, rekam?.id]`). Penerbitan yang gagal tak boleh
- * menyisakan potret "Terbit" untuk rekam yang tak ada. `Edit` membuka kunci
- * lokal (rekam P3K tidak membawa `approval_status` seperti Hydrant, jadi
- * batal-terbit tak menulis apa pun ke server) sampai Terbitkan menyimpan
- * ulang.
+ * Selalu mod sunting: bulan terisi dibuka dengan nilai yang langsung bisa
+ * diubah, `Terbitkan` menyimpan ulang (upsert), `Hapus Bulan Ini` selalu
+ * tampil di kiri (konfirmasi dulu via ConfirmModal).
  */
 export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   isOpen,
@@ -53,25 +49,20 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   const [items, setItems] = useState<ItemState>({});
   const [tanggal, setTanggal] = useState('');
   const [paraf, setParaf] = useState('');
-  /** Rekam sudah tersimpan: potret baca-saja; tombol berubah menjadi Edit. */
-  const [terbit, setTerbit] = useState(false);
-  /** `Terbitkan` menulis ke API dulu; potret mengikuti rekam. */
-  const [menerbitkan, setMenerbitkan] = useState(false);
   const [konfirmasiHapus, setKonfirmasiHapus] = useState(false);
+  // `rekam` dipertahankan di props agar pemanggil tak berubah; alur lama
+  // selalu sunting sehingga nilainya tak memengaruhi mod.
+  void rekam;
 
-  // Isi form dari rekam/draf saat dibuka.
+  // Isi form dari rekam/draf saat dibuka. Selalu mod sunting: bulan terisi
+  // pun dibuka dengan nilai yang langsung bisa diubah — tanpa potret
+  // baca-saja / tombol Edit.
   useEffect(() => {
     if (!isOpen) return;
     setItems(cloneItems(initial.items));
     setTanggal(initial.tanggal);
     setParaf(initial.paraf);
   }, [isOpen, initial]);
-
-  // Potret terbit mencerminkan rekam: hanya efek ini yang boleh menulis
-  // `terbit` dari rekam, jadi layar tak bisa lebih maju dari server.
-  useEffect(() => {
-    if (isOpen) setTerbit(Boolean(rekam));
-  }, [isOpen, rekam?.id]);
 
   // Esc + kunci scroll badan saat terbuka. WAJIB di atas
   // `if (!isOpen) return null`: efek harus dipanggil setiap render.
@@ -94,9 +85,6 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   const draft: P3kMonthData = { items, tanggal, paraf };
   const { lengkap, kurang, kd } = ringkasanDraf(draft);
 
-  /** Rekam yang sedang tampil; `terbit` hanya benar bila rekam ini ada. */
-  const idRekam = rekam?.id ?? null;
-
   const setActual = (id: number, raw: string) => {
     setItems((prev) => {
       const row = prev[id] ?? { actual: '', expired: false };
@@ -114,15 +102,10 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   };
 
   const handleTerbitkan = async () => {
-    setMenerbitkan(true);
-    try {
-      // Gagal simpan = hook sudah mengingatkan (alert Indonesia); modal
-      // tetap terbuka dalam modus sunting, tanpa potret Terbit palsu.
-      await onSave(draft);
-      onClose();
-    } finally {
-      setMenerbitkan(false);
-    }
+    // Gagal simpan = hook sudah mengingatkan (alert Indonesia); modal
+    // tetap terbuka dalam modus sunting.
+    await onSave(draft);
+    onClose();
   };
 
   return (
@@ -132,7 +115,6 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
       header={
         <P3kInspectionHeader
           monthLabel={monthLabel}
-          terbit={terbit}
           lengkap={lengkap}
           kurang={kurang}
           kd={kd}
@@ -153,7 +135,6 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
         lengkap={lengkap}
         kurang={kurang}
         kd={kd}
-        terbit={terbit}
         onUbahActual={setActual}
         onUbahExpired={setExpired}
         onUbahTanggal={setTanggal}
@@ -161,13 +142,9 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
       />
 
       <P3kInspectionFooter
-        adaInspeksi={Boolean(rekam)}
         menghapusBulan={menghapusBulan || menyimpan}
-        terbit={terbit}
-        menerbitkan={menerbitkan || menyimpan}
-        idRekam={idRekam}
+        menyimpan={menyimpan}
         onMintaKonfirmasi={() => setKonfirmasiHapus(true)}
-        onBatalkanTerbit={() => setTerbit(false)}
       />
     </P3kInspectionShell>
   );

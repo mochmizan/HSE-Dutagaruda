@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search } from 'lucide-react';
 import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
 import { P3kInspectionModal } from './P3kInspectionModal';
@@ -9,6 +9,7 @@ import { P3kTabel } from './P3kTabel';
 import { petakanGridP3k } from './petaApi';
 import {
   useKotakP3k,
+  useBuatKotakP3k,
   useInspeksiP3k,
   useSimpanInspeksiP3k,
   useUbahButirP3k,
@@ -69,6 +70,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   const ubahInspeksi = useUbahInspeksiP3k();
   const ubahButir = useUbahButirP3k();
   const hapusInspeksi = useHapusInspeksiP3k();
+  const buatKotak = useBuatKotakP3k();
 
   // Tahun berjalan, bukan tahun yang dipatok: grid tahunan harus membuka tahun
   // ini tanpa perlu diklik dua kali setiap Januari.
@@ -81,6 +83,28 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
 
   // Kotak lokasi aktif (satu kotak per lokasi, sesuai kontrak halaman).
   const kotak = (kotakQuery.data ?? []).find((b) => b.siteId === lokasi.siteId) ?? null;
+
+  // Provisioning otomatis: DB live mulai tanpa box dan seed tidak membuat
+  // satupun, sehingga simpan selalu gagal tanpa ini. Sekali per site,
+  // daftarkan box bernama site aktif. Guard ref supaya StrictMode
+  // (setup → cleanup → setup) tidak double-create; 409/duplikat (API tidak
+  // unique-guard nama) ditelan — daftar kotak dimuat ulang via invalidasi
+  // hook dan simpan tetap dijaga oleh handleSave.
+  const kotakDiusahakan = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!kotakQuery.isSuccess) return;
+    if (kotak) return;
+    const sid = lokasi.siteId;
+    if (!sid) return;
+    if (kotakDiusahakan.current.has(sid)) return;
+    kotakDiusahakan.current.add(sid);
+    void buatKotak.mutateAsync({ siteId: sid, name: lokasi.siteName }).catch(() => {
+      /* duplikat/409 atau gagal jaringan: abaikan, ulangi via muat ulang */
+    });
+  }, [kotakQuery.isSuccess, kotak, lokasi.siteId, lokasi.siteName, buatKotak]);
+
+  // Bulan berjalan (MM): target tombol aksi + CTA status kosong.
+  const bulanBerjalan = String(new Date().getMonth() + 1).padStart(2, '0');
   // Grid tahunan dari API — kosong di awal, terisi saat inspeksi dibuat per bulan.
   const grid: P3kYearGrid = useMemo(
     () => (kotak ? petakanGridP3k([kotak], inspeksiQuery.data ?? [], year)[kotak.id] ?? {} : {}),
@@ -249,6 +273,8 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
       jangkarEkspor={jangkarEkspor}
       namaBerkas={year}
       onCetak={handlePrint}
+      labelTambah="Isi Inspeksi Bulan Berjalan"
+      onTambah={() => setActiveMonth(bulanBerjalan)}
       kepalaCetak={
         <P3kPrintHeader
           siteName={lokasi.siteName}
@@ -320,6 +346,29 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
             </p>
           ) : (
             <P3kTabel grid={grid} year={year} items={barisTampil} onPilihBulan={setActiveMonth} />
+          )}
+
+          <p className="no-print mt-1.5 text-[11px] text-[var(--muted)]">
+            Klik singkatan bulan pada kepala tabel untuk mengisi bulan lain.
+          </p>
+
+          {/* Status kosong: grid masih penuh –, arahkan ke form bulan berjalan. */}
+          {stats.filled === 0 && (
+            <div className="no-print py-8 text-center border border-dashed border-[var(--border)] rounded-[8px] bg-[var(--bg-sidebar)]/50">
+              <p className="font-semibold text-sm text-[var(--primary)] tabular-nums">
+                Belum ada inspeksi tahun {year}
+              </p>
+              <p className="text-xs text-[var(--muted)] mt-1">
+                Isi inspeksi bulan berjalan untuk mulai mencatat kelengkapan kotak P3K.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveMonth(bulanBerjalan)}
+                className="mt-3 px-3 py-1.5 text-xs font-semibold text-white bg-[#2f80ed] hover:bg-[#2b77d4] rounded-[4px] cursor-pointer pressable"
+              >
+                Isi Inspeksi Bulan Berjalan
+              </button>
+            </div>
           )}
 
           <p className="mt-1.5 text-[11px] print:text-[7px] italic text-[var(--secondary)] print:text-black print:mt-0.5">
