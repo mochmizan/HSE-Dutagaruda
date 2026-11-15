@@ -94,7 +94,26 @@ presentasional saja.
 - `hydrant-print` mengunduh PDF A4 via `POST /api/export/hydrant-monthly/
   :refId` (kategori `hydrant-monthly`, bukan `hydrant`) → polling
   `GET /api/pdf-jobs/:id` (terverifikasi live Okt 17: 201 → done +
-  downloadUrl).
+  downloadUrl). Isi kertas: checklist foto per baris (kolom Dokumentasi
+  Pemeriksaan = bukti pertama, Dokumentasi Checklist = temuan pertama/bukti
+  kedua) + Section B temuan; ejaan status "Layak digunakan …" (baku).
+- `hydrant-laporan` (Nov 15): printable kedua, kategori ekspor
+  `hydrant-laporan` (**landscape** A4, satu-satunya hydrant landscape):
+  tombol `Unduh Laporan` di atas tabel Section A (di luar PageHeader supaya
+  urutan Unduh PDF → Cetak kepala tidak berubah) → `POST
+  /api/export/hydrant-laporan/:refId` → polling pdfJobs yang sama. Tanda
+  komponen ✓/X/-, tanggal `dd-Mmm-yy` dari createdAt rekam, petugas
+  `Pengawas K3` (rekam belum punya kolom pemeriksa — sama dengan tabel
+  layar), lokasi `ITJ <SITE>`. Kop kiri/kanan teks (tidak ada aset logo
+  dutagaruda/ITJ terpisah di repo; banner gabungan hanya dipakai kertas 1).
+- `hydrant-print-browser` (Nov 15): `Cetak` merender KEDUA kertas berurutan
+  via `HydrantPrintKertas` (`HydrantPrintChrome.tsx`, `hidden print:block`,
+  jeda halaman; kertas 2 lewat `@page` landscape bernama) dari data live
+  yang sama (unit + inspeksi + foto site+period; bukti per rekam diambil
+  via `ambilFotoInspeksi`). Pembungkus `.hyd-print-area` adalah anak pertama
+  cangkang sehingga aturan `@media print` menyembunyikan semua saudara
+  (krom + tabel layar) saat mencetak — tanpa menyentuh berkas laman/tabel
+  lain.
 - `hydrant-delete-month` → diganti `hydrant-delete-scope` (Okt 18, di atas):
   tidak ada lagi satu tombol `Hapus` yang berganti arti; hapus rekam bulan
   = `Kosongkan bulan ini`, hapus baris = `Hapus unit` (tersedia juga saat

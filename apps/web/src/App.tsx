@@ -282,10 +282,8 @@ function AppIsi() {
         }}
       />
 
-      {/* 6. Agentation Visual Feedback Toolbar */}
-      {(import.meta.env?.DEV || (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development')) && (
-        <Agentation endpoint="http://localhost:4747" />
-      )}
+      {/* 6. Agentation Visual Feedback Toolbar (dev-only; tidak ikut bundel produksi) */}
+      {import.meta.env.DEV && <Agentation endpoint="http://localhost:4747" />}
     </div>
   );
 }

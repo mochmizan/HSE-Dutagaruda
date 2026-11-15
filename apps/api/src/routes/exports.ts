@@ -24,11 +24,13 @@ import { renderPdf } from "../pdf/render.js";
 import {
   aparCard,
   aparMonthly,
+  hydrantLaporan,
   hydrantMonthly,
   patrolReport,
   p3kYearly,
   type AparCardData,
   type AparMonthlyData,
+  type HydrantLaporanData,
   type HydrantMonthlyData,
   type PatrolReportData,
   type P3kYearlyData,
@@ -37,7 +39,7 @@ import { objectExists, presignedGet, putBytes } from "../storage.js";
 import { newId, notFound } from "./helpers.js";
 
 const exportParamSchema = z.object({
-  category: z.enum(["hydrant-monthly", "apar-monthly", "apar-card", "p3k-yearly", "patrol-report"]),
+  category: z.enum(["hydrant-monthly", "hydrant-laporan", "apar-monthly", "apar-card", "p3k-yearly", "patrol-report"]),
   refId: z.string().min(1),
 });
 export type ExportCategory = z.infer<typeof exportParamSchema>["category"];
@@ -53,7 +55,8 @@ async function presignedPhotoRows(s3Keys: { s3Key: string; caption: string | nul
   );
 }
 
-async function loadHydrantMonthly(refId: string, owned: string): Promise<HydrantMonthlyData> {
+/** Cakupan satu bulan: semua rekam site+period yang ditambatkan refId. */
+async function hydrantScope(refId: string, owned: string) {
   const anchor = await db
     .select({ period: hydrantInspections.period, siteId: hydrantUnits.siteId, siteName: sites.name })
     .from(hydrantInspections)
@@ -76,6 +79,7 @@ async function loadHydrantMonthly(refId: string, owned: string): Promise<Hydrant
       valvePillar: hydrantInspections.valvePillar,
       overallStatus: hydrantInspections.overallStatus,
       notes: hydrantInspections.notes,
+      createdAt: hydrantInspections.createdAt,
     })
     .from(hydrantInspections)
     .innerJoin(hydrantUnits, eq(hydrantInspections.unitId, hydrantUnits.id))
@@ -88,27 +92,74 @@ async function loadHydrantMonthly(refId: string, owned: string): Promise<Hydrant
       ),
     )
     .orderBy(asc(hydrantUnits.sortOrder), asc(hydrantUnits.kode));
-  const photoRows = rows.length
+  return { siteName: a.siteName, periodKey: toPeriodKey(a.period), rows };
+}
+
+async function loadHydrantMonthly(refId: string, owned: string): Promise<HydrantMonthlyData> {
+  const scope = await hydrantScope(refId, owned);
+  // Kertas checklist butuh foto per baris (kolom Dokumentasi Pemeriksaan /
+  // Checklist), bukan hanya Section B. Diambil sekaligus lalu dipilah per
+  // rekam; presign tetap paralel (satu round trip Garage per foto).
+  const photoRows = scope.rows.length
     ? await db
-        .select({ s3Key: photos.s3Key, caption: photos.caption })
+        .select({
+          inspectionId: photos.hydrantInspectionId,
+          s3Key: photos.s3Key,
+          caption: photos.caption,
+          temuan: photos.temuan,
+        })
         .from(photos)
         .where(
           and(
-            inArray(photos.hydrantInspectionId, rows.map((r) => r.inspectionId)),
-            // Section B adalah "Catatan Hasil Temuan". Foto bukti fisik
-            // (`temuan = false`) punya tempatnya sendiri di formulir, bukan di
-            // sini; tanpa filter ini satu foto 3,7 MB ikut tercetak dan PDF
-            // satu halaman membengkak jadi 4,3 MB.
-            eq(photos.temuan, true),
+            eq(photos.companyId, owned),
+            inArray(photos.hydrantInspectionId, scope.rows.map((r) => r.inspectionId)),
           ),
         )
+        .orderBy(asc(photos.createdAt))
     : [];
+  const withSrc = await Promise.all(
+    photoRows.map(async (p) => ({
+      inspectionId: p.inspectionId as string,
+      caption: p.caption ?? "Foto temuan",
+      temuan: p.temuan,
+      src: (await objectExists(p.s3Key)) ? await presignedGet(p.s3Key, 60, "internal") : null,
+    })),
+  );
+  const perRow = new Map<string, typeof withSrc>();
+  for (const p of withSrc) {
+    const list = perRow.get(p.inspectionId) ?? [];
+    list.push(p);
+    perRow.set(p.inspectionId, list);
+  }
   return {
-    siteName: a.siteName,
-    periodKey: toPeriodKey(a.period),
-    rows: rows.map((r) => ({
+    siteName: scope.siteName,
+    periodKey: scope.periodKey,
+    rows: scope.rows.map((r) => {
+      const semua = perRow.get(r.inspectionId) ?? [];
+      const bukti = semua.filter((p) => !p.temuan);
+      const temuan = semua.filter((p) => p.temuan);
+      return {
+        kode: r.kode,
+        zoneName: r.zoneName,
+        overallStatus: r.overallStatus,
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        buktiSrc: bukti[0]?.src ?? null,
+        checklistSrc: temuan[0]?.src ?? bukti[1]?.src ?? null,
+      };
+    }),
+    // Section B tetap hanya foto temuan (`temuan = true`); bukti fisik punya
+    // tempatnya sendiri di kolom tabel, bukan di sini.
+    photos: withSrc.filter((p) => p.temuan),
+  };
+}
+
+async function loadHydrantLaporan(refId: string, owned: string): Promise<HydrantLaporanData> {
+  const scope = await hydrantScope(refId, owned);
+  return {
+    siteName: scope.siteName,
+    periodKey: scope.periodKey,
+    rows: scope.rows.map((r) => ({
       kode: r.kode,
-      zoneName: r.zoneName,
       components: {
         boxHydrant: r.boxHydrant,
         fireHose: r.fireHose,
@@ -117,10 +168,9 @@ async function loadHydrantMonthly(refId: string, owned: string): Promise<Hydrant
         nozzle: r.nozzle,
         valvePillar: r.valvePillar,
       },
-      overallStatus: r.overallStatus,
+      createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
       notes: r.notes,
     })),
-    photos: await presignedPhotoRows(photoRows),
   };
 }
 
@@ -334,6 +384,10 @@ const CATEGORY_DEFS: Record<
   "hydrant-monthly": {
     landscape: false,
     run: (refId, owned) => loadHydrantMonthly(refId, owned).then(hydrantMonthly),
+  },
+  "hydrant-laporan": {
+    landscape: true,
+    run: (refId, owned) => loadHydrantLaporan(refId, owned).then(hydrantLaporan),
   },
   "apar-monthly": {
     landscape: false,

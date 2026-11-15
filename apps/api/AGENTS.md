@@ -155,10 +155,10 @@ PDF storage, and Gotenberg PDF rendering.
   `hc<AppType>` typing: check.ts calls `hc<AppType>(BASE).api.sites.$get`,
   which fails tsc if any sub-app loses its chained registration.
 - PDF orientation proof: portrait MediaBox ≈ 595×842 pt, landscape ≈ 842×595 pt.
-- Unit tests: `bun run test` from the repo root (109 tests). Covers
+- Unit tests: `bun run test` from the repo root (113 tests). Covers
   `packages/shared/src/status.ts` + `dates.ts`, `apps/web/src/lib/aparSync.ts` +
   `dates.ts`, `apps/web/src/features/peta/petaTeks.test.ts` (size formatting),
-  and the PDF template builders (`templates.test.ts`).
+  and the PDF template builders (`templates.test.ts`, incl. the hydrantLaporan suite).
 - PDF size/page proof: `bun scripts/bench/pdf.ts` renders all categories and
   `bun scripts/bench/cek-pdf.ts <file>` prints page count. Hydrant monthly must
   stay far below 100 KB (4,3 MB means the `temuan` photo filter regressed) and

@@ -37,7 +37,8 @@ export function gagal(err: unknown): string {
 // ── Ekspor PDF ──
 
 export const KATEGORI_EKSPOR_LABEL: Record<k.KategoriEkspor, string> = {
-  'hydrant-monthly': 'Laporan Bulanan Hydrant',
+  'hydrant-monthly': 'Checklist Bulanan Hydrant',
+  'hydrant-laporan': 'Laporan Pemeriksaan Hydrant',
   'apar-monthly': 'Laporan Bulanan APAR',
   'apar-card': 'Kartu Tahunan APAR',
   'p3k-yearly': 'Laporan Tahunan P3K',

@@ -13,7 +13,7 @@ No code until the owner approves the spec.
   three: `@viaannn/shared` → `@viaannn/api` → `@viaannn/web`. The web package
   used to be named `preview`, which made the root build skip it entirely and
   ship stale bundles; do not rename it back.
-- `bun run test` runs the unit suite (109 tests). `bun run doctor` runs the
+- `bun run test` runs the unit suite (113 tests). `bun run doctor` runs the
   pre-flight. The live integration gate is
   `docker compose -f infra/docker-compose.yml exec -T -e CHECK_BASE=http://caddy:80 api bun run src/check.ts`
   (expect 72/72).

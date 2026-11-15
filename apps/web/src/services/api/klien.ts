@@ -536,6 +536,7 @@ export const hapusPeta = (id: string) => liveDelete<{ ok: boolean }>(`/project-m
 
 export type KategoriEkspor =
   | 'hydrant-monthly'
+  | 'hydrant-laporan'
   | 'apar-monthly'
   | 'apar-card'
   | 'p3k-yearly'

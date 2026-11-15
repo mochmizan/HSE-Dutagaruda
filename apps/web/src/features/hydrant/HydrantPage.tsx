@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Flame } from 'lucide-react';
 import { format } from 'date-fns';
-import { id as idLocale } from 'date-fns/locale';
 import { HydrantUnitItem, InspectionReport } from '../../types/hse';
 import { HydrantInspectionModal } from './HydrantInspectionModal';
 import { HydrantTable } from './HydrantTable';
 import { HydrantCards } from './HydrantCards';
 import { HydrantFindings } from './HydrantFindings';
-import { HydrantPrintHeader, HydrantPrintSignatures } from './HydrantPrintChrome';
+import { HydrantPrintKertas, HydrantPrintSignatures } from './HydrantPrintChrome';
 import { HydrantStats } from './HydrantStats';
 import { FilterBar } from '@/features/pageChrome';
+import { UnduhPdfButton } from '@/components/ui';
 import { EmptyUnits, InspectionPageShell, KONFIG_HYDRANT } from '@/features/inspeksi';
 import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
 import { AddFindingModal } from './AddFindingModal';
@@ -96,12 +96,11 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     const kini = new Date();
     setSelectedMonth(new Date(kini.getFullYear(), kini.getMonth(), 1));
   };
-  const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: idLocale });
+  const period = format(selectedMonth, 'yyyy-MM');
   const isCurrentMonth = (() => {
     const kini = new Date();
     return selectedMonth.getFullYear() === kini.getFullYear() && selectedMonth.getMonth() === kini.getMonth();
   })();
-  const period = format(selectedMonth, 'yyyy-MM');
 
   const inspeksiAktif: ApiInspeksiHidran | null = activeInspectionUnit
     ? inspeksiSite.find(
@@ -390,7 +389,17 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
       jangkarEkspor={jangkarEkspor}
       namaBerkas={period}
       onCetak={handlePrint}
-      kepalaCetak={<HydrantPrintHeader siteName={lokasi.siteName} monthLabel={monthLabel} />}
+      kepalaCetak={
+        <div className="hyd-print-area">
+          <HydrantPrintKertas
+            siteName={lokasi.siteName}
+            period={period}
+            units={units}
+            inspeksi={inspeksiSite}
+            findings={findings}
+          />
+        </div>
+      }
       statistik={
         <HydrantStats
           totalUnits={totalUnits}
@@ -416,10 +425,22 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
       }
       isi={
         <div className="space-y-3 pb-8 flex-1">
-          <div className="hidden print:block mb-2">
-            <h2 className="text-xs font-bold text-black uppercase tracking-wider">
-              A. Hasil Pemeriksaan Fisik Unit Hydrant
-            </h2>
+          <div className="flex items-center justify-between gap-2">
+            <div className="hidden print:block mb-2">
+              <h2 className="text-xs font-bold text-black uppercase tracking-wider">
+                A. Hasil Pemeriksaan Fisik Unit Hydrant
+              </h2>
+            </div>
+            {/* Affordance kedua: laporan rincian komponen (landscape). Di luar
+              PageHeader supaya urutan Unduh PDF → Cetak kepala tidak berubah. */}
+            <div className="no-print ml-auto">
+              <UnduhPdfButton
+                category="hydrant-laporan"
+                refId={jangkarEkspor}
+                label="Unduh Laporan"
+                namaBerkas={period}
+              />
+            </div>
           </div>
           {filteredUnits.length === 0 ? (
             <EmptyUnits

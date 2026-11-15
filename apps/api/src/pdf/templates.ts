@@ -1,5 +1,6 @@
 import { formatIndonesianDate, formatIndonesianMonthYear } from "@viaannn/shared";
 import { INTER_400_B64, INTER_700_B64 } from "./fonts.js";
+import { KOP_BANNER_B64, KOP_BANNER_MIME } from "./logos.js";
 
 export function esc(value: string): string {
   return value
@@ -87,6 +88,23 @@ td.note { font-style:italic; text-align:left; }
 .catatan-label { margin:0 0 6px 0; font-weight:700; font-size:8pt; }
 .catatan-lines { display:flex; flex-direction:column; gap:16px; }
 .catatan-lines span { display:block; border-bottom:1px dotted #9ca3af; height:0; }
+/* Kertas hydrant: kop banner + judul tengah + tabel foto + kop tiga kolom. */
+.hyd-kop { display:block; width:100%; max-height:64px; object-fit:contain; margin-bottom:6px; }
+.hyd-judul { text-align:center; margin:6px 0 8px 0; }
+.hyd-judul h1 { font-size:14pt; font-weight:700; margin:0; letter-spacing:0.02em; }
+.hyd-judul p { font-size:10pt; font-weight:700; margin:2px 0 0 0; }
+.hyd-meta { font-size:9pt; margin:2px 0; }
+table.hyd-tabel td.hyd-foto { width:118px; height:62px; padding:2px; }
+table.hyd-tabel td.hyd-foto img { max-width:114px; max-height:58px; object-fit:contain; }
+.hyd-kop-tiga { display:table; width:100%; margin-bottom:6px; }
+.hyd-kop-tiga > div { display:table-cell; vertical-align:middle; }
+.hyd-kop-kiri { width:28%; font-size:8pt; font-weight:700; color:#0f766e; }
+.hyd-kop-tengah { width:44%; text-align:center; font-size:12pt; font-weight:700; }
+.hyd-kop-kanan { width:28%; text-align:right; font-size:7.5pt; font-weight:700; color:#1e3a8a; }
+table.hyd-lap { table-layout:fixed; font-size:6.5pt; }
+table.hyd-lap th, table.hyd-lap td { padding:2px 1px; line-height:1.25; }
+table.hyd-lap th { font-size:6pt; }
+.hyd-tanda { font-weight:700; font-size:8.5pt; }
 </style>
 </head>
 <body>
@@ -149,27 +167,90 @@ export interface HydrantPhotoView {
   caption: string;
 }
 
+const BULAN_PANJANG = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+const BULAN_PENDEK = [
+  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+];
+
+/** "2026-09-18T.." -> "18-Sep-26", gaya kolom Tanggal Pemeriksaan di kertas. */
+export function formatTanggalSingkat(iso: string): string {
+  const m = iso.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  const bulan = BULAN_PENDEK[Number(m[2]) - 1] ?? "";
+  return `${Number(m[3])}-${bulan}-${m[1].slice(2)}`;
+}
+
+/** Tanggal-tanggal unik gaya kertas: "16 dan 18 September 2026",
+ *  tiga sparsity "16, 17 dan 18 September 2026". */
+export function formatDaftarTanggal(isoList: string[], periodKey: string): string {
+  const hari = [
+    ...new Set(
+      isoList
+        .map((s) => {
+          const m = s.match(/\d{4}-\d{2}-(\d{2})/);
+          return m ? Number(m[1]) : NaN;
+        })
+        .filter((n) => Number.isFinite(n)),
+    ),
+  ].sort((a, b) => a - b);
+  const pm = periodKey.match(/(\d{4})-(\d{2})/);
+  const label = pm ? `${BULAN_PANJANG[Number(pm[2]) - 1] ?? ""} ${pm[1]}` : "";
+  if (hari.length === 0) return label;
+  if (hari.length === 1) return `${hari[0]} ${label}`.trim();
+  return `${hari.slice(0, -1).join(", ")} dan ${hari[hari.length - 1]} ${label}`.trim();
+}
+
+/** Status akhir -> kalimat kolom Status Penggunaan (ejaan K3 baku). */
+export function statusPenggunaan(status: Status): string {
+  if (status === "LAYAK") return "Layak digunakan";
+  if (status === "LAYAK_DENGAN_CATATAN") return "Layak digunakan dengan catatan";
+  return "Tidak layak digunakan";
+}
+
+/** Banner kop JPM Dukuh Atas (kiri JPM, kanan W realty / TOWER BERSAMA GROUP /
+ *  cityvision / INTEGRASI TRANSIT JAKARTA), embed data URL. */
+function kopBanner(): string {
+  return `<img class="hyd-kop" src="data:${KOP_BANNER_MIME};base64,${KOP_BANNER_B64}" alt="JPM Dukuh Atas">`;
+}
+
+function selFoto(src: string | null): string {
+  return src ? `<img src="${esc(src)}" alt="Dokumentasi hydrant">` : "";
+}
+
 export interface HydrantMonthlyData {
   siteName: string;
   periodKey: string;
   rows: {
     kode: string;
     zoneName: string;
-    components: Record<string, Status>;
     overallStatus: Status;
-    notes: string | null;
+    /** ISO createdAt rekam — sumber baris Tanggal. */
+    createdAt: string;
+    /** Kolom Dokumentasi Pemeriksaan: foto bukti pertama unit. */
+    buktiSrc: string | null;
+    /** Kolom Dokumentasi Checklist: temuan pertama, bila tidak ada bukti kedua. */
+    checklistSrc: string | null;
   }[];
   photos: HydrantPhotoView[];
 }
 
 export function hydrantMonthly(data: HydrantMonthlyData): string {
+  const periode = formatIndonesianMonthYear(`${data.periodKey}-01`);
+  const tanggal = formatDaftarTanggal(
+    data.rows.map((r) => r.createdAt),
+    data.periodKey,
+  );
   const rows = data.rows
     .map(
       (r, i) => `<tr>
-  <td class="num">${i + 1}</td><td class="left"><strong>${esc(r.kode)}</strong></td><td class="left">${esc(r.zoneName)}</td>
-  <td>${HYD_COMPONENTS.map(([k, label]) => chip(label, r.components[k] ?? "")).join("")}</td>
-  <td>${overallBadge(r.overallStatus)}</td>
-  <td class="note">${esc(r.notes ?? "–")}</td>
+  <td class="num">${i + 1}</td><td class="left">${esc(r.zoneName)}</td><td class="left"><strong>${esc(r.kode)}</strong></td>
+  <td class="hyd-foto">${selFoto(r.buktiSrc)}</td>
+  <td class="hyd-foto">${selFoto(r.checklistSrc)}</td>
+  <td class="left">${esc(statusPenggunaan(r.overallStatus))}</td>
 </tr>`,
     )
     .join("\n");
@@ -186,26 +267,93 @@ export function hydrantMonthly(data: HydrantMonthlyData): string {
       ? `<p class="empty">Tidak ada foto temuan pada periode ini.</p>`
       : `<table class="fgrid">${chunkCells(photoCells, 2)}</table>`;
   return shell({
-    title: `Laporan Hydrant ${data.periodKey}`,
-    body: `${head(
-      "LEMBAR LAPORAN PEMERIKSAAN BERKALA HYDRANT GEDUNG",
-      "Sesuai Standar K3, NFPA 25 & Permenakertrans No. 04/MEN/1980",
-      [
-        metaRow("Lokasi Fasilitas", esc(data.siteName)),
-        metaRow("Periode Inspeksi", `<span class="num">${esc(formatIndonesianMonthYear(`${data.periodKey}-01`))} (${esc(data.periodKey)})</span>`),
-        metaRow("Tanggal Cetak", `<span class="num">${esc(formatIndonesianDate(new Date()))}</span>`),
-      ],
-    )}
-<h2 class="sec">A. Hasil Pemeriksaan Fisik Unit Hydrant</h2>
-<table class="grid">
-  <thead><tr><th style="width:26px">No.</th><th style="width:70px">Kode Unit</th><th style="width:110px">Lokasi &amp; Zona</th><th>Verifikasi 6 Komponen</th><th style="width:80px">Status Kelayakan</th><th style="width:150px">Catatan / Temuan</th></tr></thead>
+    title: `Checklist Bulanan Hydrant ${data.periodKey}`,
+    body: `${kopBanner()}
+<div class="hyd-judul"><h1>CHECKLIST BULANAN HYDRANT</h1><p>${esc(data.siteName.toUpperCase() || "-")}</p></div>
+<p class="hyd-meta"><strong>Periode : ${esc(periode)}</strong></p>
+<p class="hyd-meta"><strong>Tanggal : ${esc(tanggal)}</strong></p>
+<h2 class="sec">A. Laporan hasil Inspeksi Hydrant</h2>
+<table class="grid hyd-tabel">
+  <thead><tr><th style="width:26px">No</th><th style="width:110px">Zona</th><th style="width:80px">Kode Hydrant</th><th>Dokumentasi Pemeriksaan</th><th>Dokumentasi Checklist</th><th style="width:120px">Status Penggunaan</th></tr></thead>
   <tbody>${rows}</tbody>
 </table>
 <section>
-  <h2 class="sec">B. Catatan Hasil Temuan</h2>
+  <h2 class="sec">B. Catatan Hasil temuan</h2>
   ${photoGrid}
 </section>
-${signatures()}
+<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · ${data.rows.length} unit</p>`,
+  });
+}
+
+export interface HydrantLaporanData {
+  siteName: string;
+  periodKey: string;
+  rows: {
+    kode: string;
+    components: Record<string, Status>;
+    /** ISO createdAt rekam — kolom Tanggal Pemeriksaan. */
+    createdAt: string;
+    notes: string | null;
+  }[];
+}
+
+/** Nama petugas: belum ada kolom pemeriksa di rekam, jadi memakai nilai yang
+ *  sama dengan tabel layar (`Pengawas K3`). */
+export const PETUGAS_HYDRANT = "Pengawas K3";
+
+const HYD_LAPORAN_COMPONENTS = [
+  ["boxHydrant", "Box Hydrant"],
+  ["fireHose", "Fire Hose"],
+  ["hoseCoupling", "Hose Coupling"],
+  ["hoseRack", "Hose Rack"],
+  ["nozzle", "Nozzle"],
+  ["valvePillar", "Valve / Pillar Hydrant"],
+] as const;
+
+/** Tanda kertas laporan: LAYAK -> ✓ di Standar; TIDAK_LAYAK -> X di Dibawah
+ *  Standar; HILANG -> - di Dibawah Standar (legenda kertas: Hilang (-)). */
+function tandaLaporan(status: Status | undefined, kolom: "standar" | "bawah"): string {
+  if (kolom === "standar") return status === "LAYAK" ? "✓" : "";
+  if (status === "TIDAK_LAYAK") return "X";
+  if (status === "HILANG") return "-";
+  return "";
+}
+
+export function hydrantLaporan(data: HydrantLaporanData): string {
+  const pm = data.periodKey.match(/(\d{4})-(\d{2})/);
+  const tahun = pm ? pm[1] : data.periodKey;
+  const bulan = pm ? BULAN_PANJANG[Number(pm[2]) - 1] ?? "" : "";
+  const baris = data.rows
+    .map(
+      (r, i) =>
+        `<tr><td class="num">${i + 1}</td><td class="left"><strong>${esc(r.kode)}</strong></td>` +
+        HYD_LAPORAN_COMPONENTS.map(
+          ([k]) =>
+            `<td class="hyd-tanda">${tandaLaporan(r.components[k], "standar")}</td>` +
+            `<td class="hyd-tanda">${tandaLaporan(r.components[k], "bawah")}</td>`,
+        ).join("") +
+        `<td class="num">${esc(formatTanggalSingkat(r.createdAt))}</td>` +
+        `<td class="left">${esc(PETUGAS_HYDRANT)}</td>` +
+        `<td class="note">${esc(r.notes ?? "–")}</td></tr>`,
+    )
+    .join("\n");
+  return shell({
+    title: `Laporan Pemeriksaan Hydrant ${data.periodKey}`,
+    landscape: true,
+    body: `<div class="hyd-kop-tiga"><div class="hyd-kop-kiri">dutagaruda<br>piranti prima</div><div class="hyd-kop-tengah">LAPORAN PEMERIKSAAN HYDRANT</div><div class="hyd-kop-kanan">INTEGRASI TRANSIT JAKARTA</div></div>
+<dl class="meta">
+<div><dt>Tahun Pemeriksaan</dt><dd><span class="num">${esc(tahun)}</span> | <strong>Bulan :</strong> ${esc(bulan)}</dd></div>
+<div><dt>Lokasi Pemeriksaan</dt><dd>ITJ ${esc(data.siteName.toUpperCase() || "-")}</dd></div>
+<div><dt>Keterangan</dt><dd>Layak Digunakan (✓), Tidak Layak Digunakan (X), Hilang (-)</dd></div>
+</dl>
+<table class="grid hyd-lap">
+  <thead>
+    <tr><th rowspan="2" style="width:24px">No</th><th rowspan="2" style="width:64px">Kode Hydrant</th><th colspan="12">Item Alat</th><th rowspan="2" style="width:62px">Tanggal Pemeriksaan</th><th rowspan="2" style="width:70px">Petugas Pemeriksa</th><th rowspan="2">Keterangan</th></tr>
+    <tr>${HYD_LAPORAN_COMPONENTS.map(([, label]) => `<th colspan="2">${esc(label)}</th>`).join("")}</tr>
+    <tr><th></th><th></th>${HYD_LAPORAN_COMPONENTS.map(() => `<th>Standar</th><th>Dibawah Standar</th>`).join("")}<th></th><th></th><th></th></tr>
+  </thead>
+  <tbody>${baris}</tbody>
+</table>
 <p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · ${data.rows.length} unit</p>`,
   });
 }
