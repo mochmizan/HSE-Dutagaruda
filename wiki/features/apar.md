@@ -97,6 +97,15 @@ kepala cetak + tanda tangan statis 3 kolom, modals.
   + Section B + Section C (rekap, `break-before-page` → hal. 2) + Section D
   (kartu tahunan) + tanda tangan statis 3 kolom (`AparPrintSignatures`);
   `no-print` pada toolbar/stats/toggle kartu dan kontrol cip/tahun/cetak-kartu.
+- apar-kertas-pdf: `aparMonthly()` di `apps/api/src/pdf/templates.ts`
+  mengikuti kertas bulanan milik owner (kop banner JPM + kotak judul tengah
+  `CHECKLIST BULANAN APAR` + tabel checklist tata-letak tetap tinta hitam +
+  ringkasan `Kadaluwarsa APAR` No/Periode/Total/No APAR yang dikelompokkan
+  prosedural per tanggal kedaluwarsa dengan gabung Indonesia
+  `formatDaftarKode`, hal. 2 = kedaluwarsa + `Catatan :` bergaris +
+  tanda tangan 3 kolom, potret 2 halaman). Data hanya dari muatan loader
+  `loadAparMonthly` (nama penandatangan + foto per unit tidak ada di payload
+  sehingga tidak dirender — bukan diada-ada).
 - Aksen biru `#2f80ed` seragam untuk aksi utama (tambah, `Terbitkan`,
   kartu `Mulai`/`Lanjutkan`); aksen `#f2994a` untuk ikon judul + tombol
   `Tambah Temuan`. Tab aktif pil putih tipis seragam; badge jumlah tab

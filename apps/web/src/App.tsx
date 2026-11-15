@@ -12,7 +12,27 @@ import { useUmpan, petakanUmpanKeLaporan, useUnitHidran, useUnitApar, useKotakP3
 import { InspectionCategory, InspectionReport } from '@/types';
 import { Agentation } from 'agentation';
 
-type AppView = 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol';
+type AppView = 'dashboard' | 'hydrant' | 'hydrant-cetak' | 'apar' | 'p3k' | 'patrol';
+
+/** Deep-link pratinjau cetak: `?cetak=hydrant` (+ opsional `?bulan=YYYY-MM`). */
+function bacaCetakAwal(): AppView {
+  try {
+    return new URLSearchParams(window.location.search).get('cetak') === 'hydrant'
+      ? 'hydrant-cetak'
+      : 'dashboard';
+  } catch {
+    return 'dashboard';
+  }
+}
+
+function bacaBulanCetak(): string | undefined {
+  try {
+    const b = new URLSearchParams(window.location.search).get('bulan');
+    return /^\d{4}-\d{2}$/.test(b ?? '') ? (b as string) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const hariIni = () => new Date();
 
@@ -27,6 +47,9 @@ function HalamanMemuat() {
 
 // Halaman fitur dipecah per chunk agar bundel utama tetap di bawah batas.
 const HydrantPage = lazy(() => import('@/features/hydrant').then((m) => ({ default: m.HydrantPage })));
+const HydrantPrintPreview = lazy(() =>
+  import('@/features/hydrant').then((m) => ({ default: m.HydrantPrintPreview }))
+);
 const AparPage = lazy(() => import('@/features/apar').then((m) => ({ default: m.AparPage })));
 const P3kPage = lazy(() => import('@/features/p3k').then((m) => ({ default: m.P3kPage })));
 const PatrolPage = lazy(() => import('@/features/patrol').then((m) => ({ default: m.PatrolPage })));
@@ -40,7 +63,8 @@ function AppIsi() {
   const dipulihkan = useRef<string | null>(null);
   const pulihkanRef = useRef(pulihkanProyek.mutate);
   pulihkanRef.current = pulihkanProyek.mutate;
-  const [currentView, setCurrentView] = useState<AppView>('dashboard');
+  const [currentView, setCurrentView] = useState<AppView>(bacaCetakAwal);
+  const [bulanCetak] = useState<string | undefined>(bacaBulanCetak);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const toggleCollapsed = () => setIsCollapsed((v) => !v);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -170,7 +194,7 @@ function AppIsi() {
         onSelectCategoryFilter={setActiveCategoryFilter}
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
-        currentView={currentView}
+        currentView={currentView === 'hydrant-cetak' ? 'hydrant' : currentView}
         onNavigateView={setCurrentView}
         namaPengguna={sesi.data.nama}
         onKeluar={() => keluar.mutate()}
@@ -231,6 +255,22 @@ function AppIsi() {
             sedangMemuat={umpan.isFetching}
           />
         </>
+      ) : currentView === 'hydrant-cetak' ? (
+        <Suspense fallback={<HalamanMemuat />}>
+          <HydrantPrintPreview
+            bulan={bulanCetak}
+            onKembali={() => {
+              try {
+                const u = new URL(window.location.href);
+                u.searchParams.delete('cetak');
+                window.history.replaceState(null, '', u.toString());
+              } catch {
+                /* abaikan */
+              }
+              setCurrentView('hydrant');
+            }}
+          />
+        </Suspense>
       ) : currentView === 'hydrant' ? (
         <Suspense fallback={<HalamanMemuat />}>
           <HydrantPage

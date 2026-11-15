@@ -433,7 +433,14 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             </div>
             {/* Affordance kedua: laporan rincian komponen (landscape). Di luar
               PageHeader supaya urutan Unduh PDF → Cetak kepala tidak berubah. */}
-            <div className="no-print ml-auto">
+            <div className="no-print ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.open(`?cetak=hydrant&bulan=${period}`, '_blank', 'noopener')}
+                className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
+              >
+                Pratinjau Cetak
+              </button>
               <UnduhPdfButton
                 category="hydrant-laporan"
                 refId={jangkarEkspor}

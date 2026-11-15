@@ -4,6 +4,7 @@ import {
   aparMonthly,
   esc,
   formatDaftarTanggal,
+  formatDaftarKode,
   formatTanggalSingkat,
   hydrantLaporan,
   hydrantMonthly,
@@ -149,22 +150,73 @@ describe("aparMonthly", () => {
         notes: null,
       },
     ],
-    expiring: [],
+    expiring: [
+      { kode: "APAR 3", jenis: "POWDER", ukuran: "6 KG", expiredDate: "2028-02-22" },
+      { kode: "APAR 1", jenis: "POWDER", ukuran: "6 KG", expiredDate: "2027-01-22" },
+      { kode: "APAR 2", jenis: "CO2", ukuran: "3 KG", expiredDate: "2027-01-22" },
+    ],
   };
 
-  test("breaks the sheet into two pages after the component table", () => {
-    const html = aparMonthly({ ...data, rows: [...data.rows] });
+  test("renders the paper shell: kop banner, title box, period and print date", () => {
+    const html = aparMonthly({ ...data, rows: [...data.rows], expiring: [...data.expiring] });
+    expect(html).toContain('class="hyd-kop"');
+    expect(html).toContain("CHECKLIST BULANAN APAR");
+    expect(html).toContain("GEDUNG UTAMA");
+    expect(html).toContain("September 2026");
+    expect(html).toContain("Tanggal Cetak :");
+    expect(html).toContain("Verifikasi 7 Komponen");
+    expect(html).toContain("Safety Pin");
+    expect(html).toContain("LAYAK");
+    expect(html).toContain('id="pdf-ready"');
+  });
+
+  test("keeps expiry + notes + signatures on page two", () => {
+    const html = aparMonthly({ ...data, rows: [...data.rows], expiring: [...data.expiring] });
     expect(html).toContain('<div class="page-break"></div>');
     // Bagian B dan C harus berada sesudah pemisah halaman, bukan di halaman 1.
     const pisah = html.indexOf('<div class="page-break"></div>');
     expect(html.indexOf("B. Kadaluwarsa APAR")).toBeGreaterThan(pisah);
     expect(html.indexOf("C. Catatan Tambahan")).toBeGreaterThan(pisah);
+    expect(html.indexOf("Dibuat Oleh")).toBeGreaterThan(pisah);
   });
 
   test("leaves a ruled block for handwritten notes", () => {
-    const html = aparMonthly({ ...data, rows: [...data.rows] });
+    const html = aparMonthly({ ...data, rows: [...data.rows], expiring: [...data.expiring] });
     expect(html).toContain("Catatan :");
     expect(html).toContain("catatan-manual");
+  });
+
+  test("groups expiry procedurally: chronological with Indonesian joins", () => {
+    const html = aparMonthly({ ...data, rows: [...data.rows], expiring: [...data.expiring] });
+    expect(html).toContain("Periode Kadaluwarsa");
+    expect(html).toContain("Total APAR");
+    expect(html).toContain("No APAR");
+    expect(html).toContain("22 Januari 2027");
+    expect(html).toContain("APAR 1 dan APAR 2");
+    // Kelompok terawal tercetak dulu walau masukan tak berurutan.
+    expect(html.indexOf("22 Januari 2027")).toBeLessThan(html.indexOf("22 Februari 2028"));
+  });
+
+  test("states that no units are near expiry when the list is empty", () => {
+    const html = aparMonthly({ ...data, rows: [...data.rows], expiring: [] });
+    expect(html).toContain("Tidak ada unit APAR yang mendekati kedaluwarsa.");
+  });
+
+  test("never emits a raw script tag from unit text", () => {
+    const html = aparMonthly({
+      ...data,
+      siteName: `<script>alert(1)</script>`,
+      rows: [...data.rows],
+      expiring: [...data.expiring],
+    });
+    expect(html).not.toContain("<script>alert(1)</script>");
+  });
+
+  test("formats the paper kode list with Indonesian joins", () => {
+    expect(formatDaftarKode([])).toBe("–");
+    expect(formatDaftarKode(["APAR 1"])).toBe("APAR 1");
+    expect(formatDaftarKode(["APAR 1", "APAR 14"])).toBe("APAR 1 dan APAR 14");
+    expect(formatDaftarKode(["APAR 1", "APAR 2", "APAR 3"])).toBe("APAR 1, APAR 2, dan APAR 3");
   });
 });
 

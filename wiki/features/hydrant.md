@@ -106,6 +106,12 @@ presentasional saja.
   `Pengawas K3` (rekam belum punya kolom pemeriksa — sama dengan tabel
   layar), lokasi `ITJ <SITE>`. Kop kiri/kanan teks (tidak ada aset logo
   dutagaruda/ITJ terpisah di repo; banner gabungan hanya dipakai kertas 1).
+- `hydrant-print-preview` (Nov 15): rute pratinjau `?cetak=hydrant&bulan=YYYY-MM`
+  (view `hydrant-cetak`, hard-reloadable) merender kedua kertas lewat komponen
+  yang SAMA (`HydrantPrintKertas` + `selaluTampil`, tanda tangan ikut) dari
+  query live yang sama dengan laman; tombol `Pratinjau Cetak` di atas tabel
+  Section A membuka tab baru, tombol `Cetak / Simpan PDF` memanggil
+  `window.print()`; kertas terang (putih/hitam) walau mode gelap.
 - `hydrant-print-browser` (Nov 15): `Cetak` merender KEDUA kertas berurutan
   via `HydrantPrintKertas` (`HydrantPrintChrome.tsx`, `hidden print:block`,
   jeda halaman; kertas 2 lewat `@page` landscape bernama) dari data live

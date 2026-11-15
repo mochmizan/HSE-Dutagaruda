@@ -105,6 +105,13 @@ table.hyd-lap { table-layout:fixed; font-size:6.5pt; }
 table.hyd-lap th, table.hyd-lap td { padding:2px 1px; line-height:1.25; }
 table.hyd-lap th { font-size:6pt; }
 .hyd-tanda { font-weight:700; font-size:8.5pt; }
+/* Kertas APAR: kotak judul tengah + tabel tinta hitam tata-letak tetap. */
+.apar-box { border:1px solid #111827; border-bottom:none; text-align:center; padding:6px 14px 8px; }
+.apar-box h1 { font-size:14pt; font-weight:700; margin:0; letter-spacing:0.02em; }
+.apar-box h2 { font-size:10.5pt; font-weight:700; margin:2px 0 6px 0; }
+.apar-box .apar-meta { display:flex; justify-content:space-between; gap:8px; padding:0 20px; font-size:9pt; font-weight:500; }
+table.apar { table-layout:fixed; border:1px solid #111827; }
+table.apar th, table.apar td { border:1px solid #111827; }
 </style>
 </head>
 <body>
@@ -209,6 +216,15 @@ export function statusPenggunaan(status: Status): string {
   if (status === "LAYAK") return "Layak digunakan";
   if (status === "LAYAK_DENGAN_CATATAN") return "Layak digunakan dengan catatan";
   return "Tidak layak digunakan";
+}
+
+/** Daftar kode gaya kertas: "APAR 1", "APAR 1 dan APAR 2",
+ *  tiga sparsity "APAR 1, APAR 2, dan APAR 3". */
+export function formatDaftarKode(kodes: string[]): string {
+  if (kodes.length === 0) return "–";
+  if (kodes.length === 1) return kodes[0];
+  if (kodes.length === 2) return `${kodes[0]} dan ${kodes[1]}`;
+  return `${kodes.slice(0, -1).join(", ")}, dan ${kodes[kodes.length - 1]}`;
 }
 
 /** Banner kop JPM Dukuh Atas (kiri JPM, kanan W realty / TOWER BERSAMA GROUP /
@@ -385,7 +401,16 @@ export interface AparMonthlyData {
   expiring: { kode: string; jenis: string | null; ukuran: string | null; expiredDate: string }[];
 }
 
+/** Kertas APAR bulanan JPM Dukuh Atas (milik owner, prosedural): kop banner,
+ *  kotak judul tengah, tabel checklist tata-letak tetap, ringkasan
+ *  Kadaluwarsa APAR yang dikelompokkan prosedural per tanggal kedaluwarsa,
+ *  blok Catatan tulis tangan + tanda tangan 3 kolom. 2 halaman potret.
+ *  Data HANYA dari muatan aparMonthly loader (tanpa foto per unit dan tanpa
+ *  nama penandatangan — keduanya tidak ada di payload, jadi sel foto dan
+ *  nama tidak dirender). */
 export function aparMonthly(data: AparMonthlyData): string {
+  const periode = formatIndonesianMonthYear(`${data.periodKey}-01`);
+  const tanggalCetak = formatIndonesianDate(new Date());
   const rows = data.rows
     .map(
       (r, i) => `<tr>
@@ -396,44 +421,46 @@ export function aparMonthly(data: AparMonthlyData): string {
 </tr>`,
     )
     .join("\n");
-  const expiring =
+  const kelompok = new Map<string, { iso: string; kode: string[] }>();
+  for (const e of data.expiring) {
+    const label = formatIndonesianDate(e.expiredDate);
+    const g = kelompok.get(label) ?? { iso: e.expiredDate, kode: [] };
+    if (e.expiredDate < g.iso) g.iso = e.expiredDate;
+    g.kode.push(e.kode);
+    kelompok.set(label, g);
+  }
+  const barisKadaluwarsa = [...kelompok.entries()]
+    .sort((a, b) => (a[1].iso < b[1].iso ? -1 : a[1].iso > b[1].iso ? 1 : 0))
+    .map(
+      ([label, g], i) =>
+        `<tr><td class="num">${i + 1}</td><td class="num">${esc(label)}</td><td class="num">${g.kode.length}</td><td class="num">${esc(formatDaftarKode(g.kode))}</td></tr>`,
+    )
+    .join("\n");
+  const kadaluwarsa =
     data.expiring.length === 0
       ? `<p class="empty">Tidak ada unit APAR yang mendekati kedaluwarsa.</p>`
-      : `<table class="grid">
-  <thead><tr><th style="width:26px">No.</th><th style="width:80px">Kode</th><th style="width:80px">Jenis</th><th style="width:80px">Ukuran</th><th style="width:120px">Tanggal Kedaluwarsa</th></tr></thead>
-  <tbody>${data.expiring
-    .map(
-      (e, i) =>
-        `<tr><td class="num">${i + 1}</td><td class="left">${esc(e.kode)}</td><td>${esc(e.jenis ?? "–")}</td><td>${esc(e.ukuran ?? "–")}</td><td class="num">${esc(formatIndonesianDate(e.expiredDate))}</td></tr>`,
-    )
-    .join("")}</tbody>
+      : `<table class="grid apar">
+  <thead><tr><th style="width:30px">No</th><th style="width:150px">Periode Kadaluwarsa</th><th style="width:80px">Total APAR</th><th>No APAR</th></tr></thead>
+  <tbody>${barisKadaluwarsa}</tbody>
 </table>`;
   return shell({
-    title: `Laporan APAR ${data.periodKey}`,
-    body: `${head(
-      "LEMBAR LAPORAN PEMERIKSAAN BERKALA APAR",
-      "Sesuai Standar K3 & Permenakertrans No. 15/MEN/2008",
-      [
-        metaRow("Lokasi Fasilitas", esc(data.siteName)),
-        metaRow("Periode Inspeksi", `<span class="num">${esc(formatIndonesianMonthYear(`${data.periodKey}-01`))} (${esc(data.periodKey)})</span>`),
-        metaRow("Tanggal Cetak", `<span class="num">${esc(formatIndonesianDate(new Date()))}</span>`),
-      ],
-    )}
-<h2 class="sec">A. Hasil Pemeriksaan 7 Komponen Unit APAR</h2>
-<table class="grid">
-  <thead><tr><th style="width:26px">No.</th><th style="width:70px">Kode</th><th style="width:110px">Zona / Jenis</th><th>Verifikasi 7 Komponen</th><th style="width:80px">Status</th><th style="width:150px">Catatan / Tindak Lanjut</th></tr></thead>
+    title: `Checklist Bulanan APAR ${data.periodKey}`,
+    body: `${kopBanner()}
+<div class="apar-box"><h1>CHECKLIST BULANAN APAR</h1><h2>${esc(data.siteName.toUpperCase() || "-")}</h2><div class="apar-meta"><span>Periode : ${esc(periode)}</span><span>Tanggal Cetak : <span class="num">${esc(tanggalCetak)}</span></span></div></div>
+<table class="grid apar">
+  <thead><tr><th style="width:26px">No</th><th style="width:70px">Kode APAR</th><th style="width:110px">Zona / Jenis</th><th>Verifikasi 7 Komponen</th><th style="width:80px">Status</th><th style="width:150px">Catatan / Tindak Lanjut</th></tr></thead>
   <tbody>${rows}</tbody>
 </table>
 <div class="page-break"></div>
 <h2 class="sec">B. Kadaluwarsa APAR</h2>
-${expiring}
+${kadaluwarsa}
 <h2 class="sec">C. Catatan Tambahan</h2>
 <div class="catatan-manual">
   <p class="catatan-label">Catatan :</p>
   <div class="catatan-lines"><span></span><span></span><span></span><span></span></div>
 </div>
 ${signatures()}
-<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · ${data.rows.length} unit</p>`,
+<p class="foot num">Dokumen dihasilkan sistem – ${esc(tanggalCetak)} · ${data.rows.length} unit</p>`,
   });
 }
 

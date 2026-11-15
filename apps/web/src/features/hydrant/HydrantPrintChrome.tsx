@@ -52,8 +52,8 @@ export const HydrantPrintHeader: React.FC<HydrantPrintHeaderProps> = ({ siteName
 );
 
 /** Blok tanda tangan tiga kolom pada lembar cetak Hydrant. */
-export const HydrantPrintSignatures: React.FC = () => (
-  <div className="hidden print:block pt-8 mt-8 border-t border-black print:break-inside-avoid">
+export const HydrantPrintSignatures: React.FC<{ selaluTampil?: boolean }> = ({ selaluTampil }) => (
+  <div className={`${selaluTampil ? 'block' : 'hidden print:block'} pt-8 mt-8 border-t border-black print:break-inside-avoid`}>
     <div className="grid grid-cols-3 gap-6 text-center text-xs text-black">
       <div>
         <p className="font-semibold">Petugas Pemeriksa (Inspector)</p>
@@ -189,6 +189,8 @@ export interface HydrantPrintKertasProps {
   /** Semua inspeksi site ini (disaring ke period di sini). */
   inspeksi: ApiInspeksiHidran[];
   findings: HydrantFindingItem[];
+  /** Pratinjau layar: tampilkan kertas di layar, bukan hanya saat cetak. */
+  selaluTampil?: boolean;
 }
 
 /**
@@ -203,6 +205,7 @@ export const HydrantPrintKertas: React.FC<HydrantPrintKertasProps> = ({
   units,
   inspeksi,
   findings,
+  selaluTampil,
 }) => {
   const bulan = inspeksi.filter((i) => i.period.startsWith(period));
   const perUnit = new Map(bulan.map((i) => [i.unitId, i]));
@@ -224,7 +227,7 @@ export const HydrantPrintKertas: React.FC<HydrantPrintKertasProps> = ({
 @page hyd-laporan { size: A4 landscape; margin: 10mm; }`}</style>
 
       {/* Kertas 1 — CHECKLIST BULANAN HYDRANT (portrait). */}
-      <div className="hyd-kertas-1 hidden print:block text-black">
+      <div className={`hyd-kertas-1 ${selaluTampil ? 'block' : 'hidden print:block'} text-black`}>
         <div className="mb-2">
           <img
             src="/findings/report-header-logos.png"
@@ -310,7 +313,7 @@ export const HydrantPrintKertas: React.FC<HydrantPrintKertasProps> = ({
       </div>
 
       {/* Kertas 2 — LAPORAN PEMERIKSAAN HYDRANT (landscape). */}
-      <div className="hyd-kertas-2 hidden print:block text-black">
+      <div className={`hyd-kertas-2 ${selaluTampil ? 'block' : 'hidden print:block'} text-black`}>
         <div className="flex items-center justify-between mb-2">
           <p className="text-[9px] font-bold text-teal-700 leading-tight">dutagaruda<br />piranti prima</p>
           <h1 className="text-sm font-extrabold tracking-wide text-center">LAPORAN PEMERIKSAAN HYDRANT</h1>
