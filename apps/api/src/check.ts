@@ -102,9 +102,10 @@ async function reqForm(
 
 async function fetchBytes(url: string): Promise<{ bytes: Uint8Array } | { unreachable: true }> {
   try {
-    // Public storage URLs name the host origin; inside the compose network the
-    // same Caddy route answers at caddy:80, so swap the origin for the probe.
-    const local = url.replace(/^http:\/\/localhost:8080\//, `${BASE}/`);
+    // Public storage URLs name a host origin (localhost:8080 lokal,
+    // 127.0.0.1:18083 VPS, dsb); inside the compose network the same Caddy
+    // route answers at caddy:80, so swap ANY origin for the probe.
+    const local = url.replace(/^https?:\/\/[^/]+\//, `${BASE}/`);
     const res = await fetch(local);
     if (!res.ok) return { bytes: new Uint8Array() };
     return { bytes: new Uint8Array(await res.arrayBuffer()) };
