@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Camera, Search } from 'lucide-react';
+import { Camera, Eye, Printer, Search } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -24,16 +24,6 @@ interface PatrolPageProps {
   onToggleCollapsed: () => void;
 }
 
-/**
- * Patroli K3 — orkestrasi umpan foto per bulan. Semua hook + state hidup di
- * sini (pola `HydrantPage`); anak-anak (`PatrolStats`, `PatrolFeed`, modal)
- * presentasional.
- *
- * Poros = pengalih bulan bawaan shell (posisi Hydrant: `Bulan Ini` →
- * `MonthSwitcher`); umpan disaring ke bulan terpilih, terbaru dulu. API
- * patroli tidak membawa status terbit, jadi `Terbitkan` = simpan tanpa
- * cerminan status kedua. Hapus lewat `ConfirmModal`, bukan hover langsung.
- */
 export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCollapsed }) => {
   const lokasi = useKonteksLokasi();
   const qc = useQueryClient();
@@ -41,7 +31,6 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
   const unggahFoto = useUnggahFotoTemuanPatroli();
   const hapusTemuan = useHapusTemuanPatroli();
 
-  // Poros bulan = bulan kalender nyata, sama seperti Hydrant.
   const [bulan, setBulan] = useState<Date>(() => {
     const kini = new Date();
     return new Date(kini.getFullYear(), kini.getMonth(), 1);
@@ -57,9 +46,6 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
     return bulan.getFullYear() === kini.getFullYear() && bulan.getMonth() === kini.getMonth();
   })();
 
-  // Saring caption + lokasi kerja (catatan unggahan + kop cetak).
-  // Lokasi terisi bawaan nama site aktif (dinamis, bukan string paten),
-  // tetap bisa disunting; kosong = nama lokasi aktif.
   const [cari, setCari] = useState('');
   const [lokasiInput, setLokasiInput] = useState('');
   const siteTersinkron = React.useRef<string | null>(null);
@@ -75,14 +61,12 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [konfirmasiHapusId, setKonfirmasiHapusId] = useState<string | null>(null);
 
-  // Temuan dari API (laporan + findings) — lokasi aktif saja.
   const laporanSite = useMemo(
     () => (laporanQuery.data ?? []).filter((l) => l.siteId === lokasi.siteId),
     [laporanQuery.data, lokasi.siteId],
   );
   const findings = useMemo(() => petakanTemuanPatroli(laporanSite), [laporanSite]);
 
-  // Umpan bulan terpilih, terbaru dulu.
   const umpanBulan = useMemo(
     () =>
       findings
@@ -91,14 +75,12 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
     [findings, periode],
   );
 
-  // Saring caption tetap di dalam bulan terpilih.
   const tampil = useMemo(() => {
     const q = cari.trim().toLowerCase();
     if (!q) return umpanBulan;
     return umpanBulan.filter((f) => f.caption.toLowerCase().includes(q));
   }, [umpanBulan, cari]);
 
-  // Laporan terbaru (rekam patroli tersimpan) — jangkar ekspor PDF.
   const laporanTerbaru: ApiLaporanPatroli | null = useMemo(() => {
     const daftar = [...laporanSite].sort((a, b) => b.patrolDate.localeCompare(a.patrolDate));
     return daftar[0] ?? null;
@@ -125,13 +107,22 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
     if (!konfirmasiHapusId) return;
     const id = konfirmasiHapusId;
     setKonfirmasiHapusId(null);
-    // Hook sudah invalidasi `laporan-patroli` saat settle; umpan kalender
-    // ikut disegarkan di sini (kontrak mutasi: laporan + ['umpan']).
     hapusTemuan.mutate(id, {
       onSettled: () => {
         void qc.invalidateQueries({ queryKey: ['umpan'] });
       },
     });
+  };
+
+  /** Buka halaman prosedur cetak Safety Patrol (portrait A4 terisolasi mode gelap). */
+  const bukaHalamanCetakPatrol = (autoPrint = false) => {
+    const params = new URLSearchParams({ cetak: 'patrol', bulan: periode });
+    if (autoPrint) params.set('autoprint', '1');
+    window.open(
+      `${window.location.origin}${window.location.pathname}?${params.toString()}`,
+      '_blank',
+      'noopener',
+    );
   };
 
   return (
@@ -148,8 +139,8 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
       onTambah={() => setIsAddOpen(true)}
       ikonTambah={<Camera size={13} strokeWidth={2.2} />}
       jangkarEkspor={laporanTerbaru?.id ?? null}
-      namaBerkas={laporanTerbaru?.patrolDate.slice(0, 10) ?? periode}
-      onCetak={() => window.print()}
+      namaBerkas={periode}
+      onCetak={() => bukaHalamanCetakPatrol(true)}
       kepalaCetak={
         <PatrolPrintHeader
           lokasi={lokasiKerja}
@@ -189,6 +180,22 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
               title="Lokasi kerja untuk unggahan dan kop cetak"
               className="min-w-[150px] flex-1 sm:flex-initial text-xs px-2.5 py-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2f80ed]"
             />
+            <button
+              type="button"
+              onClick={() => bukaHalamanCetakPatrol(false)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
+            >
+              <Eye size={13} />
+              <span>Pratinjau Cetak</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => bukaHalamanCetakPatrol(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#2f80ed] hover:bg-[#2b77d4] text-white shadow-2xs cursor-pointer pressable tabular-nums"
+            >
+              <Printer size={13} />
+              <span>Cetak Laporan Patroli</span>
+            </button>
           </div>
         </div>
       }

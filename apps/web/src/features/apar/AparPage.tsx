@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { Eye, Printer, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { AparUnitItem, InspectionReport } from '../../types/hse';
@@ -63,7 +63,6 @@ export const AparPage: React.FC<AparPageProps> = ({
   const buatUnit = useBuatUnitApar();
   const ubahUnit = useUbahUnitApar();
 
-  // Lokasi aktif memilih barisnya: unit + inspeksi lokasi lain tidak tampil.
   const unitSite = useMemo(
     () => (unitQuery.data ?? []).filter((u) => u.siteId === lokasi.siteId),
     [unitQuery.data, lokasi.siteId],
@@ -83,13 +82,8 @@ export const AparPage: React.FC<AparPageProps> = ({
   const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
   const [isAddFindingModalOpen, setIsAddFindingModalOpen] = useState(false);
 
-  // Foto bukti dibaca dari API (lihat `fotoBukti` di bawah), bukan disimpan per
-  // sesi: tutup/buka ulang modal atau muat ulang halaman harus tetap menampilkan
-  // foto yang sama.
   const unggahFoto = useUnggahFoto();
   const hapusFoto = useHapusFoto();
-  // Month navigation state (di atas: inspeksiAktif memakai period).
-  // Bawaan = bulan kalender nyata agar data bulan berjalan langsung tampil.
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
     const kini = new Date();
     return new Date(kini.getFullYear(), kini.getMonth(), 1);
@@ -111,29 +105,21 @@ export const AparPage: React.FC<AparPageProps> = ({
       ) ?? null
     : null;
 
-  // Bukti inspeksi unit yang sedang dibuka, dibaca dari API — bukan state sesi,
-  // jadi tutup/buka ulang atau muat ulang tidak menghilangkan foto. Rekam ini
-  // juga bisa memuat foto temuan (bila unit ini jangkar Section B): saring.
   const fotoAktif = useFotoInspeksi(inspeksiAktif?.id ?? null, 'apar');
   const buktiAktif = (fotoAktif.data ?? []).filter((f) => !f.temuan);
 
-  // Hapus rekam inspeksi bulan ini: hook membersihkan foto anak dulu (cegah 409),
-  // laman sekadar menutup modal.
   const handleHapusBulan = () => {
     if (!inspeksiAktif) return;
     hapusInspeksi.mutate(inspeksiAktif.id);
     setActiveInspectionUnit(null);
   };
 
-  // Hapus unit sebaris seluruh datanya (dipakai popup bulan tanpa rekam:
-  // belum dimulai = tidak ada rekam bulan untuk dihapus).
   const handleHapusUnit = () => {
     if (!activeInspectionUnit) return;
     hapusUnit.mutate(activeInspectionUnit.id);
     setActiveInspectionUnit(null);
   };
 
-  // Sunting dari dasbor: bila rekamnya bulan terpilih, buka modal inspeksinya.
   useEffect(() => {
     if (!suntingRefId || suntingRefId.kategori !== 'apar') return;
     const insp = (inspeksiQuery.data ?? []).find((i) => i.id === suntingRefId.refId);
@@ -161,13 +147,9 @@ export const AparPage: React.FC<AparPageProps> = ({
       });
       onSuntingSelesai?.();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- satu kali per permintaan sunting
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suntingRefId, inspeksiQuery.data, unitQuery.data]);
 
-  // Unit + hasil inspeksi bulan terpilih dari API, dipetakan ke model UI.
-  // Memoized: identitas objek unit stabil antar-render — efek init modal
-  // tidak boleh menyala setiap refetch (mematikan mode terbit / menimpa
-  // ketikan yang sedang berjalan).
   const units = useMemo(
     () =>
       petakanUnitApar(
@@ -180,8 +162,6 @@ export const AparPage: React.FC<AparPageProps> = ({
   );
   const zones = lokasi.zonaNamaList;
 
-  // B. Catatan hasil temuan = HANYA foto bertanda `temuan` pada rekam jangkar
-  // bulan terpilih. Foto bukti inspeksi (unggahan dari modal) bukan temuan.
   const jangkarTemuan =
     inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
   const fotoTemuan = useFotoInspeksi(jangkarTemuan, 'apar');
@@ -197,29 +177,21 @@ export const AparPage: React.FC<AparPageProps> = ({
     [fotoTemuan.data],
   );
 
-  // Derived counts
   const totalUnits = units.length;
   const onProgressUnits = units.filter(
     (u) => u.status === 'SEDANG_BERJALAN' || u.status === 'BELUM_DIPERIKSA'
   );
   const completedUnits = units.filter((u) => u.status === 'SELESAI');
 
-  // Max unit number for auto-incrementing new units
   const maxUnitNumber = units.reduce((max, u) => {
     const num = parseInt(u.kode.replace(/\D/g, ''), 10) || 0;
     return Math.max(max, num);
   }, 0);
 
-  // Filtered units based on tab, zone, and search query
   const filteredUnits = units.filter((unit) => {
-    // Tab filter: ON_PROGRESS shows unfinished units
     if (filterTab === 'ON_PROGRESS' && unit.status === 'SELESAI') return false;
     if (filterTab === 'COMPLETED' && unit.status !== 'SELESAI') return false;
-
-    // Zone filter
     if (zoneFilter !== 'ALL' && unit.zoneName !== zoneFilter) return false;
-
-    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchKode = unit.kode.toLowerCase().includes(q);
@@ -228,13 +200,9 @@ export const AparPage: React.FC<AparPageProps> = ({
       const matchNotes = unit.draftDetails?.notes?.toLowerCase().includes(q) || false;
       if (!matchKode && !matchZone && !matchInspector && !matchNotes) return false;
     }
-
     return true;
   });
 
-  // Pindah baris: urutan disimpan per lokasi, jadi daftar yang dikirim adalah
-  // SEMUA unit lokasi — bukan hanya baris yang lolos saringan. `susunUrutanBaru`
-  // menyisipkan baris ke posisi tetangganya di daftar penuh.
   const urutkan = useUrutkanUnit('apar');
   const handlePindah = (unitId: string, arah: -1 | 1) => {
     const ids = susunUrutanBaru(
@@ -246,9 +214,6 @@ export const AparPage: React.FC<AparPageProps> = ({
     if (ids) urutkan.mutate({ siteId: lokasi.siteId, ids });
   };
 
-  // Terbit menyimpan inspeksi ke API (modal selalu mengisi 7 komponen).
-  // Promise-nya dikembalikan: modal menunggu tulisan, dan potret terbit hanya
-  // muncul setelah rekamnya ada.
   const handleCompleteInspection = async (newReport: InspectionReport) => {
     const unit = units.find((u) => u.kode === newReport.assetCode);
     if (!unit) {
@@ -279,19 +244,12 @@ export const AparPage: React.FC<AparPageProps> = ({
     });
   };
 
-  // `Edit` pada rekam terbit = batalkan terbit rekam itu saja (satu medan,
-  // `approval_status` → DRAFT). Rekam yang sama turun jadi DRAF, jadi barisnya
-  // keluar dari "Selesai Diperiksa" dan tombolnya kembali ke `Terbitkan`.
   const handleBatalkanTerbit = async (inspectionId: string): Promise<void> => {
     await batalkanTerbit.mutateAsync(inspectionId);
   };
 
-  const handleAddZone = (_zoneName: string) => {
-    // Zona dibuat bersama unit pada handleAddAparUnits (butuh siteId).
-  };
+  const handleAddZone = (_zoneName: string) => {};
 
-  // Bukti inspeksi (`temuan: false`) — dipisahkan dari catatan hasil temuan
-  // supaya unggahan baris ini tidak muncul di Section B.
   const handleUnggahFoto = (file: File, caption: string, nilai?: AparUnitItem['draftDetails']) => {
     if (!activeInspectionUnit) return;
     const unggah = (inspectionId: string) =>
@@ -306,8 +264,6 @@ export const AparPage: React.FC<AparPageProps> = ({
       unggah(inspeksiAktif.id);
       return;
     }
-    // Belum ada rekam: buat baris inspeksi sebagai jangkar foto — unggah foto
-    // tidak menunggu tombol Terbitkan.
     simpanInspeksi.mutate(
       {
         unitId: activeInspectionUnit.id,
@@ -359,8 +315,6 @@ export const AparPage: React.FC<AparPageProps> = ({
     });
   };
 
-  // Tambah temuan = unggah foto nyata bertanda `temuan` ke rekam jangkar bulan
-  // terpilih, sehingga hanya foto ini yang tampil di Section B.
   const handleAddFinding = (item: { file: File; description: string; unitCode?: string }) => {
     if (!jangkarTemuan) {
       window.alert('Belum ada inspeksi bulan ini — simpan inspeksi satu unit dahulu.');
@@ -385,11 +339,17 @@ export const AparPage: React.FC<AparPageProps> = ({
     hapusFoto.mutate({ id, inspectionId: jangkarTemuan });
   };
 
-  // Pratinjau cetak: bangun URL bersih dari origin+pathname dengan
-  // URLSearchParams baru ({cetak, bulan}) — jangan menempel ke href yang
-  // sudah berquery agar tidak ganda (`?a? a`).
-  const bukaPratinjauCetak = () => {
-    const params = new URLSearchParams({ cetak: 'apar', bulan: period });
+  /** Buka halaman prosedur cetak APAR (baik mode bulanan maupun kartu tahunan, dengan/tanpa autoprint). */
+  const bukaHalamanCetakApar = (
+    mode: 'bulanan' | 'kartu',
+    autoPrint = false,
+    unitId?: string,
+    tahun?: string,
+  ) => {
+    const params = new URLSearchParams({ cetak: 'apar', bulan: period, mode });
+    if (unitId) params.set('unit', unitId);
+    if (tahun) params.set('tahun', tahun);
+    if (autoPrint) params.set('autoprint', '1');
     window.open(
       `${window.location.origin}${window.location.pathname}?${params.toString()}`,
       '_blank',
@@ -397,11 +357,11 @@ export const AparPage: React.FC<AparPageProps> = ({
     );
   };
 
+  // Tombol Cetak di kepala halaman mencetak halaman prosedur Checklist Bulanan APAR
   const handlePrint = () => {
-    window.print();
+    bukaHalamanCetakApar('bulanan', true);
   };
 
-  // Jangkar ekspor PDF: rekam inspeksi pertama bulan terpilih (lalu berisi).
   const jangkarEkspor =
     inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
 
@@ -446,21 +406,37 @@ export const AparPage: React.FC<AparPageProps> = ({
       }
       isi={
         <div className="space-y-3 pb-8 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <div className="hidden print:block mb-2">
-              <h2 className="text-xs font-bold text-black uppercase tracking-wider">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xs font-bold text-[var(--primary)] print:text-black uppercase tracking-wider">
                 A. Hasil Pemeriksaan Fisik Unit APAR
               </h2>
             </div>
-            {/* Affordance kedua: pratinjau kertas demo-faithful (?cetak=apar).
-              Di luar PageHeader supaya urutan Unduh PDF → Cetak kepala tidak berubah. */}
-            <div className="no-print ml-auto flex items-center gap-2">
+            {/* Dua pasang tombol Cetak prosedural APAR: 1) Checklist Bulanan, 2) Kartu Tahunan Unit */}
+            <div className="no-print ml-auto flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={bukaPratinjauCetak}
-                className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
+                onClick={() => bukaHalamanCetakApar('bulanan', false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
               >
-                Pratinjau Cetak
+                <Eye size={13} />
+                <span>Pratinjau Bulanan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => bukaHalamanCetakApar('bulanan', true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
+              >
+                <Printer size={13} />
+                <span>Cetak Checklist Bulanan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => bukaHalamanCetakApar('kartu', true, units[0]?.id, period.slice(0, 4))}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#f2994a] hover:bg-[#e0893b] text-white shadow-2xs cursor-pointer pressable tabular-nums"
+              >
+                <Printer size={13} />
+                <span>Cetak Kartu Tahunan</span>
               </button>
             </div>
           </div>
@@ -489,7 +465,12 @@ export const AparPage: React.FC<AparPageProps> = ({
             aksen={AKSEN}
           />
           <AparExpiryRecap units={units} />
-          <AparYearCard units={units} inspeksi={inspeksiSite} onCetak={handlePrint} />
+          <AparYearCard
+            units={units}
+            inspeksi={inspeksiSite}
+            onCetak={(uId, thn) => bukaHalamanCetakApar('kartu', true, uId, thn)}
+            onPratinjau={(uId, thn) => bukaHalamanCetakApar('kartu', false, uId, thn)}
+          />
         </>
       }
       tandaTangan={<AparPrintSignatures />}

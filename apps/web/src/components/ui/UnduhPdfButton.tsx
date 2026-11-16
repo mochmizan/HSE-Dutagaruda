@@ -1,60 +1,73 @@
-import React, { useState } from 'react';
-import { FileDown } from 'lucide-react';
+import React from 'react';
+import { FileDown, Printer } from 'lucide-react';
 import type { KategoriEkspor } from '@/services/api/klien';
-import { jalankanEkspor, unduhBerkas, KATEGORI_EKSPOR_LABEL } from '@/services/api/queries';
-import { ApiError } from '@/services/api/client';
+import { KATEGORI_EKSPOR_LABEL } from '@/services/api/queries';
 
-/** Unduh PDF resmi via POST /api/export/:category/:refId (pdfJobs, v1 sinkron). */
+/**
+ * Tombol Cetak / Simpan PDF resmi: membuka halaman prosedur cetak (`?cetak=...&autoprint=1`)
+ * yang terisolasi dari mode gelap, bukan lagi memanggil layanan Gotenberg.
+ */
 interface UnduhPdfButtonProps {
   category: KategoriEkspor;
-  /** ID baris rujukan (inspeksi/laporan); null = belum ada data (nonaktif). */
+  /** ID baris rujukan (inspeksi/laporan); null = belum ada data (tetap dapat membuka pratinjau periode). */
   refId: string | null;
   label?: string;
-  /** Sufiks nama berkas, mis. periode. */
+  /** Sufiks nama berkas / periode (mis. YYYY-MM atau YYYY). */
   namaBerkas?: string;
+  /** Unit ID/kode opsional untuk mode kartu APAR. */
+  unitId?: string;
 }
 
 export const UnduhPdfButton: React.FC<UnduhPdfButtonProps> = ({
   category,
-  refId,
   label,
   namaBerkas,
+  unitId,
 }) => {
-  const [sibuk, setSibuk] = useState(false);
   const teks = label ?? 'Unduh PDF';
 
-  const jalankan = async () => {
-    if (!refId || sibuk) return;
-    setSibuk(true);
-    try {
-      const url = await jalankanEkspor(category, refId);
-      const nama = `${KATEGORI_EKSPOR_LABEL[category]}${namaBerkas ? ` ${namaBerkas}` : ''}.pdf`;
-      unduhBerkas(url, nama);
-    } catch (err) {
-      const pesan =
-        err instanceof ApiError
-          ? ((err.data as { pesan?: string } | undefined)?.pesan ?? err.message)
-          : 'Terjadi kesalahan tak terduga.';
-      window.alert(pesan);
-    } finally {
-      setSibuk(false);
+  const bukaHalamanProsedurCetak = () => {
+    const params = new URLSearchParams({ autoprint: '1' });
+    if (category === 'hydrant-monthly') {
+      params.set('cetak', 'hydrant');
+      params.set('mode', 'checklist');
+      if (namaBerkas) params.set('bulan', namaBerkas);
+    } else if (category === 'hydrant-laporan') {
+      params.set('cetak', 'hydrant');
+      params.set('mode', 'laporan');
+      if (namaBerkas) params.set('bulan', namaBerkas);
+    } else if (category === 'apar-monthly') {
+      params.set('cetak', 'apar');
+      params.set('mode', 'bulanan');
+      if (namaBerkas) params.set('bulan', namaBerkas);
+    } else if (category === 'apar-card') {
+      params.set('cetak', 'apar');
+      params.set('mode', 'kartu');
+      if (namaBerkas) params.set('tahun', namaBerkas.slice(0, 4));
+      if (unitId) params.set('unit', unitId);
+    } else if (category === 'p3k-yearly') {
+      params.set('cetak', 'p3k');
+      if (namaBerkas) params.set('tahun', namaBerkas.slice(0, 4));
+    } else if (category === 'patrol-report') {
+      params.set('cetak', 'patrol');
+      if (namaBerkas) params.set('bulan', namaBerkas.slice(0, 7));
     }
+    window.open(
+      `${window.location.origin}${window.location.pathname}?${params.toString()}`,
+      '_blank',
+      'noopener',
+    );
   };
 
   return (
     <button
       type="button"
-      onClick={() => void jalankan()}
-      disabled={!refId || sibuk}
-      title={
-        !refId
-          ? 'Belum ada data untuk diekspor pada periode ini'
-          : `Buat berkas PDF resmi (${KATEGORI_EKSPOR_LABEL[category]})`
-      }
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] rounded-[4px] hover:bg-[var(--bg-hover)] shadow-2xs cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed"
+      onClick={bukaHalamanProsedurCetak}
+      title={`Cetak / Simpan PDF resmi (${KATEGORI_EKSPOR_LABEL[category]})`}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] rounded-[4px] hover:bg-[var(--bg-hover)] shadow-2xs cursor-pointer pressable"
     >
-      <FileDown size={14} />
-      <span>{sibuk ? 'Menyiapkan…' : teks}</span>
+      {label?.toLowerCase().includes('cetak') ? <Printer size={14} /> : <FileDown size={14} />}
+      <span>{teks}</span>
     </button>
   );
 };

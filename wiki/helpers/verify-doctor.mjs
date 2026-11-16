@@ -22,7 +22,7 @@ const docker = await run("docker", ["info"]);
 cek("docker-daemon", docker.code === 0);
 
 const ps = await run("docker", ["compose", "-f", "infra/docker-compose.yml", "ps", "--format", "{{.Service}} {{.Status}}"]);
-for (const svc of ["api", "postgres", "caddy", "garage", "gotenberg"]) {
+for (const svc of ["api", "postgres", "caddy", "garage"]) {
   cek(
     `compose:${svc}`,
     ps.out.split("\n").some((l) => l.startsWith(svc) && l.includes("Up")),

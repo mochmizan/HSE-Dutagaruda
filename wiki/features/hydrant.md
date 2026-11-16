@@ -91,10 +91,12 @@ presentasional saja.
   jadi foto tidak hilang saat modal ditutup atau halaman dimuat ulang.
 - `hydrant-add-unit` mendaftarkan zona + kode unit non-sekuensial via modal.
 - `hydrant-finding` menambah temuan Section B (foto wajib + caption).
-- `hydrant-print` mengunduh PDF A4 via `POST /api/export/hydrant-monthly/
-  :refId` (kategori `hydrant-monthly`, bukan `hydrant`) → polling
-  `GET /api/pdf-jobs/:id` (terverifikasi live Okt 17: 201 → done +
-  downloadUrl). Isi kertas: checklist foto per baris (kolom Dokumentasi
+- `hydrant-print` (Nov 16, tanpa Gotenberg): `UnduhPdfButton` membuka
+  pratinjau prosedural (`?cetak=hydrant&bulan=` + `autoprint=1`,
+  cetak/simpan via dialog browser); PDF server
+  (`POST /api/export/hydrant-monthly/:refId` → polling
+  `GET /api/pdf-jobs/:id`) kini generator PDF 1.4 murni
+  (`apps/api/src/pdf/render.ts`, tanpa container). Isi kertas: checklist foto per baris (kolom Dokumentasi
   Pemeriksaan = bukti pertama, Dokumentasi Checklist = temuan pertama/bukti
   kedua) + Section B temuan; ejaan status "Layak digunakan …" (baku).
 - `hydrant-laporan` (Nov 15): printable kedua, kategori ekspor

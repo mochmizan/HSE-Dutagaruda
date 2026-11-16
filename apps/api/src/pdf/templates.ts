@@ -1,6 +1,12 @@
 import { formatIndonesianDate, formatIndonesianMonthYear } from "@viaannn/shared";
 import { INTER_400_B64, INTER_700_B64 } from "./fonts.js";
-import { KOP_BANNER_B64, KOP_BANNER_MIME } from "./logos.js";
+import {
+  KOP_BANNER_B64,
+  KOP_BANNER_MIME,
+  LOGO_DUTAGARUDA_B64,
+  LOGO_ITJ_B64,
+  LOGO_K3_B64,
+} from "./logos.js";
 
 export function esc(value: string): string {
   return value
@@ -28,8 +34,8 @@ function shell(args: ShellArgs): string {
 @font-face { font-family:'Inter'; font-style:normal; font-weight:400; src:url(data:font/woff2;base64,${INTER_400_B64}) format('woff2'); }
 @font-face { font-family:'Inter'; font-style:normal; font-weight:700; src:url(data:font/woff2;base64,${INTER_700_B64}) format('woff2'); }
 @page { size: A4 ${orient}; margin: ${margin}; }
-* { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-body { margin:0; font-family:'Inter', Arial, Helvetica, sans-serif; font-size:8pt; line-height:1.45; color:#111827; background:#fff; }
+* { box-sizing: border-box; print-color-adjust: exact !important; -webkit-print-color-adjust: exact !important; color-scheme: light only !important; }
+body { margin:0; font-family:'Inter', Arial, Helvetica, sans-serif; font-size:8pt; line-height:1.45; color:#111827 !important; background:#fff !important; }
 .num { font-variant-numeric: tabular-nums; }
 .doc-head { border-bottom:2px solid #111827; padding-bottom:8px; margin-bottom:10px; }
 .doc-head h1 { font-size:13pt; font-weight:700; margin:0 0 2px 0; letter-spacing:0.01em; }
@@ -135,15 +141,6 @@ function head(title: string, std: string, metaRows: string[]): string {
   return `<header class="doc-head"><h1>${esc(title)}</h1><p class="std">${esc(std)}</p><dl class="meta">${metaRows.join("")}</dl></header>`;
 }
 
-const HYD_COMPONENTS = [
-  ["boxHydrant", "Box Hydrant"],
-  ["fireHose", "Fire Hose"],
-  ["hoseCoupling", "Hose Coupling"],
-  ["hoseRack", "Hose Rack"],
-  ["nozzle", "Nozzle"],
-  ["valvePillar", "Valve/Pillar"],
-] as const;
-
 const APAR_COMPONENTS = [
   ["safetyPin", "Safety Pin"],
   ["corong", "Corong"],
@@ -191,8 +188,7 @@ export function formatTanggalSingkat(iso: string): string {
   return `${Number(m[3])}-${bulan}-${m[1].slice(2)}`;
 }
 
-/** Tanggal-tanggal unik gaya kertas: "16 dan 18 September 2026",
- *  tiga sparsity "16, 17 dan 18 September 2026". */
+/** Tanggal-tanggal unik gaya kertas: "16 dan 18 September 2026". */
 export function formatDaftarTanggal(isoList: string[], periodKey: string): string {
   const hari = [
     ...new Set(
@@ -218,8 +214,7 @@ export function statusPenggunaan(status: Status): string {
   return "Tidak layak digunakan";
 }
 
-/** Daftar kode gaya kertas: "APAR 1", "APAR 1 dan APAR 2",
- *  tiga sparsity "APAR 1, APAR 2, dan APAR 3". */
+/** Daftar kode gaya kertas: "APAR 1", "APAR 1 dan APAR 2", "APAR 1, APAR 2, dan APAR 3". */
 export function formatDaftarKode(kodes: string[]): string {
   if (kodes.length === 0) return "–";
   if (kodes.length === 1) return kodes[0];
@@ -227,8 +222,6 @@ export function formatDaftarKode(kodes: string[]): string {
   return `${kodes.slice(0, -1).join(", ")}, dan ${kodes[kodes.length - 1]}`;
 }
 
-/** Banner kop JPM Dukuh Atas (kiri JPM, kanan W realty / TOWER BERSAMA GROUP /
- *  cityvision / INTEGRASI TRANSIT JAKARTA), embed data URL. */
 function kopBanner(): string {
   return `<img class="hyd-kop" src="data:${KOP_BANNER_MIME};base64,${KOP_BANNER_B64}" alt="JPM Dukuh Atas">`;
 }
@@ -244,11 +237,8 @@ export interface HydrantMonthlyData {
     kode: string;
     zoneName: string;
     overallStatus: Status;
-    /** ISO createdAt rekam — sumber baris Tanggal. */
     createdAt: string;
-    /** Kolom Dokumentasi Pemeriksaan: foto bukti pertama unit. */
     buktiSrc: string | null;
-    /** Kolom Dokumentasi Checklist: temuan pertama, bila tidak ada bukti kedua. */
     checklistSrc: string | null;
   }[];
   photos: HydrantPhotoView[];
@@ -307,14 +297,11 @@ export interface HydrantLaporanData {
   rows: {
     kode: string;
     components: Record<string, Status>;
-    /** ISO createdAt rekam — kolom Tanggal Pemeriksaan. */
     createdAt: string;
     notes: string | null;
   }[];
 }
 
-/** Nama petugas: belum ada kolom pemeriksa di rekam, jadi memakai nilai yang
- *  sama dengan tabel layar (`Pengawas K3`). */
 export const PETUGAS_HYDRANT = "Pengawas K3";
 
 const HYD_LAPORAN_COMPONENTS = [
@@ -326,8 +313,6 @@ const HYD_LAPORAN_COMPONENTS = [
   ["valvePillar", "Valve / Pillar Hydrant"],
 ] as const;
 
-/** Tanda kertas laporan: LAYAK -> ✓ di Standar; TIDAK_LAYAK -> X di Dibawah
- *  Standar; HILANG -> - di Dibawah Standar (legenda kertas: Hilang (-)). */
 function tandaLaporan(status: Status | undefined, kolom: "standar" | "bawah"): string {
   if (kolom === "standar") return status === "LAYAK" ? "✓" : "";
   if (status === "TIDAK_LAYAK") return "X";
@@ -356,7 +341,7 @@ export function hydrantLaporan(data: HydrantLaporanData): string {
   return shell({
     title: `Laporan Pemeriksaan Hydrant ${data.periodKey}`,
     landscape: true,
-    body: `<div class="hyd-kop-tiga"><div class="hyd-kop-kiri">dutagaruda<br>piranti prima</div><div class="hyd-kop-tengah">LAPORAN PEMERIKSAAN HYDRANT</div><div class="hyd-kop-kanan">INTEGRASI TRANSIT JAKARTA</div></div>
+    body: `<div class="hyd-kop-tiga"><div class="hyd-kop-kiri"><img src="${LOGO_DUTAGARUDA_B64}" style="height:28px;vertical-align:middle;margin-right:6px" alt="Dutagaruda">dutagaruda piranti prima</div><div class="hyd-kop-tengah">LAPORAN PEMERIKSAAN HYDRANT</div><div class="hyd-kop-kanan"><img src="${LOGO_ITJ_B64}" style="height:28px;vertical-align:middle;margin-right:6px" alt="ITJ">INTEGRASI TRANSIT JAKARTA</div></div>
 <dl class="meta">
 <div><dt>Tahun Pemeriksaan</dt><dd><span class="num">${esc(tahun)}</span> | <strong>Bulan :</strong> ${esc(bulan)}</dd></div>
 <div><dt>Lokasi Pemeriksaan</dt><dd>ITJ ${esc(data.siteName.toUpperCase() || "-")}</dd></div>
@@ -401,13 +386,6 @@ export interface AparMonthlyData {
   expiring: { kode: string; jenis: string | null; ukuran: string | null; expiredDate: string }[];
 }
 
-/** Kertas APAR bulanan JPM Dukuh Atas (milik owner, prosedural): kop banner,
- *  kotak judul tengah, tabel checklist tata-letak tetap, ringkasan
- *  Kadaluwarsa APAR yang dikelompokkan prosedural per tanggal kedaluwarsa,
- *  blok Catatan tulis tangan + tanda tangan 3 kolom. 2 halaman potret.
- *  Data HANYA dari muatan aparMonthly loader (tanpa foto per unit dan tanpa
- *  nama penandatangan — keduanya tidak ada di payload, jadi sel foto dan
- *  nama tidak dirender). */
 export function aparMonthly(data: AparMonthlyData): string {
   const periode = formatIndonesianMonthYear(`${data.periodKey}-01`);
   const tanggalCetak = formatIndonesianDate(new Date());
@@ -480,7 +458,7 @@ export function aparCard(data: AparCardData): string {
   const mark = (s: Status | undefined): string => {
     if (s === "BAIK") return `<span class="chip ok">✓</span>`;
     if (s === "TIDAK_BAIK") return `<span class="chip bad">✗</span>`;
-    if (s === "NA") return `<span class="chip idle">–</span>`;
+    if (s === "NA") return `<span class="chip idle">NA</span>`;
     return `<span class="chip idle">·</span>`;
   };
   const body = data.months
@@ -491,24 +469,33 @@ export function aparCard(data: AparCardData): string {
     .join("");
   return shell({
     title: `Kartu APAR ${data.kode} ${data.tahun ?? ""}`,
-    body: `${head(
-      "KARTU TAHUNAN PEMERIKSAAN APAR",
-      "Sesuai Standar K3 & Permenakertrans No. 15/MEN/2008",
-      [
-        metaRow("Kode Unit", `<strong>${esc(data.kode)}</strong>`),
-        metaRow("Lokasi", `${esc(data.siteName)} – ${esc(data.zoneName)}`),
-        metaRow("Jenis / Ukuran", `${esc(data.jenis ?? "–")} / ${esc(data.ukuran ?? "–")}`),
-        metaRow("Kedaluwarsa", `<span class="num">${esc(formatIndonesianDate(data.expiredDate))}</span>`),
-        metaRow("Tahun", `<span class="num">${esc(String(data.tahun ?? new Date().getFullYear()))}</span>`),
-      ],
-    )}
+    body: `<div style="max-width:158mm;margin:0 auto;border:1.5px solid #111827;padding:8px">
+<table class="grid" style="margin-bottom:6px">
+  <tr>
+    <td style="width:24%;text-align:center"><img src="${LOGO_DUTAGARUDA_B64}" style="height:32px" alt="Dutagaruda"></td>
+    <td style="width:58%;text-align:center;font-weight:700;font-size:11pt">CHECKLIST PEMERIKSAAN<br>ALAT PEMADAM API RINGAN (APAR)</td>
+    <td style="width:18%;text-align:center"><img src="${LOGO_K3_B64}" style="height:34px" alt="K3"></td>
+  </tr>
+</table>
+${head(
+  "KARTU TAHUNAN PEMERIKSAAN APAR",
+  "Sesuai Standar K3 & Permenakertrans No. 04/MEN/1980",
+  [
+    metaRow("Kode Unit", `<strong>${esc(data.kode)}</strong>`),
+    metaRow("Lokasi", `${esc(data.siteName)} – ${esc(data.zoneName)}`),
+    metaRow("Jenis / Ukuran", `${esc(data.jenis ?? "–")} / ${esc(data.ukuran ?? "–")}`),
+    metaRow("Kedaluwarsa", `<span class="num">${esc(formatIndonesianDate(data.expiredDate))}</span>`),
+    metaRow("Tahun", `<span class="num">${esc(String(data.tahun ?? new Date().getFullYear()))}</span>`),
+  ],
+)}
 <h2 class="sec">Hasil Pemeriksaan Bulanan</h2>
 <table class="grid">
   <thead><tr><th style="width:44px">Bulan</th>${APAR_COMPONENTS.map(([, l]) => `<th>${esc(l)}</th>`).join("")}<th>Status</th></tr></thead>
   <tbody>${body}</tbody>
 </table>
 ${signatures()}
-<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))}</p>`,
+<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))}</p>
+</div>`,
   });
 }
 
@@ -517,7 +504,6 @@ export interface P3kYearlyData {
   siteName: string;
   tahun: number;
   items: { name: string; standardQty: number; perMonth: (Status | null)[] }[];
-  /** Tanggal inspeksi terakhir pada tahun ini, bila ada rekam. */
   inspectionDate?: string | null;
 }
 
@@ -526,7 +512,7 @@ export function p3kYearly(data: P3kYearlyData): string {
   const mark = (s: Status | null): string => {
     if (s === "STANDAR") return `<span class="chip ok">✓</span>`;
     if (s === "DIBAWAH_STANDAR") return `<span class="chip bad">✗</span>`;
-    if (s === "KADALUARSA") return `<span class="chip bad">K</span>`;
+    if (s === "KADALUARSA") return `<span class="chip bad">KD</span>`;
     return `<span class="chip idle">·</span>`;
   };
   const rows = data.items
@@ -538,15 +524,23 @@ export function p3kYearly(data: P3kYearlyData): string {
   return shell({
     title: `Kartu P3K ${data.boxName} ${data.tahun}`,
     landscape: true,
-    body: `<div class="p3k">${head(
-      "KARTU TAHUNAN PEMERIKSAAN KOTAK P3K",
-      "Sesuai Permenkes No. 48 Tahun 2016 tentang Standar Keselamatan Kesehatan Kerja",
-      [
-        metaRow("Nama Kotak", `<strong>${esc(data.boxName)}</strong>`),
-        metaRow("Lokasi", esc(data.siteName)),
-        metaRow("Tahun", `<span class="num">${data.tahun}</span>`),
-      ],
-    )}
+    body: `<div class="p3k">
+<table class="grid" style="margin-bottom:6px">
+  <tr>
+    <td style="width:20%;text-align:center"><img src="${LOGO_DUTAGARUDA_B64}" style="height:30px" alt="Dutagaruda"></td>
+    <td style="width:60%;text-align:center;font-weight:700;font-size:12pt">INSPEKSI KOTAK P3K</td>
+    <td style="width:20%;text-align:center"><img src="${LOGO_K3_B64}" style="height:30px" alt="K3"></td>
+  </tr>
+</table>
+${head(
+  "KARTU TAHUNAN PEMERIKSAAN KOTAK P3K",
+  "Sesuai Permenkes No. 48 Tahun 2016 tentang Standar Keselamatan Kesehatan Kerja",
+  [
+    metaRow("Nama Kotak", `<strong>${esc(data.boxName)}</strong>`),
+    metaRow("Lokasi", esc(data.siteName)),
+    metaRow("Tahun", `<span class="num">${data.tahun}</span>`),
+  ],
+)}
 <table class="grid">
   <thead><tr><th style="width:26px">No.</th><th style="text-align:left">Nama Barang</th><th style="width:52px">Standar</th>${monthNames.map((m) => `<th style="width:34px">${m}</th>`).join("")}</tr></thead>
   <tbody>${rows}</tbody>
@@ -564,7 +558,7 @@ export function p3kYearly(data: P3kYearlyData): string {
   </tbody>
 </table>
 ${signatures()}
-<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · Tanda: ✓ standar · ✗ di bawah standar · K kedaluwarsa</p></div>`,
+<p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · Tanda: ✓ standar · ✗ di bawah standar · KD kedaluwarsa</p></div>`,
   });
 }
 
@@ -589,10 +583,17 @@ export function patrolReport(data: PatrolReportData): string {
       : `<table class="fgrid">${chunkCells(cells, 2)}</table>`;
   return shell({
     title: `Laporan Safety Patrol ${data.patrolDate}`,
-    body: `${head("LAPORAN KEGIATAN", "SAFETY PATROL", [
-      metaRow("Lokasi", esc(data.siteName)),
-      metaRow("Tanggal", `<span class="num">${esc(formatIndonesianDate(data.patrolDate))}</span>`),
-    ])}
+    body: `<table class="grid" style="margin-bottom:10px">
+  <tr>
+    <td style="width:30%;text-align:center"><img src="${LOGO_DUTAGARUDA_B64}" style="height:36px" alt="Dutagaruda"></td>
+    <td style="width:40%;text-align:center;font-weight:700;font-size:11pt">LAPORAN KEGIATAN<br>SAFETY PATROL<br>${esc(data.siteName)}<br><span class="num">${esc(formatIndonesianDate(data.patrolDate))}</span></td>
+    <td style="width:30%;text-align:center"><img src="${LOGO_ITJ_B64}" style="height:38px" alt="ITJ"></td>
+  </tr>
+</table>
+${head("LAPORAN KEGIATAN", "SAFETY PATROL", [
+  metaRow("Lokasi", esc(data.siteName)),
+  metaRow("Tanggal", `<span class="num">${esc(formatIndonesianDate(data.patrolDate))}</span>`),
+])}
 ${grid}
 ${signatures()}
 <p class="foot num">Dokumen dihasilkan sistem – ${esc(formatIndonesianDate(new Date()))} · ${data.findings.length} temuan foto</p>`,

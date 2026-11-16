@@ -12,9 +12,18 @@ import { useUmpan, petakanUmpanKeLaporan, useUnitHidran, useUnitApar, useKotakP3
 import { InspectionCategory, InspectionReport } from '@/types';
 import { Agentation } from 'agentation';
 
-type AppView = 'dashboard' | 'hydrant' | 'hydrant-cetak' | 'apar' | 'apar-cetak' | 'p3k' | 'patrol';
+type AppView =
+  | 'dashboard'
+  | 'hydrant'
+  | 'hydrant-cetak'
+  | 'apar'
+  | 'apar-cetak'
+  | 'p3k'
+  | 'p3k-cetak'
+  | 'patrol'
+  | 'patrol-cetak';
 
-/** Deep-link pratinjau cetak: `?cetak=hydrant|apar` (+ opsional `?bulan=YYYY-MM`).
+/** Deep-link pratinjau cetak: `?cetak=hydrant|apar|p3k|patrol` (+ opsional `?bulan=YYYY-MM`, `?tahun=YYYY`, `?mode=...`, `?unit=...`, `?autoprint=1`).
  * Tahan bentuk ganda (`?cetak=apar&bulan=X?cetak=apar&bulan=X`): pecah tiap
  * segmen `?` lalu ambil pasangan valid pertama. */
 function ambilParamCetak(nama: string): string | null {
@@ -35,6 +44,8 @@ function bacaCetakAwal(): AppView {
     const cetak = ambilParamCetak('cetak');
     if (cetak === 'hydrant') return 'hydrant-cetak';
     if (cetak === 'apar') return 'apar-cetak';
+    if (cetak === 'p3k') return 'p3k-cetak';
+    if (cetak === 'patrol' || cetak === 'patroli') return 'patrol-cetak';
     return 'dashboard';
   } catch {
     return 'dashboard';
@@ -47,6 +58,39 @@ function bacaBulanCetak(): string | undefined {
     return /^\d{4}-\d{2}$/.test(b ?? '') ? (b as string) : undefined;
   } catch {
     return undefined;
+  }
+}
+
+function bacaTahunCetak(): string | undefined {
+  try {
+    const t = ambilParamCetak('tahun');
+    return /^\d{4}$/.test(t ?? '') ? (t as string) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function bacaModeCetak(): string | undefined {
+  try {
+    return ambilParamCetak('mode') ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function bacaUnitCetak(): string | undefined {
+  try {
+    return ambilParamCetak('unit') ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function bacaAutoPrint(): boolean {
+  try {
+    return ambilParamCetak('autoprint') === '1';
+  } catch {
+    return false;
   }
 }
 
@@ -71,19 +115,41 @@ const AparPrintPreview = lazy(() =>
   import('@/features/apar').then((m) => ({ default: m.AparPrintPreview }))
 );
 const P3kPage = lazy(() => import('@/features/p3k').then((m) => ({ default: m.P3kPage })));
+const P3kPrintPreview = lazy(() =>
+  import('@/features/p3k').then((m) => ({ default: m.P3kPrintPreview }))
+);
 const PatrolPage = lazy(() => import('@/features/patrol').then((m) => ({ default: m.PatrolPage })));
+const PatrolPrintPreview = lazy(() =>
+  import('@/features/patrol').then((m) => ({ default: m.PatrolPrintPreview }))
+);
+
+function bersihkanQueryCetak() {
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.delete('cetak');
+    u.searchParams.delete('mode');
+    u.searchParams.delete('unit');
+    u.searchParams.delete('tahun');
+    u.searchParams.delete('autoprint');
+    window.history.replaceState(null, '', u.toString());
+  } catch {
+    /* abaikan */
+  }
+}
 
 function AppIsi() {
   const sesi = useSesi();
   const keluar = useKeluar();
   const pulihkanProyek = usePulihkanProyek();
-  // Pemulihan proyek aktif hanya sekali per sesi; tanpa penjaga ini efek akan
-  // memicu mutation berulang saat pemulihan gagal (mis. belum punya proyek).
   const dipulihkan = useRef<string | null>(null);
   const pulihkanRef = useRef(pulihkanProyek.mutate);
   pulihkanRef.current = pulihkanProyek.mutate;
   const [currentView, setCurrentView] = useState<AppView>(bacaCetakAwal);
   const [bulanCetak] = useState<string | undefined>(bacaBulanCetak);
+  const [tahunCetak] = useState<string | undefined>(bacaTahunCetak);
+  const [modeCetak] = useState<string | undefined>(bacaModeCetak);
+  const [unitCetak] = useState<string | undefined>(bacaUnitCetak);
+  const [autoPrint] = useState<boolean>(bacaAutoPrint);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const toggleCollapsed = () => setIsCollapsed((v) => !v);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -95,12 +161,12 @@ function AppIsi() {
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<InspectionCategory | 'ALL'>('ALL');
 
   const [detailReport, setDetailReport] = useState<InspectionReport | null>(null);
-  /** Permintaan sunting dari dasbor: kategori + id rekam inspeksi yang akan dibuka. */
   const [bukaSunting, setBukaSunting] = useState<{ kategori: string | null; refId: string } | null>(
     null,
   );
 
-  const lokasi = useKonteksLokasi();  const monthKey = format(currentDate, 'yyyy-MM');
+  const lokasi = useKonteksLokasi();
+  const monthKey = format(currentDate, 'yyyy-MM');
   const umpan = useUmpan(monthKey);
   const unitHidran = useUnitHidran();
   const unitApar = useUnitApar();
@@ -122,8 +188,6 @@ function AppIsi() {
     }
   }, [isDarkMode]);
 
-  // Sesi yang lahir tanpa organisasi aktif (mis. dibuat di luar alur masuk)
-  // akan ditolak 401 oleh semua rute data. Pulihkan proyek dari catatan server.
   useEffect(() => {
     const s = sesi.data;
     if (!s || s.perusahaanId || dipulihkan.current === s.id) return;
@@ -205,6 +269,17 @@ function AppIsi() {
     return <LoginScreen />;
   }
 
+  const sidebarActiveView =
+    currentView === 'hydrant-cetak'
+      ? 'hydrant'
+      : currentView === 'apar-cetak'
+        ? 'apar'
+        : currentView === 'p3k-cetak'
+          ? 'p3k'
+          : currentView === 'patrol-cetak'
+            ? 'patrol'
+            : currentView;
+
   return (
     <div className="flex h-screen w-screen bg-[var(--bg-main)] text-[var(--primary)] overflow-hidden font-sans select-none">
       {/* 1. Left: Notion-Kit Sidebar */}
@@ -213,7 +288,7 @@ function AppIsi() {
         onSelectCategoryFilter={setActiveCategoryFilter}
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
-        currentView={currentView === 'hydrant-cetak' ? 'hydrant' : currentView === 'apar-cetak' ? 'apar' : currentView}
+        currentView={sidebarActiveView}
         onNavigateView={setCurrentView}
         namaPengguna={sesi.data.nama}
         onKeluar={() => keluar.mutate()}
@@ -222,12 +297,10 @@ function AppIsi() {
         onToggleCollapsed={toggleCollapsed}
       />
 
-      {/* 2. Main Area: Toggle between Calendar Dashboard and Category Specific Pages (e.g. Hydrant, APAR) */}
+      {/* 2. Main Area */}
       {currentView === 'dashboard' ? (
         <>
-          {/* Center: Main Inspection Area (Calendar + 4 PRD Squares) */}
           <main className="flex-1 flex flex-col h-screen overflow-y-auto px-6 py-4 bg-[var(--bg-main)]">
-            {/* Top Breadcrumb & Site Meta */}
             <div className="flex items-center justify-between pb-3 mb-4 border-b border-[var(--border)]">
               <div className="flex flex-col space-y-2">
                 <div className="flex items-center gap-2 text-xs">
@@ -243,7 +316,6 @@ function AppIsi() {
               </div>
             </div>
 
-            {/* Calendar View ("not all the way" - compact month grid) */}
             <div className="w-full">
               <HseCalendar
                 currentDate={currentDate}
@@ -257,13 +329,11 @@ function AppIsi() {
               />
             </div>
 
-            {/* Peta proyek (denah terunggah): tepat di bawah kalender dasbor */}
             <div className="mt-4">
               <PetaProyek />
             </div>
           </main>
 
-          {/* Right: Monthly Report List Panel */}
           <MonthlyReportsPanel
             reports={reports}
             selectedDate={selectedDate}
@@ -278,14 +348,16 @@ function AppIsi() {
         <Suspense fallback={<HalamanMemuat />}>
           <HydrantPrintPreview
             bulan={bulanCetak}
+            modeAwal={
+              modeCetak === 'laporan'
+                ? 'laporan'
+                : modeCetak === 'semua'
+                  ? 'semua'
+                  : 'checklist'
+            }
+            autoPrint={autoPrint}
             onKembali={() => {
-              try {
-                const u = new URL(window.location.href);
-                u.searchParams.delete('cetak');
-                window.history.replaceState(null, '', u.toString());
-              } catch {
-                /* abaikan */
-              }
+              bersihkanQueryCetak();
               setCurrentView('hydrant');
             }}
           />
@@ -314,31 +386,51 @@ function AppIsi() {
         <Suspense fallback={<HalamanMemuat />}>
           <AparPrintPreview
             bulan={bulanCetak}
+            modeAwal={modeCetak === 'kartu' ? 'kartu' : 'bulanan'}
+            unitAwal={unitCetak}
+            tahunAwal={tahunCetak}
+            autoPrint={autoPrint}
             onKembali={() => {
-              try {
-                const u = new URL(window.location.href);
-                u.searchParams.delete('cetak');
-                window.history.replaceState(null, '', u.toString());
-              } catch {
-                /* abaikan */
-              }
+              bersihkanQueryCetak();
               setCurrentView('apar');
+            }}
+          />
+        </Suspense>
+      ) : currentView === 'p3k-cetak' ? (
+        <Suspense fallback={<HalamanMemuat />}>
+          <P3kPrintPreview
+            tahun={tahunCetak}
+            autoPrint={autoPrint}
+            onKembali={() => {
+              bersihkanQueryCetak();
+              setCurrentView('p3k');
             }}
           />
         </Suspense>
       ) : currentView === 'p3k' ? (
         <Suspense fallback={<HalamanMemuat />}>
           <P3kPage
-          isCollapsed={isCollapsed}
-          onToggleCollapsed={toggleCollapsed}
-        />
+            isCollapsed={isCollapsed}
+            onToggleCollapsed={toggleCollapsed}
+          />
+        </Suspense>
+      ) : currentView === 'patrol-cetak' ? (
+        <Suspense fallback={<HalamanMemuat />}>
+          <PatrolPrintPreview
+            bulan={bulanCetak}
+            autoPrint={autoPrint}
+            onKembali={() => {
+              bersihkanQueryCetak();
+              setCurrentView('patrol');
+            }}
+          />
         </Suspense>
       ) : (
         <Suspense fallback={<HalamanMemuat />}>
           <PatrolPage
-          isCollapsed={isCollapsed}
-          onToggleCollapsed={toggleCollapsed}
-        />
+            isCollapsed={isCollapsed}
+            onToggleCollapsed={toggleCollapsed}
+          />
         </Suspense>
       )}
 
@@ -347,7 +439,6 @@ function AppIsi() {
         report={detailReport}
         onClose={() => setDetailReport(null)}
         onEdit={(rep) => {
-          // Sunting dari dasbor: pindah ke halaman kategori lalu buka modal inspeksi rekam nyata.
           setDetailReport(null);
           setBukaSunting({ kategori: rep.category.toLowerCase(), refId: rep.id });
           if (rep.category === 'HYDRANT') setCurrentView('hydrant');
@@ -357,7 +448,6 @@ function AppIsi() {
         }}
       />
 
-      {/* 6. Agentation Visual Feedback Toolbar (dev-only; tidak ikut bundel produksi) */}
       {import.meta.env.DEV && <Agentation endpoint="http://localhost:4747" />}
     </div>
   );

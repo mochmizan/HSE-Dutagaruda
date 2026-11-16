@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Eye, Printer, Search } from 'lucide-react';
 import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
 import { P3kInspectionModal } from './P3kInspectionModal';
 import { P3kKepala } from './P3kKepala';
@@ -56,12 +56,6 @@ const KELAS_TAB_P3K = (aktif: boolean) =>
       : 'text-[var(--secondary)] hover:text-[var(--primary)]'
   }`;
 
-/**
- * Inspeksi Kotak P3K — yearly grid only.
- * Box is keyed by site name (one box per site). Empty start; month click opens the input form.
- *
- * Orkestrasi di sini (semua hook + hitung + simpan); anak-anak presentasional.
- */
 export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed }) => {
   const lokasi = useKonteksLokasi();
   const kotakQuery = useKotakP3k();
@@ -72,8 +66,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   const hapusInspeksi = useHapusInspeksiP3k();
   const buatKotak = useBuatKotakP3k();
 
-  // Tahun berjalan, bukan tahun yang dipatok: grid tahunan harus membuka tahun
-  // ini tanpa perlu diklik dua kali setiap Januari.
   const [year, setYear] = useState(() => String(new Date().getFullYear()));
   const [unitKerja, setUnitKerja] = useState('HSE');
   const [lokasiKerja, setLokasiKerja] = useState('ITJ JPM Dukuh Atas');
@@ -81,15 +73,8 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   const [tabP3k, setTabP3k] = useState<TabP3k>('SEMUA');
   const [cariItem, setCariItem] = useState('');
 
-  // Kotak lokasi aktif (satu kotak per lokasi, sesuai kontrak halaman).
   const kotak = (kotakQuery.data ?? []).find((b) => b.siteId === lokasi.siteId) ?? null;
 
-  // Provisioning otomatis: DB live mulai tanpa box dan seed tidak membuat
-  // satupun, sehingga simpan selalu gagal tanpa ini. Sekali per site,
-  // daftarkan box bernama site aktif. Guard ref supaya StrictMode
-  // (setup → cleanup → setup) tidak double-create; 409/duplikat (API tidak
-  // unique-guard nama) ditelan — daftar kotak dimuat ulang via invalidasi
-  // hook dan simpan tetap dijaga oleh handleSave.
   const kotakDiusahakan = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!kotakQuery.isSuccess) return;
@@ -98,20 +83,15 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
     if (!sid) return;
     if (kotakDiusahakan.current.has(sid)) return;
     kotakDiusahakan.current.add(sid);
-    void buatKotak.mutateAsync({ siteId: sid, name: lokasi.siteName }).catch(() => {
-      /* duplikat/409 atau gagal jaringan: abaikan, ulangi via muat ulang */
-    });
+    void buatKotak.mutateAsync({ siteId: sid, name: lokasi.siteName }).catch(() => {});
   }, [kotakQuery.isSuccess, kotak, lokasi.siteId, lokasi.siteName, buatKotak]);
 
-  // Bulan berjalan (MM): target tombol aksi + CTA status kosong.
   const bulanBerjalan = String(new Date().getMonth() + 1).padStart(2, '0');
-  // Grid tahunan dari API — kosong di awal, terisi saat inspeksi dibuat per bulan.
   const grid: P3kYearGrid = useMemo(
     () => (kotak ? petakanGridP3k([kotak], inspeksiQuery.data ?? [], year)[kotak.id] ?? {} : {}),
     [kotak, inspeksiQuery.data, year],
   );
 
-  // Jangkar ekspor PDF tahunan: rekam inspeksi kotak aktif pada tahun terpilih.
   const jangkarEkspor = kotak
     ? ((inspeksiQuery.data ?? []).find(
         (i) => i.boxId === kotak.id && i.period.startsWith(`${year}-`),
@@ -135,7 +115,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
     return { filled, kurang, kd };
   }, [grid]);
 
-  // Saring baris grid: status terburuk setahun + cari nama item.
   const barisTampil = useMemo(() => {
     const q = cariItem.trim().toLowerCase();
     return STANDARD_P3K_ITEMS.filter((item) => {
@@ -157,17 +136,19 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
     return { kurang, kd };
   }, [grid]);
 
+  /** Buka halaman prosedur cetak P3K (landscape A4 terisolasi mode gelap). */
+  const bukaHalamanCetakP3k = (autoPrint = false) => {
+    const params = new URLSearchParams({ cetak: 'p3k', tahun: year });
+    if (autoPrint) params.set('autoprint', '1');
+    window.open(
+      `${window.location.origin}${window.location.pathname}?${params.toString()}`,
+      '_blank',
+      'noopener',
+    );
+  };
+
   const handlePrint = () => {
-    const style = document.createElement('style');
-    style.id = 'p3k-print-page';
-    style.textContent = '@page { size: A4 landscape; margin: 10mm 12mm; }';
-    document.head.appendChild(style);
-    const done = () => {
-      style.remove();
-      window.removeEventListener('afterprint', done);
-    };
-    window.addEventListener('afterprint', done);
-    window.print();
+    bukaHalamanCetakP3k(true);
   };
 
   const bulanAktif = activeMonth ? `${year}-${activeMonth}` : '';
@@ -188,8 +169,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
 
   const menyimpan = buatInspeksi.isPending || ubahInspeksi.isPending || ubahButir.isPending;
 
-  // Simpan upsert bulan: kepala lewat PATCH bila rekam sudah ada (tanpa 409),
-  // lalu setiap butir disimpan; rekam baru dibuat dulu sebagai jangkar butir.
   const handleSave = async (data: P3kMonthData) => {
     if (!activeMonth) return;
     if (!kotak) {
@@ -309,15 +288,35 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
             </button>
           </div>
 
-          <div className="relative min-w-[170px] lg:w-64">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input
-              type="text"
-              placeholder="Cari item P3K…"
-              value={cariItem}
-              onChange={(e) => setCariItem(e.target.value)}
-              className="w-full pl-7 pr-2.5 py-1.5 text-xs bg-[var(--bg-main)] border border-[var(--border)] rounded-[4px] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#27ae60]"
-            />
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="relative min-w-[170px] lg:w-64">
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+              <input
+                type="text"
+                placeholder="Cari item P3K…"
+                value={cariItem}
+                onChange={(e) => setCariItem(e.target.value)}
+                className="w-full pl-7 pr-2.5 py-1.5 text-xs bg-[var(--bg-main)] border border-[var(--border)] rounded-[4px] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#27ae60]"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => bukaHalamanCetakP3k(false)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] text-[var(--primary)] cursor-pointer pressable tabular-nums"
+            >
+              <Eye size={13} />
+              <span>Pratinjau Cetak</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => bukaHalamanCetakP3k(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#27ae60] hover:bg-[#219653] text-white shadow-2xs cursor-pointer pressable tabular-nums"
+            >
+              <Printer size={13} />
+              <span>Cetak Kartu Tahunan P3K</span>
+            </button>
           </div>
         </div>
       }
@@ -328,8 +327,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
               A. Hasil Pemeriksaan Kotak P3K
             </h2>
           </div>
-          {/* Kop layar interaktif; kop cetak lewat slot kepalaCetak */}
-          <div className="print:hidden bg-white dark:bg-[var(--bg-main)]">
+          <div className="print:hidden">
             <P3kKepala
               year={year}
               unitKerja={unitKerja}
@@ -339,7 +337,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
             />
           </div>
 
-          {/* Grid tahunan */}
           {barisTampil.length === 0 ? (
             <p className="print:hidden text-xs text-[var(--muted)] px-1 py-6 text-center">
               Tidak ada item yang cocok dengan saringan. Ubah tab atau kata kunci.
@@ -348,11 +345,6 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
             <P3kTabel grid={grid} year={year} items={barisTampil} onPilihBulan={setActiveMonth} />
           )}
 
-          <p className="no-print mt-1.5 text-[11px] text-[var(--muted)]">
-            Klik singkatan bulan pada kepala tabel untuk mengisi bulan lain.
-          </p>
-
-          {/* Status kosong: grid masih penuh –, arahkan ke form bulan berjalan. */}
           {stats.filled === 0 && (
             <div className="no-print py-8 text-center border border-dashed border-[var(--border)] rounded-[8px] bg-[var(--bg-sidebar)]/50">
               <p className="font-semibold text-sm text-[var(--primary)] tabular-nums">

@@ -194,11 +194,11 @@ body {
   z-index: 9999;
 }
 
-/* Formal HSE Inspection Print Media Styles */
+/* Formal HSE Inspection Print Media Styles — Strict Light Paper Isolation */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 10mm 12mm;
   }
 
   * {
@@ -206,9 +206,24 @@ body {
     -webkit-print-color-adjust: exact !important;
   }
 
-  body, html {
+  html,
+  html.dark,
+  body,
+  .dark body {
     background: #ffffff !important;
-    color: #111827 !important;
+    color: #000000 !important;
+    color-scheme: light only !important;
+    --bg-main: #ffffff !important;
+    --bg-sidebar: #f9f8f7 !important;
+    --bg-modal: #ffffff !important;
+    --bg-popover: #ffffff !important;
+    --bg-hover: rgba(55, 53, 47, 0.04) !important;
+    --primary: #000000 !important;
+    --secondary: #374151 !important;
+    --muted: #4b5563 !important;
+    --border: #111827 !important;
+    --border-strong: #000000 !important;
+    --border-cell: #111827 !important;
   }
 
   aside,
@@ -229,25 +244,6 @@ body {
     height: auto !important;
   }
 
-  table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    font-size: 8pt !important;
-  }
-
-  th, td {
-    border: 1px solid #9ca3af !important;
-    padding: 3px 5px !important;
-    color: #111827 !important;
-    background-color: transparent !important;
-    page-break-inside: avoid !important;
-  }
-
-  th {
-    background-color: #f3f4f6 !important;
-    font-weight: 700 !important;
-  }
-
   .print\:break-inside-avoid {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
@@ -256,19 +252,6 @@ body {
   .print\:break-before-page {
     break-before: page !important;
     page-break-before: always !important;
-  }
-
-  /* APAR print scoping: dua grup cetak terpisah — laporan vs kartu tahunan */
-  body.printing-report #apar-card-print {
-    display: none !important;
-  }
-
-  body.printing-card #apar-report-print > .apar-report-part {
-    display: none !important;
-  }
-
-  body.printing-card #apar-card-print {
-    display: block !important;
   }
 
   thead {

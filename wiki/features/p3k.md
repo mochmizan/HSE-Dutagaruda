@@ -74,10 +74,16 @@ memaksa A4 landscape via injeksi `@page`.
   ini hanya jaring pengaman.
 - `p3k-clear` menghapus satu bulan penuh via aksi hapus-bulan (konfirmasi
   dulu, lalu modal menutup).
-- `p3k-print` mengunduh PDF landscape via `POST /api/export/p3k-yearly/
-  :refId` (kategori `p3k-yearly`, bukan `p3k`) → polling
-  `GET /api/pdf-jobs/:id` hingga `done` + `downloadUrl`. Ada juga
-  `Cetak` (window.print, A4 landscape via `@page`).
+- `p3k-print` (Nov 16, tanpa Gotenberg): `UnduhPdfButton` membuka
+  pratinjau prosedural `?cetak=p3k&tahun=YYYY&autoprint=1` (cetak/simpan
+  via dialog browser); PDF server (`POST /api/export/p3k-yearly/:refId`
+  → `GET /api/pdf-jobs/:id`) kini generator PDF 1.4 murni di
+  `apps/api/src/pdf/render.ts` (tanpa container). Ada juga `Cetak`
+  (window.print, A4 landscape via `@page`).
+- `p3k-cetak` (Nov 16): rute pratinjau `P3kPrintPreview` (procedural
+  sheets + `PROCEDURAL_PRINT_CSS`, logo `/findings/report-header-logos.png`),
+  deep-link `?cetak=p3k&tahun=` + `autoprint=1`; tombol `Pratinjau Cetak`
+  di laman.
 - `p3k-shell`: `P3kPage` dirender lewat `InspectionPageShell`
   dengan `KONFIG_P3K`; tombol kembali `onBack` dihapus (Hydrant/APAR juga
   tidak memakainya — navigasi lewat sidebar); judul shell baru

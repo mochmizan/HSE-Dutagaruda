@@ -1,5 +1,6 @@
 export * from './types';
 export { P3kPage } from './P3kPage';
+export { P3kPrintPreview } from './P3kPrintPreview';
 export { P3kInspectionModal } from './P3kInspectionModal';
 export { P3kInspectionShell } from './P3kInspectionShell';
 export { P3kInspectionHeader } from './P3kInspectionHeader';

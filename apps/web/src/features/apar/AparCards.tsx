@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, CheckCircle2, ChevronRight, Clock, ExternalLink, X } from 'lucide-react';
+import { Check, CheckCircle2, ChevronRight, Clock, ExternalLink, Flame, ShieldAlert, X } from 'lucide-react';
 import type { AparUnitItem } from '../../types/hse';
 import { formatIndonesianDate } from '@/lib/dates';
 import { detailKomponen, tanggalTampil, unitTidakLayak } from './AparTable';
@@ -25,27 +25,36 @@ export const AparCards: React.FC<AparCardsProps> = ({ units, onBuka, aksen }) =>
       const isOnProgress = unit.status === 'SEDANG_BERJALAN';
       const komponen = detailKomponen(unit);
       const tidakLayak = unitTidakLayak(unit, komponen);
+      const isCo2 = unit.jenis === 'CO2';
+      const sisaHari = unit.expiredDate ? hariMenujuKedaluwarsa(unit.expiredDate) : null;
+      const sudahLewat = sisaHari !== null && sisaHari < 0;
+      const segeraHabis = sisaHari !== null && sisaHari >= 0 && sisaHari <= 90;
 
       return (
         <div
           key={unit.id}
           className={`p-3.5 rounded-[6px] border bg-[var(--bg-main)] hover:shadow-xs transition-all flex flex-col justify-between ${
             tidakLayak
-              ? 'border-red-500/40 bg-gradient-to-r from-red-500/[0.04] to-transparent'
+              ? 'border-red-500/40 bg-gradient-to-r from-red-500/[0.05] to-transparent'
               : isOnProgress
-              ? 'border-[#eb5757]/40 bg-gradient-to-r from-[#eb5757]/[0.03] to-transparent'
+              ? 'border-[#f2994a]/40 bg-gradient-to-r from-[#f2994a]/[0.04] to-transparent'
               : isCompleted
-              ? 'border-emerald-500/30'
+              ? 'border-emerald-500/30 bg-gradient-to-r from-emerald-500/[0.03] to-transparent'
               : 'border-[var(--border)]'
           }`}
         >
           <div>
             <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-bold text-[var(--primary)] tracking-tight font-mono tabular-nums">
-                  {unit.kode}
-                </h3>
-                <span className="text-[10px] text-[var(--secondary)]">{unit.zoneName}</span>
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-[5px] bg-[#f2994a]/15 border border-[#f2994a]/30 text-[#f2994a] grid place-items-center flex-shrink-0">
+                  <Flame size={14} strokeWidth={2.2} />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--primary)] tracking-tight font-mono tabular-nums leading-tight">
+                    {unit.kode}
+                  </h3>
+                  <span className="text-[11px] font-medium text-[var(--secondary)]">{unit.zoneName}</span>
+                </div>
               </div>
 
               {tidakLayak ? (
@@ -53,7 +62,7 @@ export const AparCards: React.FC<AparCardsProps> = ({ units, onBuka, aksen }) =>
                   <X size={11} strokeWidth={2.5} /> TIDAK LAYAK
                 </span>
               ) : isCompleted ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                   <CheckCircle2 size={11} /> LAYAK
                 </span>
               ) : isOnProgress ? (
@@ -61,35 +70,51 @@ export const AparCards: React.FC<AparCardsProps> = ({ units, onBuka, aksen }) =>
                   <Clock size={11} /> Berjalan
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[10px] font-medium bg-[var(--bg-hover)] text-[var(--muted)]">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] text-[10px] font-medium bg-[var(--bg-hover)] text-[var(--muted)] border border-[var(--border)]">
                   Belum Dimulai
                 </span>
               )}
             </div>
 
-            <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
-              <span className="font-medium text-[var(--secondary)]">
-                {unit.jenis && unit.ukuran ? `${unit.jenis} • ${unit.ukuran}` : '–'}
-              </span>
+            <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px] bg-[var(--bg-sidebar)]/70 px-2.5 py-1.5 rounded-[4px] border border-[var(--border)]">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold font-mono uppercase border ${
+                    isCo2
+                      ? 'bg-sky-500/12 border-sky-500/30 text-sky-600 dark:text-sky-400'
+                      : 'bg-amber-500/12 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                  }`}
+                >
+                  {unit.jenis || 'POWDER'}
+                </span>
+                <span className="font-semibold text-[var(--primary)] tabular-nums">
+                  {unit.ukuran || '–'}
+                </span>
+              </div>
+
               {(() => {
                 const teksExpired = unit.expiredDate ? formatIndonesianDate(unit.expiredDate) : '';
-                const sisa = unit.expiredDate ? hariMenujuKedaluwarsa(unit.expiredDate) : null;
-                const segera = sisa !== null && sisa <= 90;
-                return teksExpired ? (
+                if (!teksExpired) {
+                  return <span className="font-mono tabular-nums text-[var(--muted)]">–</span>;
+                }
+                return (
                   <span
-                    className={`font-mono tabular-nums ${
-                      segera ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-[var(--muted)]'
+                    className={`inline-flex items-center gap-1 font-mono tabular-nums text-[10px] ${
+                      sudahLewat
+                        ? 'font-bold text-red-600 dark:text-red-400'
+                        : segeraHabis
+                        ? 'font-semibold text-amber-600 dark:text-amber-400'
+                        : 'text-[var(--secondary)]'
                     }`}
                   >
-                    {teksExpired}
+                    {(sudahLewat || segeraHabis) && <ShieldAlert size={11} />}
+                    <span>Exp: {teksExpired}</span>
                   </span>
-                ) : (
-                  <span className="font-mono tabular-nums text-[var(--muted)]">–</span>
                 );
               })()}
             </div>
 
-            <div className="mt-3 pt-2 border-t border-[var(--border)]">
+            <div className="mt-2.5 pt-2 border-t border-[var(--border)]">
               <div className="flex flex-wrap gap-1">
                 {komponen.map((item) => {
                   const isOk = item.status === 'BAIK' || (isCompleted && !item.status && !tidakLayak);
