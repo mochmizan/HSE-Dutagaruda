@@ -19,7 +19,9 @@ export interface InspectionReport {
   inspectorName: string;
   overallStatus: import('./domain').OverallStatus;
   summaryNotes?: string;
+  tindakLanjut?: string;
   photoUrl?: string;
+  photoTimestamp?: string;
   // Specific details
   hydrantDetails?: {
     boxHydrant: import('./domain').HydrantComponentStatus;
@@ -33,6 +35,7 @@ export interface InspectionReport {
     jenis: 'POWDER' | 'CO2' | 'FOAM';
     ukuran: string;
     expiredDate: string;
+    tanggalRefill?: string;
     beratCo2Kg?: number;
     safetyPin: import('./domain').AparComponentStatus;
     corong: import('./domain').AparComponentStatus;
@@ -89,7 +92,7 @@ export interface CategoryMeta {
 
 export const CATEGORY_CONFIG: Record<InspectionCategory, CategoryMeta> = {
   HYDRANT: {
-    label: 'Hydrant',
+    label: 'Inspeksi Hydrant',
     labelIndo: 'Pemeriksaan Hydrant',
     name: 'Hydrant',
     colorHex: '#eb5757',
@@ -101,7 +104,7 @@ export const CATEGORY_CONFIG: Record<InspectionCategory, CategoryMeta> = {
     description: 'Pemeriksaan fisik kotak, selang, nozzle, dan kran valve hydrant gedung',
   },
   APAR: {
-    label: 'APAR',
+    label: 'Inspeksi APAR',
     labelIndo: 'Pemeriksaan APAR',
     name: 'APAR',
     colorHex: '#f2994a',
@@ -113,20 +116,20 @@ export const CATEGORY_CONFIG: Record<InspectionCategory, CategoryMeta> = {
     description: 'Pemeriksaan tekanan tabung, pin segel, corong, dan masa kadaluarsa APAR',
   },
   P3K: {
-    label: 'P3K',
+    label: 'Kotak P3K',
     labelIndo: 'Pemeriksaan Kotak P3K',
-    name: 'P3K',
+    name: 'Kotak P3K',
     colorHex: '#27ae60',
     bgTint: 'rgba(39, 174, 96, 0.12)',
     borderTint: 'rgba(39, 174, 96, 0.25)',
     badgeColor: '#27ae60',
     bgBadge: 'rgba(39, 174, 96, 0.12)',
     icon: 'BriefcaseMedical',
-    description: 'Pemeriksaan kelengkapan 21 item standar obat & perban kotak P3K',
+    description: 'Pemeriksaan kelengkapan 21 item standar obat & perban kotak P3K (Tipe A, B, C)',
   },
   SAFETY_PATROL: {
     label: 'Safety Patrol',
-    labelIndo: 'Patroli Keselamatan (K3)',
+    labelIndo: 'Safety Patrol (K3)',
     name: 'Safety Patrol',
     colorHex: '#2f80ed',
     bgTint: 'rgba(47, 128, 237, 0.12)',
@@ -161,7 +164,9 @@ export interface HydrantUnitItem {
     nozzle?: import('./domain').HydrantComponentStatus;
     valvePillar?: import('./domain').HydrantComponentStatus;
     notes?: string;
+    tindakLanjut?: string;
     photoUrl?: string;
+    photoTimestamp?: string;
     overallStatus?: import('./domain').OverallStatus;
   };
   completedReport?: InspectionReport;
@@ -183,6 +188,7 @@ export interface AparUnitItem {
   jenis: 'POWDER' | 'CO2';
   ukuran: string;
   tahunPembuatan: number;
+  tanggalRefill?: string;
   expiredDate: string;
   beratCo2Kg?: number;
   componentsCheckedCount: number;
@@ -199,6 +205,7 @@ export interface AparUnitItem {
     photoKartuUrl?: string;
     photoBeratUrl?: string;
     photoPengecekanUrl?: string;
+    photoTimestamp?: string;
     overallStatus?: import('./domain').OverallStatus;
     tindakLanjut?: string;
     tanggalPemeriksaan?: string;
@@ -225,4 +232,3 @@ export interface AparYearCell {
 }
 
 export type AparYearGrid = Record<string, AparYearCell>;
-

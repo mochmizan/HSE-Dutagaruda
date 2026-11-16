@@ -1,44 +1,48 @@
-:80 {
-  root * /srv/web
+{
+	auto_https {$CADDY_AUTO_HTTPS:off}
+}
 
-  # Satu directive di level situs: berlaku untuk shell SPA, /assets/*, /api/*,
-  # dan /storage/*. zstd didahulukan bila klien menerimanya, gzip sebagai
-  # cadangan. Tipe biner (PNG/JPEG/PDF) tidak disentuh encoder.
-  encode zstd gzip
+{$SITE_ADDRESS::80} {
+	root * /srv/web
 
-  handle /api/* {
-    reverse_proxy api:3001
-  }
-  handle_path /storage/* {
-    reverse_proxy garage:3900 {
-      header_up Host garage:3900
-    }
-  }
+	# Satu directive di level situs: berlaku untuk shell SPA, /assets/*, /api/*,
+	# dan /storage/*. zstd didahulukan bila klien menerimanya, gzip sebagai
+	# cadangan. Tipe biner (PNG/JPEG/PDF) tidak disentuh encoder.
+	encode zstd gzip
 
-  # Aset ber-hash milik satu build: aman di-cache lama, dan TIDAK boleh jatuh ke
-  # shell. `try_files` umum dulu membuat /assets/<hash-lama>.js dijawab
-  # index.html + header immutable setahun, yaitu HTML tersimpan setahun di URL
-  # aset. Blok terpisah = 404 yang benar, dan tetap tak bisa di-cache.
-  handle /assets/* {
-    header Cache-Control "public, max-age=31536000, immutable"
-    file_server
-  }
+	handle /api/* {
+		reverse_proxy api:3001
+	}
+	handle_path /storage/* {
+		reverse_proxy garage:3900 {
+			header_up Host garage:3900
+		}
+	}
 
-  # Gambar publik non-hash (kop laporan). URL-nya statis, jadi `immutable` akan
-  # menahan logo lama setahun di peramban saat berkas diganti. Tujuh hari cukup
-  # untuk menghapus permintaan berulang tanpa mengunci penggantian.
-  handle /findings/* {
-    header Cache-Control "public, max-age=604800"
-    file_server
-  }
+	# Aset ber-hash milik satu build: aman di-cache lama, dan TIDAK boleh jatuh ke
+	# shell. `try_files` umum dulu membuat /assets/<hash-lama>.js dijawab
+	# index.html + header immutable setahun, yaitu HTML tersimpan setahun di URL
+	# aset. Blok terpisah = 404 yang benar, dan tetap tak bisa di-cache.
+	handle /assets/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
 
-  # Shell SPA selalu divalidasi ulang. Tanpa ini peramban memakai index.html
-  # lama (heuristik ETag/Last-Modified) bersama bundel lama, sehingga perubahan
-  # yang sudah ter-build tidak sampai ke peninjau (Okt 18: tombol Edit "tidak
-  # bekerja" karena tab menjalankan bundle sebelum perubahan).
-  handle {
-    header Cache-Control "no-cache"
-    try_files {path} /index.html
-    file_server
-  }
+	# Gambar publik non-hash (kop laporan). URL-nya statis, jadi `immutable` akan
+	# menahan logo lama setahun di peramban saat berkas diganti. Tujuh hari cukup
+	# untuk menghapus permintaan berulang tanpa mengunci penggantian.
+	handle /findings/* {
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	# Shell SPA selalu divalidasi ulang. Tanpa ini peramban memakai index.html
+	# lama (heuristik ETag/Last-Modified) bersama bundel lama, sehingga perubahan
+	# yang sudah ter-build tidak sampai ke peninjau (Okt 18: tombol Edit "tidak
+	# bekerja" karena tab menjalankan bundle sebelum perubahan).
+	handle {
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
 }

@@ -23,9 +23,6 @@ type AppView =
   | 'patrol'
   | 'patrol-cetak';
 
-/** Deep-link pratinjau cetak: `?cetak=hydrant|apar|p3k|patrol` (+ opsional `?bulan=YYYY-MM`, `?tahun=YYYY`, `?mode=...`, `?unit=...`, `?autoprint=1`).
- * Tahan bentuk ganda (`?cetak=apar&bulan=X?cetak=apar&bulan=X`): pecah tiap
- * segmen `?` lalu ambil pasangan valid pertama. */
 function ambilParamCetak(nama: string): string | null {
   try {
     const mentah = window.location.search.replace(/^\?/, '');
@@ -105,7 +102,6 @@ function HalamanMemuat() {
   );
 }
 
-// Halaman fitur dipecah per chunk agar bundel utama tetap di bawah batas.
 const HydrantPage = lazy(() => import('@/features/hydrant').then((m) => ({ default: m.HydrantPage })));
 const HydrantPrintPreview = lazy(() =>
   import('@/features/hydrant').then((m) => ({ default: m.HydrantPrintPreview }))
@@ -159,6 +155,7 @@ function AppIsi() {
   const [currentDate, setCurrentDate] = useState<Date>(() => hariIni());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<InspectionCategory | 'ALL'>('ALL');
+  const [calendarSiteFilter, setCalendarSiteFilter] = useState<string>('');
 
   const [detailReport, setDetailReport] = useState<InspectionReport | null>(null);
   const [bukaSunting, setBukaSunting] = useState<{ kategori: string | null; refId: string } | null>(
@@ -172,6 +169,8 @@ function AppIsi() {
   const unitApar = useUnitApar();
   const kotakP3k = useKotakP3k();
 
+  const effectiveCalendarSite = calendarSiteFilter || lokasi.siteId || 'ALL';
+
   const reports = petakanUmpanKeLaporan(umpan.data, {
     zonaNama: lokasi.zonaIdKeNama,
     unitHidran: new Map((unitHidran.data ?? []).map((u) => [u.id, u])),
@@ -179,7 +178,6 @@ function AppIsi() {
     kotakP3k: new Map((kotakP3k.data ?? []).map((b) => [b.id, b])),
   });
 
-  // Sync dark class on document element
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -308,10 +306,14 @@ function AppIsi() {
                   <span className="text-[var(--primary)] font-medium">
                     {lokasi.namaProyek}
                   </span>
+                  <span className="text-[var(--muted)]">•</span>
+                  <span className="text-[#2383e2] font-semibold">
+                    {lokasi.siteName === 'Pabrik Utama' ? 'Kantor Pusat' : lokasi.siteName}
+                  </span>
                 </div>
 
                 <h1 className="text-lg font-bold text-[var(--primary)] tracking-tight flex items-center gap-2 pt-1">
-                  <span>Dashboard Digitalisasi Inspeksi K3</span>
+                  <span>Dashboard Digitalisasi Inspeksi K3 — Kantor Pusat</span>
                 </h1>
               </div>
             </div>
@@ -326,6 +328,12 @@ function AppIsi() {
                 onToday={handleToday}
                 reports={reports}
                 activeCategoryFilter={activeCategoryFilter}
+                sites={lokasi.daftarLokasi}
+                selectedSiteId={effectiveCalendarSite}
+                onSelectSiteId={(sid) => {
+                  setCalendarSiteFilter(sid);
+                  if (sid !== 'ALL') lokasi.pilihLokasi(sid);
+                }}
               />
             </div>
 
@@ -335,7 +343,11 @@ function AppIsi() {
           </main>
 
           <MonthlyReportsPanel
-            reports={reports}
+            reports={
+              effectiveCalendarSite === 'ALL'
+                ? reports
+                : reports.filter((r) => !r.siteId || r.siteId === effectiveCalendarSite)
+            }
             selectedDate={selectedDate}
             onClearDateFilter={() => setSelectedDate(null)}
             activeCategoryFilter={activeCategoryFilter}

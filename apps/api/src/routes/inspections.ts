@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import {
-  STANDARD_P3K_ITEMS,
   computeAparOverallStatus,
   computeHydrantOverallStatus,
+  detectP3kBoxType,
   firstOfMonth,
+  getStandardP3kItemsForType,
 } from "@viaannn/shared";
 import { and, asc, eq, getTableColumns, gt, gte, lt } from "drizzle-orm";
 import { Hono } from "hono";
@@ -40,10 +41,6 @@ import {
 
 const itemParamSchema = idParamSchema.extend({ itemId: z.string().min(1) });
 
-/** Medan yang menentukan status akhir. PATCH yang tidak menyentuhnya (mis.
- *  `Edit` / batalkan terbit yang hanya mengirim `approvalStatus`) tidak boleh
- *  menghitung ulang status akhir — kalau tidak, satu medan bisa diam-diam
- *  menimpa nilai lain, tepat yang dihindari oleh tulisan satu-medan. */
 const MEDAN_KOMPONEN_HIDRAN = [
   "boxHydrant",
   "fireHose",
@@ -466,8 +463,10 @@ export const p3kInspectionsApp = new Hono()
       paraf: body.paraf?.trim() ? body.paraf.trim() : null,
     })
     .returning();
+  const boxType = detectP3kBoxType(box[0].name);
+  const typedItems = getStandardP3kItemsForType(boxType);
   await db.insert(p3kInspectionItems).values(
-    STANDARD_P3K_ITEMS.map((item) => ({
+    typedItems.map((item) => ({
       id: newId(),
       companyId: owned,
       inspectionId: row.id,

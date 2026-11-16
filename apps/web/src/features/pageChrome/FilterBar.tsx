@@ -8,7 +8,7 @@ interface FilterBarProps {
   filterTab: FilterTab;
   onFilterTab: (tab: FilterTab) => void;
   total: number;
-  onProgress: number;
+  onProgress?: number;
   completed: number;
   zona: string[];
   zoneFilter: string;
@@ -27,20 +27,14 @@ const KELAS_TAB = (aktif: boolean) =>
   }`;
 
 /**
- * Tab filter status, saringan zona, kotak cari, dan pengalih tabel/kartu.
- *
- * Satu komponen untuk Hydrant dan APAR. Sebelumnya APAR menyalin bar ini dan
- * menyimpang di dua hal: label tab hanya `Sedang Berjalan` (bukan
- * `Sedang Berjalan (On Progress)`) dan semua lencana hitungan memakai warna
- * netral. Lencana sekarang memakai warna per tab di kedua halaman — amber untuk
- * berjalan, emerald untuk selesai, netral untuk semua unit — sesuai kontrak
- * `features/AGENTS.md`, termasuk saat tab itu aktif.
+ * Tab filter status (Total Unit & Selesai Diperiksa), saringan zona, kotak cari,
+ * dan pengalih tabel/kartu. Sesuai revisi: tab "Sedang Berjalan (On Progress)"
+ * dihapus, menyisakan Total Unit dan Selesai Diperiksa.
  */
 export const FilterBar: React.FC<FilterBarProps> = ({
   filterTab,
   onFilterTab,
   total,
-  onProgress,
   completed,
   zona,
   zoneFilter,
@@ -53,20 +47,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   <div className="no-print flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 pb-3 mb-3 border-b border-[var(--border)]">
     <div className="flex items-center gap-1 bg-[var(--bg-sidebar)] p-0.5 rounded-[5px] border border-[var(--border)] text-xs flex-wrap">
       <button type="button" onClick={() => onFilterTab('ALL')} className={KELAS_TAB(filterTab === 'ALL')}>
-        <span>Semua Unit</span>
+        <span>Total Unit</span>
         <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full tabular-nums bg-[var(--bg-hover)] text-[var(--muted)]">
           {total}
-        </span>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onFilterTab('ON_PROGRESS')}
-        className={KELAS_TAB(filterTab === 'ON_PROGRESS')}
-      >
-        <span>Sedang Berjalan (On Progress)</span>
-        <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full tabular-nums bg-amber-500/15 text-amber-600 dark:text-amber-400">
-          {onProgress}
         </span>
       </button>
 

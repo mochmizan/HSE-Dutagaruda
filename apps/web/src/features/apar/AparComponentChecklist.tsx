@@ -11,11 +11,22 @@ interface AparComponentChecklistProps {
   onUbahCatatan: (key: KunciKomponenApar, value: string) => void;
 }
 
+const SARAN_CATATAN_APAR: Record<KunciKomponenApar, string[]> = {
+  safetyPin: ['Pin pengaman bengkok/longgar', 'Tali pengikat pin putus'],
+  corong: ['Corong retak/pecah', 'Sambungan corong kendor'],
+  segel: ['Segel timah/plastik rusak', 'Segel tidak terpasang'],
+  tekanan: ['Jarum manometer di zona merah (kurang tekanan)', 'Tekanan berlebih (overcharged)'],
+  tabung: ['Tabung berkarat/penyok', 'Cat tabung mengelupas'],
+  selang: ['Selang retak/getas', 'Selang tersumbat'],
+  katupTuas: ['Tuas katup macet/berat ditekan', 'Pegas tuas lemah'],
+};
+
 /**
- * Daftar 7 komponen APAR.
- *
- * Kotak catatan selalu tampil: nonaktif saat komponen BAIK, dapat diisi saat
- * TIDAK BAIK / HILANG (kontrak catatan modal inspeksi di features/AGENTS.md).
+ * Daftar 7 Komponen APAR.
+ * Sesuai revisi:
+ * - Tulisan Layak/Baik diganti dengan STANDAR / TIDAK STANDAR.
+ * - Tulisan Hilang di setiap komponen dihapus.
+ * - Ketika memilih TIDAK STANDAR, langsung muncul input keterangan di setiap poin.
  */
 export const AparComponentChecklist: React.FC<AparComponentChecklistProps> = ({
   nilai,
@@ -27,18 +38,26 @@ export const AparComponentChecklist: React.FC<AparComponentChecklistProps> = ({
   <div className="space-y-2">
     <div className="flex items-center justify-between">
       <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
-        Daftar 7 Komponen APAR
+        2. Daftar Pemeriksaan 7 Komponen APAR
       </label>
+      <span className="text-[10px] text-[var(--muted)]">
+        Pilih <strong>Tidak Standar</strong> untuk mengisi keterangan per poin
+      </span>
     </div>
 
     <fieldset disabled={terbit} className={terbit ? 'opacity-60 cursor-not-allowed' : undefined}>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {KOMPONEN_APAR.map(({ key, judul, hint }) => {
-          const nilaiKomponen = nilai[key];
+          const nilaiKomponen = nilai[key] === 'NA' ? 'TIDAK_BAIK' : nilai[key];
+          const tidakStandar = nilaiKomponen === 'TIDAK_BAIK';
           return (
             <div
               key={key}
-              className="p-2.5 rounded-[5px] border border-[var(--border)] bg-[var(--bg-main)] space-y-1.5"
+              className={`p-2.5 rounded-[5px] border space-y-1.5 transition-colors ${
+                tidakStandar
+                  ? 'border-red-500/45 bg-red-500/[0.04]'
+                  : 'border-[var(--border)] bg-[var(--bg-main)]'
+              }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-[var(--primary)]">{judul}</span>
@@ -47,26 +66,41 @@ export const AparComponentChecklist: React.FC<AparComponentChecklistProps> = ({
               <select
                 value={nilaiKomponen}
                 onChange={(e) => onUbahStatus(key, e.target.value as AparComponentStatus)}
-                className="w-full text-xs p-1.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2]"
+                className={`w-full text-xs font-semibold p-1.5 rounded-[4px] border focus:outline-none ${
+                  tidakStandar
+                    ? 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
+                    : 'border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                }`}
               >
-                <option value="BAIK">BAIK</option>
-                <option value="TIDAK_BAIK">TIDAK BAIK</option>
-                <option value="NA">HILANG</option>
+                <option value="BAIK">STANDAR</option>
+                <option value="TIDAK_BAIK">TIDAK STANDAR</option>
               </select>
-              {(nilaiKomponen === 'TIDAK_BAIK' || nilaiKomponen === 'NA') ? (
-                <input
-                  value={catatan[key] ?? ''}
-                  onChange={(e) => onUbahCatatan(key, e.target.value)}
-                  placeholder="Uraikan kondisi / ketidakhadiran komponen ini…"
-                  className="w-full text-[11px] px-2 py-1 rounded-[3px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2383e2]"
-                />
-              ) : (
-                <input
-                  value={catatan[key] ?? ''}
-                  disabled
-                  placeholder="Komponen standar — tanpa catatan"
-                  className="w-full text-[11px] px-2 py-1 rounded-[3px] border border-[var(--border)] bg-[var(--bg-sidebar)] text-[var(--muted)] placeholder-[var(--muted)] cursor-not-allowed"
-                />
+
+              {tidakStandar && (
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-[10px] font-semibold text-red-600 dark:text-red-400">
+                    Keterangan Tidak Standar ({judul}):
+                  </label>
+                  <input
+                    autoFocus={!catatan[key]}
+                    value={catatan[key] ?? ''}
+                    onChange={(e) => onUbahCatatan(key, e.target.value)}
+                    placeholder={`Tuliskan keterangan ketidaksesuaian ${judul.toLowerCase()}…`}
+                    className="w-full text-[11px] px-2 py-1.5 rounded-[4px] border border-red-500/40 bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-red-500"
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {(SARAN_CATATAN_APAR[key] ?? []).map((saran) => (
+                      <button
+                        key={saran}
+                        type="button"
+                        onClick={() => onUbahCatatan(key, saran)}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--bg-sidebar)] hover:bg-[var(--bg-hover)] border border-[var(--border)] text-[var(--secondary)] cursor-pointer"
+                      >
+                        + {saran}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           );

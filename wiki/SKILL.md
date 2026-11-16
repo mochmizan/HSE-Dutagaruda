@@ -31,7 +31,8 @@ What "up" gives you (all `restart: unless-stopped`):
 
 - Caddy `:8080` — serves the prod web build (`apps/web/dist`) AND proxies
   `/api/*` → api:3001, `/storage/*` → garage. Single review/verify origin.
-- API + Postgres 17 + Garage (S3 foto) + Gotenberg 8 (PDF Chromium).
+- API + Postgres 17 + Garage (S3 foto). PDF tanpa Gotenberg (generator
+  PDF 1.4 murni di `apps/api/src/pdf/render.ts`; ekspor <1 detik/berkas).
 - Seed data (only on a FRESH database — never reseed a live one):
   company `PT DUTAGARUDA PIRANTI PRIMA`, site `Utama` (live DB juga
   memuat site tambahan buatan review, mis. `sampingan` — pilih berdasar
@@ -107,9 +108,9 @@ Real routes (all auth + `companyId` scoped unless noted; base
 - Foto: `GET /api/photos?inspectionKind=hydrant&inspectionId=<id>` (daftar),
   `GET /api/photos/:id` (302 ke presign singkat)
 - Ekspor PDF: `POST /api/export/:category/:refId` → job,
-  `GET /api/pdf-jobs/:id` (status + unduhan, <1 detik per berkas —
+  `GET /api/pdf-jobs/:id` (status + unduhan, <1 detik per berkas,
   generator murni tanpa Gotenberg).
-  Kategori proven: `hydrant-monthly`, `p3k-yearly`,
+  Kategori proven: `hydrant-monthly`, `hydrant-laporan`, `p3k-yearly`,
   `patrol-report` (bukan `hydrant`/`p3k`/`patrol`).
 
 Browser lane (labels below are literal — copy them exactly):
@@ -154,7 +155,8 @@ Proof standards (no exceptions):
   from a second view (list endpoint, feed, reopened modal) — a save status
   alone is insufficient proof.
 - Mocks only where a production boundary already isolates the system
-  (there are none in the drive paths — Garage/Gotenberg are real here).
+  (there are none in the drive paths — Garage is real, PDF renders
+  natively in-process).
 - Prefer read-only journeys. Mutations need a second agent-visible reason
   AND must create clearly-marked fixtures (`uji-` prefix) that the same run
   deletes (dev-DB residue from past runs: soak assets, HYD-W3, pdfJobs rows).

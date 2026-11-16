@@ -503,6 +503,7 @@ async function main(): Promise<void> {
 
   const exportsToTry: [string, string][] = [
     ["hydrant-monthly", hydInspId],
+    ["hydrant-laporan", hydInspId],
     ["apar-monthly", aparInspId],
     ["apar-card", aparInspId],
     ["p3k-yearly", p3kInspId],

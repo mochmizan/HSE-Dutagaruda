@@ -1,6 +1,6 @@
 import { hashPassword } from "better-auth/crypto";
 import { createId } from "@paralleldrive/cuid2";
-import { STANDARD_P3K_ITEMS } from "@viaannn/shared";
+import { getStandardP3kItemsForType } from "@viaannn/shared";
 import { eq } from "drizzle-orm";
 import { db } from "./client.js";
 import { account, member, organization, user } from "./auth-schema.js";
@@ -48,14 +48,14 @@ if (existingSite.length === 0) {
   await db.insert(sites).values({
     id: SITE_ID,
     companyId: COMPANY_ID,
-    name: "JPM Dukuh Atas",
+    name: "Kantor Pusat",
     address: "Jl. Jenderal Sudirman, Dukuh Atas, Jakarta Pusat",
   });
 } else {
   await db
     .update(sites)
     .set({
-      name: "JPM Dukuh Atas",
+      name: "Kantor Pusat",
       address: "Jl. Jenderal Sudirman, Dukuh Atas, Jakarta Pusat",
     })
     .where(eq(sites.id, SITE_ID));
@@ -399,66 +399,78 @@ for (const a of APAR_UNITS_SEED) {
 
 // ── 3. BENIH KOTAK P3K (Kotak Lokasi + 11 Bulan Tahun 2026 × 21 Item Baku) ──
 
-const P3K_BOX_ID = "seed-p3k-box-1";
-const exBox = await db.select({ id: p3kBoxes.id }).from(p3kBoxes).where(eq(p3kBoxes.id, P3K_BOX_ID)).limit(1);
-if (exBox.length === 0) {
-  await db.insert(p3kBoxes).values({
-    id: P3K_BOX_ID,
-    companyId: COMPANY_ID,
-    siteId: SITE_ID,
-    name: "JPM Dukuh Atas",
-  });
+const P3K_BOXES_SEED = [
+  { id: "seed-p3k-box-1", name: "Lantai 2 (Kotak Tipe A)", boxType: "A" as const },
+  { id: "seed-p3k-box-2", name: "Lantai 3 (Kotak Tipe B)", boxType: "B" as const },
+];
+
+for (const boxDef of P3K_BOXES_SEED) {
+  const exBox = await db.select({ id: p3kBoxes.id }).from(p3kBoxes).where(eq(p3kBoxes.id, boxDef.id)).limit(1);
+  if (exBox.length === 0) {
+    await db.insert(p3kBoxes).values({
+      id: boxDef.id,
+      companyId: COMPANY_ID,
+      siteId: SITE_ID,
+      name: boxDef.name,
+    });
+  } else {
+    await db.update(p3kBoxes).set({ name: boxDef.name }).where(eq(p3kBoxes.id, boxDef.id));
+  }
 }
 
 const P3K_MONTHS_SEED = [
-  { period: "2026-01-01", inspectionDate: "2026-01-02", paraf: "Takamay" },
-  { period: "2026-02-01", inspectionDate: "2026-02-10", paraf: "Takamay" },
-  { period: "2026-03-01", inspectionDate: "2026-03-11", paraf: "Takamay" },
-  { period: "2026-04-01", inspectionDate: "2026-04-22", paraf: "Takamay" },
-  { period: "2026-05-01", inspectionDate: "2026-05-13", paraf: "Takamay" },
-  { period: "2026-06-01", inspectionDate: "2026-06-12", paraf: "Takamay" },
-  { period: "2026-07-01", inspectionDate: "2026-07-20", paraf: "Takamay" },
-  { period: "2026-08-01", inspectionDate: "2026-08-21", paraf: "Takamay" },
-  { period: "2026-09-01", inspectionDate: "2026-09-16", paraf: "Favian" },
-  { period: "2026-10-01", inspectionDate: "2026-10-15", paraf: "Favian" },
-  { period: "2026-11-01", inspectionDate: "2026-11-15", paraf: "Favian" },
+  { period: "2026-01-01", inspectionDate: "2026-01-02", paraf: "Takamay Jason H. I." },
+  { period: "2026-02-01", inspectionDate: "2026-02-10", paraf: "Takamay Jason H. I." },
+  { period: "2026-03-01", inspectionDate: "2026-03-11", paraf: "Takamay Jason H. I." },
+  { period: "2026-04-01", inspectionDate: "2026-04-22", paraf: "Takamay Jason H. I." },
+  { period: "2026-05-01", inspectionDate: "2026-05-13", paraf: "Takamay Jason H. I." },
+  { period: "2026-06-01", inspectionDate: "2026-06-12", paraf: "Takamay Jason H. I." },
+  { period: "2026-07-01", inspectionDate: "2026-07-20", paraf: "Takamay Jason H. I." },
+  { period: "2026-08-01", inspectionDate: "2026-08-21", paraf: "Takamay Jason H. I." },
+  { period: "2026-09-01", inspectionDate: "2026-09-16", paraf: "Takamay Jason H. I." },
+  { period: "2026-10-01", inspectionDate: "2026-10-15", paraf: "Takamay Jason H. I." },
+  { period: "2026-11-01", inspectionDate: "2026-11-15", paraf: "Takamay Jason H. I." },
 ];
 
-for (const m of P3K_MONTHS_SEED) {
-  const ym = m.period.slice(0, 7);
-  const inspId = `seed-p3k-insp-${ym}`;
-  const exP = await db
-    .select({ id: p3kInspections.id })
-    .from(p3kInspections)
-    .where(eq(p3kInspections.id, inspId))
-    .limit(1);
-  if (exP.length === 0) {
-    await db.insert(p3kInspections).values({
-      id: inspId,
-      companyId: COMPANY_ID,
-      boxId: P3K_BOX_ID,
-      period: m.period,
-      inspectionDate: m.inspectionDate,
-      paraf: m.paraf,
-      notes: "Pemeriksaan rutin kelengkapan 21 item standar kotak P3K",
-    });
-
-    const itemRows = STANDARD_P3K_ITEMS.map((std) => {
-      const kurangJan = ym === "2026-01" && (std.id === 5 || std.id === 8);
-      const kurangApr = ym === "2026-04" && std.id === 8;
-      const kurangJun = ym === "2026-06" && std.id === 14;
-      const isKurang = kurangJan || kurangApr || kurangJun;
-      return {
-        id: `${inspId}-item-${std.id}`,
+for (const boxDef of P3K_BOXES_SEED) {
+  const itemsForBox = getStandardP3kItemsForType(boxDef.boxType);
+  const prefix = boxDef.boxType === "A" ? "seed-p3k-insp" : "seed-p3k-b-insp";
+  for (const m of P3K_MONTHS_SEED) {
+    const ym = m.period.slice(0, 7);
+    const inspId = `${prefix}-${ym}`;
+    const exP = await db
+      .select({ id: p3kInspections.id })
+      .from(p3kInspections)
+      .where(eq(p3kInspections.id, inspId))
+      .limit(1);
+    if (exP.length === 0) {
+      await db.insert(p3kInspections).values({
+        id: inspId,
         companyId: COMPANY_ID,
-        inspectionId: inspId,
-        itemName: std.name,
-        standardQty: std.standardQty,
-        actualQty: isKurang ? Math.max(0, std.standardQty - 1) : std.standardQty,
-        status: isKurang ? ("DIBAWAH_STANDAR" as const) : ("STANDAR" as const),
-      };
-    });
-    await db.insert(p3kInspectionItems).values(itemRows);
+        boxId: boxDef.id,
+        period: m.period,
+        inspectionDate: m.inspectionDate,
+        paraf: m.paraf,
+        notes: `Pemeriksaan rutin kelengkapan 21 item standar ${boxDef.name}`,
+      });
+
+      const itemRows = itemsForBox.map((std) => {
+        const kurangJan = ym === "2026-01" && (std.id === 5 || std.id === 8);
+        const kurangApr = ym === "2026-04" && std.id === 8;
+        const kurangJun = ym === "2026-06" && std.id === 14;
+        const isKurang = kurangJan || kurangApr || kurangJun;
+        return {
+          id: `${inspId}-item-${std.id}`,
+          companyId: COMPANY_ID,
+          inspectionId: inspId,
+          itemName: std.name,
+          standardQty: std.standardQty,
+          actualQty: isKurang ? Math.max(0, std.standardQty - 1) : std.standardQty,
+          status: isKurang ? ("DIBAWAH_STANDAR" as const) : ("STANDAR" as const),
+        };
+      });
+      await db.insert(p3kInspectionItems).values(itemRows);
+    }
   }
 }
 
@@ -511,6 +523,6 @@ for (const patrolDate of PATROL_DATES_SEED) {
 }
 
 console.log(
-  "Benih selesai: PT DUTAGARUDA PIRANTI PRIMA, lokasi JPM Dukuh Atas (4 zona), 8 unit Hydrant, 20 unit APAR, 1 kotak P3K (11 bulan × 21 item), dan 3 laporan Safety Patrol (36 temuan).",
+  "Benih selesai: PT DUTAGARUDA PIRANTI PRIMA, lokasi Kantor Pusat (4 zona), 8 unit Hydrant, 20 unit APAR, 2 kotak P3K (Lantai 2 Tipe A & Lantai 3 Tipe B, 11 bulan × 21 item), dan 3 laporan Safety Patrol (36 temuan).",
 );
 process.exit(0);

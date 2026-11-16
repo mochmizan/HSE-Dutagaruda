@@ -4,6 +4,7 @@ import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { AparUnitItem } from '../../types/hse';
 import type { ApiInspeksiApar } from '@/services/api/klien';
+import { tanggalRefillTampil } from './AparTable';
 import {
   BULAN_KARTU,
   KUNCI_KOMPONEN_KARTU,
@@ -49,6 +50,7 @@ function kelasTanda(tanda: TandaKartuApar): string {
 
 /**
  * Section D halaman APAR: kartu tahunan 12 bulan per unit (hanya-baca).
+ * Sesuai revisi: label Standar / Tidak Standar (tanpa Hilang), Tanggal Refill, dan Tindakan Rekomendasi.
  */
 export const AparYearCard: React.FC<AparYearCardProps> = ({
   units,
@@ -76,7 +78,7 @@ export const AparYearCard: React.FC<AparYearCardProps> = ({
             D. Kartu Tahunan APAR (Hang-Tag 12 Bulan)
           </h2>
           <p className="no-print text-xs text-[var(--muted)] mt-0.5">
-            Kartu gantung pemeriksaan tahunan per unit — tanggal, kondisi 7 komponen, dan tindak lanjut
+            Kartu gantung pemeriksaan tahunan per unit — tanggal, kondisi 7 komponen (Standar / Tidak Standar), dan tindakan rekomendasi
           </p>
         </div>
         <div className="no-print flex items-center gap-2">
@@ -191,7 +193,7 @@ export const AparYearCard: React.FC<AparYearCardProps> = ({
                   <th className="py-2.5 px-3 text-center align-middle w-28">Bulan</th>
                   <th className="py-2.5 px-3 text-center align-middle w-32">Tanggal</th>
                   <th className="py-2.5 px-3 text-center align-middle">Kondisi 7 Komponen</th>
-                  <th className="py-2.5 px-3 text-center align-middle w-64">Tindak Lanjut</th>
+                  <th className="py-2.5 px-3 text-center align-middle w-64">Catatan &amp; Tindakan Rekomendasi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)] print:divide-black">
@@ -223,9 +225,9 @@ export const AparYearCard: React.FC<AparYearCardProps> = ({
                               key={k}
                               title={`${LABEL_KOMPONEN_KARTU[k]}: ${
                                 sel.kondisi[k] === '✓'
-                                  ? 'Baik'
+                                  ? 'Standar'
                                   : sel.kondisi[k] === 'X'
-                                    ? 'Tidak Baik/Hilang'
+                                    ? 'Tidak Standar'
                                     : 'Belum diperiksa'
                               }`}
                               className={`px-1.5 py-0.5 rounded-[3px] text-[10px] font-mono border inline-flex items-center gap-0.5 ${kelasTanda(sel.kondisi[k])}`}
@@ -252,12 +254,18 @@ export const AparYearCard: React.FC<AparYearCardProps> = ({
             </table>
           </div>
           <div className="px-3.5 py-2.5 border-t border-[var(--border)] bg-[var(--bg-sidebar)]/40 print:border-black flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] text-[var(--secondary)] tabular-nums print:text-black">
-              <span className="font-semibold text-[var(--primary)] print:text-black">Tgl Pengisian Ulang (Expired):</span>{' '}
-              <span className="font-mono font-semibold">{tanggalIsiUlang(unitAktif.expiredDate)}</span>
-            </p>
+            <div className="flex flex-wrap items-center gap-4 text-[11px] text-[var(--secondary)] tabular-nums print:text-black">
+              <span>
+                <span className="font-semibold text-[var(--primary)] print:text-black">Tanggal Refill:</span>{' '}
+                <span className="font-mono font-semibold">{tanggalRefillTampil(unitAktif)}</span>
+              </span>
+              <span>
+                <span className="font-semibold text-[var(--primary)] print:text-black">Tgl Kedaluwarsa:</span>{' '}
+                <span className="font-mono font-semibold">{tanggalIsiUlang(unitAktif.expiredDate)}</span>
+              </span>
+            </div>
             <p className="text-[10px] text-[var(--muted)] print:text-black">
-              <span className="font-semibold">Legenda:</span> ✓ Baik · X Tidak Baik/Hilang · –
+              <span className="font-semibold">Legenda:</span> ✓ Standar · X Tidak Standar · –
               Belum diperiksa
             </p>
           </div>

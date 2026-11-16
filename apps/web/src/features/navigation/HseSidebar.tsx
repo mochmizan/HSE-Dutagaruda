@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { InspectionCategory } from '../../types/hse';
 import { useKonteksLokasi } from '../konteksLokasi';
 import { useBuatProyek, useDaftarProyek, useHapusProyek, usePindahProyek, useSesi, useUbahProyek } from '../auth/sesi';
@@ -54,7 +54,6 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
   const hapusProyek = useHapusProyek();
   const hapusLokasi = useHapusLokasi();
 
-  // Badge hitung per lokasi: unit/kotak terdaftar (patroli tak punya angka wajar).
   const unitHidran = useUnitHidran();
   const unitApar = useUnitApar();
   const kotakP3k = useKotakP3k();
@@ -64,7 +63,6 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
     p3k: (kotakP3k.data ?? []).filter((b) => b.siteId === siteId).length,
   });
 
-  // Menu konteks klik-kanan untuk hapus proyek / lokasi.
   const [menu, setMenu] = useState<MenuAksi | null>(null);
 
   useEffect(() => {
@@ -84,14 +82,20 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
     };
   }, [menu]);
 
-  // Seksi PROYEK: tambah baris dan sunting nama sebaris, pola sama seperti lokasi.
   const [tambahProyek, setTambahProyek] = useState(false);
   const [namaProyekBaru, setNamaProyekBaru] = useState('');
   const [suntingProyekId, setSuntingProyekId] = useState<string | null>(null);
   const [namaProyekSunting, setNamaProyekSunting] = useState('');
 
-  // Seksi LOKASI: lokasi mana yang terbuka, tambah baris, dan sunting nama sebaris.
   const [lokasiTerbuka, setLokasiTerbuka] = useState<string | null>(null);
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (!autoOpened.current && lokasi.siteId) {
+      autoOpened.current = true;
+      setLokasiTerbuka(lokasi.siteId);
+    }
+  }, [lokasi.siteId]);
+
   const [tambahLokasi, setTambahLokasi] = useState(false);
   const [namaBaru, setNamaBaru] = useState('');
   const [suntingId, setSuntingId] = useState<string | null>(null);
@@ -153,9 +157,7 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
 
   return (
     <aside className="w-64 h-screen border-r border-[var(--border)] bg-[var(--bg-sidebar)] flex flex-col justify-between select-none flex-shrink-0 z-30 transition-[width] duration-200 ease-[var(--ease-out)] font-sans">
-      {/* Header & Site Selector */}
       <div className="flex flex-col">
-        {/* Workspace Switcher / Pengalih Proyek */}
         <SidebarProyek
           namaProyek={lokasi.namaProyek}
           onToggleCollapsed={onToggleCollapsed}
@@ -169,11 +171,8 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
           onSimpanBaru={simpanProyekBaru}
         />
 
-        {/* Navigation Sections */}
         <SidebarNavigasi currentView={currentView} onNavigateView={onNavigateView} />
 
-        {/* Lokasi: tambah + sunting nama sebaris (tanpa popup); tiap baris
-            melipat untuk 4 kategori dan memindah lokasi aktif saat dipilih. */}
         <SidebarLokasi
           daftar={lokasi.daftarLokasi}
           siteId={lokasi.siteId}
@@ -187,14 +186,12 @@ export const HseSidebar: React.FC<HseSidebarProps> = ({
           onSimpanBaru={simpanLokasiBaru}
         />
 
-        {/* Filter Kategori */}
         <SidebarFilter
           activeCategoryFilter={activeCategoryFilter}
           onSelectCategoryFilter={onSelectCategoryFilter}
         />
       </div>
 
-      {/* Footer & User Profile & Theme Toggle */}
       <SidebarPengguna
         namaPengguna={namaPengguna}
         isDarkMode={isDarkMode}

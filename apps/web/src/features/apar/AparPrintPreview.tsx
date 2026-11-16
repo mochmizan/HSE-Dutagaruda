@@ -231,12 +231,12 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       inspectionDate: tanggalInspeksi,
       notes: catatan,
       signers: {
-        dibuatNama: 'Erick',
-        dibuatJabatan: 'Danru',
+        dibuatNama: 'Takamay Jason Hermantika Irsyad',
+        dibuatJabatan: 'Junior HSE Analyst',
         diketahuiNama: 'Rifaldi Apriansyah',
         diketahuiJabatan: 'Operational & TR',
-        disetujuiNama: 'Oky Gusta Putra Pratama',
-        disetujuiJabatan: 'Building Management',
+        disetujuiNama: 'Hizri',
+        disetujuiJabatan: 'Governance, Risk, HSE & Quality Group Head',
       },
       rows,
       expiryRows,
@@ -272,17 +272,22 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
         tabung: r.tabung,
         selang: r.selang,
         katupTuas: r.katupTuas,
-        namaPemeriksa: 'Takamay',
+        namaPemeriksa: 'Takamay Jason H. I.',
         paraf: 'Tkm',
       };
     });
 
     const tRefill = pecahTanggalSlot(unitAktif.expiredDate);
     const expYear = Number(unitAktif.expiredDate.slice(0, 4));
-    const tLast: [string, string, string] =
-      Number.isFinite(expYear) && tRefill[0]
-        ? [tRefill[0], tRefill[1], String(expYear - 2).slice(2)]
-        : ['', '', ''];
+    const refillYear =
+      unitAktif.tahunPembuatan && unitAktif.tahunPembuatan >= 2000
+        ? unitAktif.tahunPembuatan
+        : Number.isFinite(expYear)
+        ? expYear - 2
+        : 2025;
+    const tLast: [string, string, string] = tRefill[0]
+      ? [tRefill[0], tRefill[1], String(refillYear).slice(2)]
+      : ['', '', ''];
 
     return {
       tahun: tahunKartu,
@@ -306,7 +311,6 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
 
   const memuat = unitQuery.isPending || inspeksiQuery.isPending || !fotoSelesai;
 
-  // Trigger print automatically when opened with `?autoprint=1` once loaded
   useEffect(() => {
     if (!autoPrint || memuat) return;
     const t = window.setTimeout(() => {

@@ -51,8 +51,8 @@ export const AparPrintSignatures: React.FC = () => (
       <div>
         <p className="font-semibold">Petugas Pemeriksa (Inspector)</p>
         <div className="h-16"></div>
-        <p className="font-bold underline">( Pengawas K3 )</p>
-        <p className="text-[10px] text-gray-700">Staff HSE / Teknisi K3</p>
+        <p className="font-bold underline">( Takamay Jason Hermantika Irsyad )</p>
+        <p className="text-[10px] text-gray-700">Junior HSE Analyst</p>
       </div>
       <div>
         <p className="font-semibold">Diverifikasi Oleh (Supervisor)</p>
@@ -63,8 +63,8 @@ export const AparPrintSignatures: React.FC = () => (
       <div>
         <p className="font-semibold">Disetujui Oleh (Site Manager)</p>
         <div className="h-16"></div>
-        <p className="font-bold underline">( Ir. Hendra Wijaya )</p>
-        <p className="text-[10px] text-gray-700">Kepala Operasional Logistik</p>
+        <p className="font-bold underline">( Hizri )</p>
+        <p className="text-[10px] text-gray-700">Governance, Risk, HSE & Quality Group Head</p>
       </div>
     </div>
   </div>

@@ -58,8 +58,8 @@ export const HydrantPrintSignatures: React.FC<{ selaluTampil?: boolean }> = ({ s
       <div>
         <p className="font-semibold">Petugas Pemeriksa (Inspector)</p>
         <div className="h-16"></div>
-        <p className="font-bold underline">( Alex Chen )</p>
-        <p className="text-[10px] text-gray-700">Staff HSE / Teknisi K3</p>
+        <p className="font-bold underline">( Takamay Jason Hermantika Irsyad )</p>
+        <p className="text-[10px] text-gray-700">Junior HSE Analyst</p>
       </div>
       <div>
         <p className="font-semibold">Diverifikasi Oleh (Supervisor)</p>
@@ -70,8 +70,8 @@ export const HydrantPrintSignatures: React.FC<{ selaluTampil?: boolean }> = ({ s
       <div>
         <p className="font-semibold">Disetujui Oleh (Site Manager)</p>
         <div className="h-16"></div>
-        <p className="font-bold underline">( Ir. Hendra Wijaya )</p>
-        <p className="text-[10px] text-gray-700">Kepala Operasional Logistik</p>
+        <p className="font-bold underline">( Hizri )</p>
+        <p className="text-[10px] text-gray-700">Governance, Risk, HSE & Quality Group Head</p>
       </div>
     </div>
   </div>
@@ -281,7 +281,7 @@ export const HydrantPrintKertas: React.FC<HydrantPrintKertasProps> = ({
         </table>
 
         <h2 className="text-xs font-bold uppercase tracking-wider mt-3 mb-1 pb-1 border-b border-black">
-          B. Catatan Hasil temuan
+          B. Catatan Temuan Tambahan & Tindakan Rekomendasi
         </h2>
         {findings.length === 0 ? (
           <p className="text-[8px] italic text-gray-600">Tidak ada foto temuan pada periode ini.</p>
@@ -322,7 +322,7 @@ export const HydrantPrintKertas: React.FC<HydrantPrintKertasProps> = ({
         <div className="text-[8px] mb-1">
           <p><strong>Tahun Pemeriksaan :</strong> <span className="tabular-nums">{tahun}</span> | <strong>Bulan :</strong> {namaBulan}</p>
           <p><strong>Lokasi Pemeriksaan :</strong> ITJ {(siteName || '-').toUpperCase()}</p>
-          <p><strong>Keterangan :</strong> Layak Digunakan (✓), Tidak Layak Digunakan (X), Hilang (-)</p>
+          <p><strong>Keterangan :</strong> Standar (✓), Tidak Standar (X)</p>
         </div>
         <table className="w-full border-collapse text-[6px] text-center table-fixed">
           <thead>

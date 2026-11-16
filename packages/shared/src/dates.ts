@@ -21,6 +21,7 @@ export function toPeriodKey(date: Date | string): string {
 
 export function toPeriodIso(date: Date | string): string {
   const d = typeof date === "string" ? parseISO(date) : date;
+  if (!isValid(d)) return "";
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}-01T00:00:00.000Z`;

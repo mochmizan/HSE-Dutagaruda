@@ -8,6 +8,7 @@ export interface AparCreationItem {
   jenis: 'POWDER' | 'CO2';
   ukuran: string;
   tahunPembuatan: number;
+  tanggalRefill?: string;
   expiredDate: string;
   inspectorName?: string;
 }
@@ -23,6 +24,8 @@ export interface AddZoneAparModalProps {
   onReassignUnitZone: (unitId: string, newZoneName: string) => void;
 }
 
+const DEFAULT_REFILL_DATE = '2026-01-15';
+
 export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
   isOpen,
   onClose,
@@ -37,9 +40,11 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
   const [jenis, setJenis] = useState<'POWDER' | 'CO2'>('POWDER');
   const [ukuran, setUkuran] = useState<string>('3 kg');
   const [ukuranTouched, setUkuranTouched] = useState(false);
-  const [tahunPembuatan, setTahunPembuatan] = useState<number>(2026);
+  const [tanggalRefill, setTanggalRefill] = useState<string>(DEFAULT_REFILL_DATE);
   const [expiredDate, setExpiredDate] = useState<string>('');
-  const [inspectorName, setInspectorName] = useState<string>('Alex Chen (Staff HSE)');
+  const [inspectorName, setInspectorName] = useState<string>(
+    'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)',
+  );
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
@@ -49,9 +54,9 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
       setJenis('POWDER');
       setUkuran('3 kg');
       setUkuranTouched(false);
-      setTahunPembuatan(2026);
+      setTanggalRefill(DEFAULT_REFILL_DATE);
       setExpiredDate('');
-      setInspectorName('Alex Chen (Staff HSE)');
+      setInspectorName('Takamay Jason Hermantika Irsyad (Junior HSE Analyst)');
       setErrorMessage('');
     }
   }, [isOpen, existingZones]);
@@ -129,6 +134,11 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
       return;
     }
 
+    if (!tanggalRefill) {
+      setErrorMessage('Tanggal refill wajib diisi untuk unit APAR baru.');
+      return;
+    }
+
     if (!expiredDate) {
       setErrorMessage('Tanggal kedaluwarsa wajib diisi untuk unit APAR baru.');
       return;
@@ -139,10 +149,11 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
       return;
     }
 
-    if (!Number.isFinite(tahunPembuatan) || tahunPembuatan < 1990 || tahunPembuatan > 2030) {
-      setErrorMessage('Tahun pembuatan tidak valid (1990–2030).');
-      return;
-    }
+    const parsedRefillYear = Number(tanggalRefill.slice(0, 4));
+    const tahunPembuatan =
+      Number.isFinite(parsedRefillYear) && parsedRefillYear >= 1990 && parsedRefillYear <= 2035
+        ? parsedRefillYear
+        : 2026;
 
     const codes = targetApar
       .split(',')
@@ -172,6 +183,7 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
       jenis,
       ukuran: ukuran.trim(),
       tahunPembuatan,
+      tanggalRefill,
       expiredDate,
       inspectorName,
     }));
@@ -285,14 +297,13 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-[var(--primary)]">
-                Tahun Pembuatan
+                Tanggal Refill
               </label>
               <input
-                type="number"
-                value={tahunPembuatan}
-                min={1990}
-                max={2030}
-                onChange={(e) => setTahunPembuatan(Number(e.target.value))}
+                type="date"
+                value={tanggalRefill}
+                onChange={(e) => setTanggalRefill(e.target.value)}
+                aria-label="Tanggal Refill"
                 className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] tabular-nums focus:outline-none focus:border-[#f2994a]"
               />
             </div>
@@ -304,6 +315,7 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
                 type="date"
                 value={expiredDate}
                 onChange={(e) => setExpiredDate(e.target.value)}
+                aria-label="Tanggal Kedaluwarsa"
                 className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] tabular-nums focus:outline-none focus:border-[#f2994a]"
               />
             </div>
@@ -318,10 +330,12 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
               onChange={(e) => setInspectorName(e.target.value)}
               className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] focus:outline-none focus:border-[#f2994a]"
             >
-              <option value="Alex Chen (Staff HSE)">Alex Chen (Staff HSE)</option>
-              <option value="Budi Santoso (Staff HSE)">Budi Santoso (Staff HSE)</option>
-              <option value="Siti Rahma (Inspector K3)">Siti Rahma (Inspector K3)</option>
-              <option value="Deni Kurniawan (Teknisi K3)">Deni Kurniawan (Teknisi K3)</option>
+              <option value="Takamay Jason Hermantika Irsyad (Junior HSE Analyst)">
+                Takamay Jason Hermantika Irsyad (Junior HSE Analyst)
+              </option>
+              <option value="Hizri (Governance, Risk, HSE & Quality Group Head)">
+                Hizri (Governance, Risk, HSE &amp; Quality Group Head)
+              </option>
             </select>
           </div>
 

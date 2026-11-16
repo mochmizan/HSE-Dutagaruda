@@ -127,18 +127,7 @@ async function catatProyekAktif(userId: string, organizationId: string): Promise
     });
 }
 
-/**
- * Proyek aktif yang diingat server.
- *
- * Sesi Better Auth memang menyimpan `active_organization_id`, tetapi baris sesi
- * dibuat ulang tiap kali masuk dan dihapus saat keluar — jadi pilihan pengguna
- * hilang dan klien dulu menebak organisasi pertama (halaman selalu mendarat di
- * proyek yang salah). Tabel `project_preferences` menjadikannya fakta server
- * yang bertahan lintas sesi dan lintas peramban.
- */
 export const proyekAktifApp = new Hono()
-  // GET sengaja TANPA requireSession: dipakai justru saat sesi belum punya
-  // organisasi aktif (pemulihan tepat setelah masuk).
   .get("/", async (c) => {
     const sesi = await auth.api.getSession({ headers: c.req.raw.headers });
     if (!sesi?.user?.id) {
@@ -157,7 +146,6 @@ export const proyekAktifApp = new Hono()
       .where(and(eq(member.organizationId, tersimpan), eq(member.userId, sesi.user.id)))
       .limit(1);
     if (anggota.length === 0) {
-      // Proyek sudah dihapus / keanggotaan dicabut: bersihkan catatan basi.
       await db.delete(projectPreferences).where(eq(projectPreferences.userId, sesi.user.id));
       return c.json({ organizationId: null });
     }
@@ -172,11 +160,6 @@ export const proyekAktifApp = new Hono()
     return c.json({ organizationId });
   });
 
-/**
- * Proyek = organisasi Better Auth + baris cermin companies (satu id).
- * Cermin wajib ada: sites.companyId FK ke companies.id, tanpanya
- * proyek baru tak bisa punya lokasi.
- */
 export const projectsApp = new Hono()
   .use("*", requireSession)
 
@@ -198,8 +181,6 @@ export const projectsApp = new Hono()
       role: "owner",
       createdAt: new Date(),
     });
-    // Proyek yang baru dibuat langsung dicatat sebagai proyek aktif pengguna,
-    // supaya catatan server tidak bergantung pada panggilan klien berikutnya.
     await catatProyekAktif(pemintaId(c), id);
     return c.json({ id, name: nama }, 201);
   })
@@ -232,9 +213,7 @@ export const projectsApp = new Hono()
       .where(eq(sites.companyId, id))
       .limit(1);
     if (kids.length > 0) throw blockedByChildren("Proyek");
-    // Catatan proyek aktif ikut dibersihkan supaya tidak menunjuk proyek mati.
     await db.delete(projectPreferences).where(eq(projectPreferences.projectId, id));
-    // Cascade FK menghapus member + invitation; cermin companies dihapus eksplisit.
     await db.delete(organization).where(eq(organization.id, id));
     await db.delete(companies).where(eq(companies.id, id));
     return c.json({ ok: true });
@@ -358,9 +337,18 @@ export const zonesApp = new Hono()
     .where(and(eq(sites.id, body.siteId), eq(sites.companyId, owned)))
     .limit(1);
   if (site.length === 0) throw notFound("Lokasi");
+  const namaBersih = body.name.trim();
+  const existing = await db
+    .select()
+    .from(zones)
+    .where(and(eq(zones.companyId, owned), eq(zones.siteId, body.siteId)));
+  const dup = existing.find((z) => z.name.trim().toLowerCase() === namaBersih.toLowerCase());
+  if (dup) {
+    return c.json(dup, 200);
+  }
   const [row] = await db
     .insert(zones)
-    .values({ id: newId(), companyId: owned, siteId: body.siteId, name: body.name })
+    .values({ id: newId(), companyId: owned, siteId: body.siteId, name: namaBersih })
     .returning();
   return c.json(row, 201);
   })

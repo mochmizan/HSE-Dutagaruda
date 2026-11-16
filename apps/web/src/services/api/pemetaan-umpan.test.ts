@@ -243,6 +243,23 @@ describe("petakanUmpanKeLaporan", () => {
     );
     expect(laporan.summaryNotes).toBe("keran bocor");
   });
+
+  test("menerima kunci patrol dari API maupun patroli dari klien", () => {
+    const hasil = petakanUmpanKeLaporan(
+      {
+        month: "2026-10",
+        hydrant: [],
+        apar: [],
+        p3k: [],
+        patroli: [],
+        patrol: [umpanPatroli()],
+      },
+      ctx(),
+    );
+    expect(hasil.length).toBe(1);
+    expect(hasil[0].category).toBe("SAFETY_PATROL");
+    expect(hasil[0].inspectorName).toBe("Takamay Jason Hermantika Irsyad (Junior HSE Analyst)");
+  });
 });
 
 describe("petakanTemuanPatroli", () => {

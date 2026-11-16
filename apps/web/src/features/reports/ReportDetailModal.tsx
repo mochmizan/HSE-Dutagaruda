@@ -36,6 +36,12 @@ const APAR_LABELS: Record<string, string> = {
   katupTuas: 'Katup / Tuas Pembuka',
 };
 
+function formatStatusStandar(status?: string): string {
+  if (status === 'LAYAK' || status === 'BAIK' || status === 'STANDAR') return 'STANDAR';
+  if (status === 'LAYAK_DENGAN_CATATAN') return 'STANDAR DENGAN CATATAN';
+  return 'TIDAK STANDAR';
+}
+
 export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
   report,
   onClose,
@@ -45,21 +51,19 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
 
   const meta = CATEGORY_CONFIG[report.category];
   const dateFormatted = format(parseISO(report.date), 'EEEE, d MMMM yyyy · HH:mm', { locale: idLocale });
+  const overallLabel = formatStatusStandar(report.overallStatus);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
         onClick={onClose}
       />
 
-      {/* Modal Dialog */}
       <div
         className="relative w-full max-w-xl bg-[var(--bg-modal)] text-[var(--primary)] border border-[var(--border)] rounded-[8px] shadow-[var(--shadow-popover)] overflow-hidden flex flex-col z-10 emil-modal select-none max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--bg-sidebar)]/50">
           <div className="flex items-center gap-2">
             <span
@@ -89,9 +93,7 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Content Body */}
         <div className="p-4 overflow-y-auto space-y-4 text-xs">
-          {/* Metadata Grid */}
           <div className="grid grid-cols-2 gap-2 p-2.5 bg-[var(--bg-sidebar)]/40 rounded-[5px] border border-[var(--border)]">
             <div className="flex items-center gap-1.5 text-[var(--secondary)]">
               <Calendar size={13} />
@@ -108,33 +110,34 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
             <div className="flex items-center gap-1.5 text-[var(--secondary)]">
               <FileCheck size={13} />
               <span className="text-[var(--primary)] font-semibold">
-                Status: {report.overallStatus}
+                Status: {overallLabel}
               </span>
             </div>
           </div>
 
-          {/* Detail Periksa Hydrant */}
           {report.hydrantDetails && (
             <div className="space-y-1.5">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Verifikasi 6 Komponen Hydrant
               </h4>
               <div className="grid grid-cols-2 gap-1.5 border border-[var(--border)] rounded-[4px] p-2 bg-[var(--bg-main)]">
-                {Object.entries(report.hydrantDetails).map(([key, val]) => (
-                  <div key={key} className="flex items-center justify-between p-1 border-b border-[var(--border)] last:border-b-0">
-                    <span className="text-[var(--secondary)]">
-                      {HYDRANT_LABELS[key] || key}
-                    </span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {val}
-                    </span>
-                  </div>
-                ))}
+                {Object.entries(report.hydrantDetails).map(([key, val]) => {
+                  const isOk = val === 'LAYAK';
+                  return (
+                    <div key={key} className="flex items-center justify-between p-1 border-b border-[var(--border)] last:border-b-0">
+                      <span className="text-[var(--secondary)]">
+                        {HYDRANT_LABELS[key] || key}
+                      </span>
+                      <span className={isOk ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'font-semibold text-red-600 dark:text-red-400'}>
+                        {isOk ? 'STANDAR' : 'TIDAK STANDAR'}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* Detail Periksa APAR */}
           {report.aparDetails && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -147,22 +150,24 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-1.5 border border-[var(--border)] rounded-[4px] p-2 bg-[var(--bg-main)]">
                 {Object.entries(report.aparDetails)
-                  .filter(([k]) => !['jenis', 'ukuran', 'expiredDate', 'beratCo2Kg'].includes(k))
-                  .map(([key, val]) => (
-                    <div key={key} className="flex items-center justify-between p-1 border-b border-[var(--border)]">
-                      <span className="text-[var(--secondary)]">
-                        {APAR_LABELS[key] || key}
-                      </span>
-                      <span className={val === 'BAIK' ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-semibold'}>
-                        {val}
-                      </span>
-                    </div>
-                  ))}
+                  .filter(([k]) => !['jenis', 'ukuran', 'expiredDate', 'tanggalRefill', 'beratCo2Kg'].includes(k))
+                  .map(([key, val]) => {
+                    const isOk = val === 'BAIK';
+                    return (
+                      <div key={key} className="flex items-center justify-between p-1 border-b border-[var(--border)]">
+                        <span className="text-[var(--secondary)]">
+                          {APAR_LABELS[key] || key}
+                        </span>
+                        <span className={isOk ? 'text-emerald-600 font-semibold' : 'text-red-600 font-semibold'}>
+                          {isOk ? 'STANDAR' : 'TIDAK STANDAR'}
+                        </span>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}
 
-          {/* Detail Periksa P3K */}
           {report.p3kDetails && (
             <div className="space-y-1.5">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
@@ -174,7 +179,7 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
                   <span className="font-mono font-semibold tabular-nums">{report.p3kDetails.itemsTotal} / 21</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
-                  <span>Item di Bawah Standar:</span>
+                  <span>Item Tidak Standar (Kurang):</span>
                   <span className={`font-mono font-semibold tabular-nums ${report.p3kDetails.itemsUnderStandard > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                     {report.p3kDetails.itemsUnderStandard} item
                   </span>
@@ -182,18 +187,17 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
                 <div className="flex items-center justify-between text-[11px]">
                   <span>Perlu Pengisian Ulang (Restock):</span>
                   <span className="font-semibold text-rose-600">
-                    {report.p3kDetails.needsRestock ? 'YA (Perlu Pengadaan)' : 'TIDAK (Lengkap)'}
+                    {report.p3kDetails.needsRestock ? 'YA (Perlu Pengadaan)' : 'TIDAK (Standar)'}
                   </span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Temuan Patroli */}
           {report.patrolDetails && (
             <div className="space-y-1.5">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Temuan Lapangan Patroli K3
+                Temuan Lapangan Safety Patrol
               </h4>
               <div className="p-2 border border-[var(--border)] rounded-[4px] bg-[var(--bg-main)] space-y-1">
                 <div className="flex items-center justify-between text-[11px]">
@@ -204,19 +208,14 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
                   <span>Total Temuan Tercatat:</span>
                   <span className="font-mono font-semibold tabular-nums">{report.patrolDetails.findingsCount} temuan</span>
                 </div>
-                <div className="flex items-center justify-between text-[11px]">
-                  <span>Temuan Kritis (Tindakan Cepat):</span>
-                  <span className="font-mono font-semibold tabular-nums text-rose-600">{report.patrolDetails.criticalCount} kritis</span>
-                </div>
               </div>
             </div>
           )}
 
-          {/* Summary notes */}
           {report.summaryNotes && (
             <div className="space-y-1">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Catatan Petugas Pemeriksa
+                Catatan Temuan Tambahan &amp; Tindakan Rekomendasi
               </h4>
               <div className="p-2 bg-[var(--bg-sidebar)] rounded-[4px] border border-[var(--border)] text-[var(--primary)] italic [text-wrap:pretty]">
                 “{report.summaryNotes}”
@@ -224,7 +223,6 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
             </div>
           )}
 
-          {/* Photo attachment preview */}
           {report.photoUrl && (
             <div className="space-y-1">
               <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
@@ -239,10 +237,7 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
           )}
         </div>
 
-        {/* Footer Actions */}
         <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-[var(--border)] bg-[var(--bg-sidebar)]/50">
-          {/* Sunting hanya untuk laporan dari API (id nyata, bukan “rep-…” pasca-simpan);
-              laporan sintetis pasca-simpan tidak dapat dibuka ulang sebagai rekam. */}
           {!report.id.startsWith('rep-') ? (
             <button
               type="button"

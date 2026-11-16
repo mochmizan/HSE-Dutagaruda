@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ApiInspeksiP3k } from '@/services/api/klien';
+import { STANDARD_P3K_ITEMS, type P3kBoxType, type StandardP3kItemDefinition } from '@/lib/p3kItems';
 import { P3kInspectionBody, ringkasanDraf } from './P3kInspectionBody';
 import { P3kDeleteConfirmation, P3kInspectionFooter } from './P3kInspectionFooter';
 import { P3kInspectionHeader } from './P3kInspectionHeader';
@@ -10,7 +11,8 @@ interface P3kInspectionModalProps {
   isOpen: boolean;
   monthLabel: string;
   initial: P3kMonthData;
-  /** Rekam tersimpan bulan ini; null = belum ada (belum terbit). */
+  itemsCatalog?: StandardP3kItemDefinition[];
+  boxType?: P3kBoxType;
   rekam: ApiInspeksiP3k | null;
   menyimpan: boolean;
   menghapusBulan: boolean;
@@ -27,18 +29,12 @@ function cloneItems(src: Record<number, P3kMonthItemData>): ItemState {
   return next;
 }
 
-/**
- * Form input satu bulan kotak P3K: 21 kuantitas aktual + flag KD +
- * tanggal/paraf. Semua state + efek di sini; anak-anak presentasional.
- *
- * Selalu mod sunting: bulan terisi dibuka dengan nilai yang langsung bisa
- * diubah, `Terbitkan` menyimpan ulang (upsert), `Hapus Bulan Ini` selalu
- * tampil di kiri (konfirmasi dulu via ConfirmModal).
- */
 export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   isOpen,
   monthLabel,
   initial,
+  itemsCatalog = STANDARD_P3K_ITEMS,
+  boxType = 'A',
   rekam,
   menyimpan,
   menghapusBulan,
@@ -50,22 +46,15 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   const [tanggal, setTanggal] = useState('');
   const [paraf, setParaf] = useState('');
   const [konfirmasiHapus, setKonfirmasiHapus] = useState(false);
-  // `rekam` dipertahankan di props agar pemanggil tak berubah; alur lama
-  // selalu sunting sehingga nilainya tak memengaruhi mod.
   void rekam;
 
-  // Isi form dari rekam/draf saat dibuka. Selalu mod sunting: bulan terisi
-  // pun dibuka dengan nilai yang langsung bisa diubah — tanpa potret
-  // baca-saja / tombol Edit.
   useEffect(() => {
     if (!isOpen) return;
     setItems(cloneItems(initial.items));
     setTanggal(initial.tanggal);
-    setParaf(initial.paraf);
+    setParaf(initial.paraf || 'Takamay Jason Hermantika Irsyad');
   }, [isOpen, initial]);
 
-  // Esc + kunci scroll badan saat terbuka. WAJIB di atas
-  // `if (!isOpen) return null`: efek harus dipanggil setiap render.
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -83,7 +72,7 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   if (!isOpen) return null;
 
   const draft: P3kMonthData = { items, tanggal, paraf };
-  const { lengkap, kurang, kd } = ringkasanDraf(draft);
+  const { lengkap, kurang, kd } = ringkasanDraf(draft, itemsCatalog);
 
   const setActual = (id: number, raw: string) => {
     setItems((prev) => {
@@ -102,8 +91,6 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   };
 
   const handleTerbitkan = async () => {
-    // Gagal simpan = hook sudah mengingatkan (alert Indonesia); modal
-    // tetap terbuka dalam modus sunting.
     await onSave(draft);
     onClose();
   };
@@ -114,7 +101,7 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
       onClose={onClose}
       header={
         <P3kInspectionHeader
-          monthLabel={monthLabel}
+          monthLabel={`${monthLabel} · Tipe ${boxType}`}
           lengkap={lengkap}
           kurang={kurang}
           kd={kd}
@@ -132,6 +119,8 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
     >
       <P3kInspectionBody
         draft={draft}
+        itemsCatalog={itemsCatalog}
+        boxType={boxType}
         lengkap={lengkap}
         kurang={kurang}
         kd={kd}

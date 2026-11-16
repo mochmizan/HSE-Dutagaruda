@@ -12,13 +12,7 @@
  * tersemat data-URI dari `printLogos.ts` sehingga nol ketergantungan jaringan.
  */
 
-import {
-  LOGO_DUTAGARUDA_B64,
-  LOGO_ITJ_B64,
-  LOGO_JPM_B64,
-  LOGO_K3_B64,
-  LOGO_PARTNERS_B64,
-} from './printLogos';
+import { LOGO_DUTAGARUDA_B64, LOGO_K3_B64 } from './printLogos';
 
 export function escPrint(val: unknown): string {
   return String(val ?? '')
@@ -619,8 +613,8 @@ table.hyd-mon-table tbody tr {
 export function renderKopHeaderJpm(): string {
   return `
     <div class="kop-header">
-      <img class="kop-logo-left" src="${LOGO_JPM_B64}" alt="JPM Dukuh Atas" />
-      <img class="kop-logo-right" src="${LOGO_PARTNERS_B64}" alt="W Realty · Tower Bersama Group · CityVision · ITJ" />
+      <img class="kop-logo-left" src="${LOGO_DUTAGARUDA_B64}" alt="PT Dutagaruda Piranti Prima" style="height:44px;width:auto;" />
+      <img class="kop-logo-right" src="${LOGO_K3_B64}" alt="Logo K3" style="height:44px;width:auto;" />
     </div>
   `;
 }
@@ -766,16 +760,12 @@ export function renderAparCardSheet(data: AparCardPrintPayload): string {
           <table class="apar-card-ket-table">
             <tbody>
               <tr>
-                <td style="font-weight:700;width:36px;text-align:center;">NA</td>
-                <td>Tidak Diperluan</td>
-              </tr>
-              <tr>
-                <td style="font-weight:700;text-align:center;">&#10003;</td>
-                <td>Baik</td>
+                <td style="font-weight:700;width:36px;text-align:center;">&#10003;</td>
+                <td>Standar</td>
               </tr>
               <tr>
                 <td style="font-weight:700;text-align:center;">X</td>
-                <td>Tidak Baik</td>
+                <td>Tidak Standar</td>
               </tr>
             </tbody>
           </table>
@@ -783,7 +773,7 @@ export function renderAparCardSheet(data: AparCardPrintPayload): string {
           <table class="apar-card-fill-dates">
             <tbody>
               <tr>
-                <td style="width:165px;">Tgl Pengisian Terakhir</td>
+                <td style="width:165px;">Tanggal Refill</td>
                 <td>:</td>
                 <td class="num">
                   <span class="dotted-slot">${escPrint(tLast[0] || '')}</span> /
@@ -823,10 +813,17 @@ export interface P3kYearlyPrintItem {
 export interface P3kYearlyPrintPayload {
   tahun: number | string;
   unitKerja?: string;
+  boxType?: 'A' | 'B' | 'C';
   siteName: string;
   tanggalInspeksi: string[];
   parafInisial: string[];
   items: P3kYearlyPrintItem[];
+  signatures?: {
+    diperiksaNama: string;
+    diperiksaJabatan: string;
+    mengetahuiNama: string;
+    mengetahuiJabatan: string;
+  };
 }
 
 export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
@@ -897,7 +894,7 @@ export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
                 <img src="${LOGO_DUTAGARUDA_B64}" alt="Dutagaruda" style="height:36px;width:auto;margin:0 auto;display:block;" />
               </td>
               <td colspan="18" style="text-align:center;font-size:13.5pt;font-weight:700;letter-spacing:0.02em;">
-                INSPEKSI KOTAK P3K
+                INSPEKSI KOTAK P3K ${data.boxType ? `(TIPE ${escPrint(data.boxType)})` : ''}
               </td>
               <td colspan="7" style="text-align:center;padding:4px;">
                 <img src="${LOGO_K3_B64}" alt="K3" style="height:36px;width:auto;margin:0 auto;display:block;" />
@@ -918,7 +915,7 @@ export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
                 Lokasi Kerja : ${escPrint(data.siteName || 'ITJ JPM Dukuh Atas')}
               </td>
               <td colspan="15" style="padding:3px 6px;font-size:7.6pt;text-align:left;">
-                <strong>Keterangan:</strong> Standar ( &#10003; ) | Dibawah Standar ( &#10007; ) | Kadaluarsa (KD)
+                <strong>Keterangan:</strong> Standar ( &#10003; ) | Tidak Standar ( &#10007; ) | Kadaluarsa (KD)
               </td>
             </tr>
 
@@ -951,6 +948,22 @@ export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
       <div class="p3k-bottom-note">
         Catatan: Apabila jumlah dibawah standar, maka harus diisi kembali sesuai dengan jumlah standar yang tercantum
       </div>
+      <table class="sign-table" style="margin-top:8px;">
+        <tbody>
+          <tr>
+            <td style="width:50%;">
+              <div class="sign-header" style="margin-bottom:32px;">Diperiksa Oleh :</div>
+              <div class="sign-name">${escPrint(data.signatures?.diperiksaNama || 'Takamay Jason Hermantika Irsyad')}</div>
+              <div class="sign-role">${escPrint(data.signatures?.diperiksaJabatan || 'Junior HSE Analyst')}</div>
+            </td>
+            <td style="width:50%;">
+              <div class="sign-header" style="margin-bottom:32px;">Mengetahui / Disetujui Oleh :</div>
+              <div class="sign-name">${escPrint(data.signatures?.mengetahuiNama || 'Hizri')}</div>
+              <div class="sign-role">${escPrint(data.signatures?.mengetahuiJabatan || 'Governance, Risk, HSE & Quality Group Head')}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -969,6 +982,14 @@ export interface PatrolReportPrintPayload {
   siteName: string;
   patrolDate: string;
   findings: PatrolFindingPrintItem[];
+  signatures?: {
+    dibuatNama: string;
+    dibuatJabatan: string;
+    diketahuiNama?: string;
+    diketahuiJabatan?: string;
+    disetujuiNama: string;
+    disetujuiJabatan: string;
+  };
 }
 
 export function renderPatrolReportSheets(data: PatrolReportPrintPayload): string {
@@ -1030,7 +1051,7 @@ export function renderPatrolReportSheets(data: PatrolReportPrintPayload): string
                   <div class="num">${escPrint(data.patrolDate || '')}</div>
                 </td>
                 <td style="width:33%;">
-                  <img src="${LOGO_ITJ_B64}" alt="Integrasi Transit Jakarta" style="height:52px;width:auto;margin:0 auto;display:block;" />
+                  <img src="${LOGO_K3_B64}" alt="Logo K3" style="height:48px;width:auto;margin:0 auto;display:block;" />
                 </td>
               </tr>
             </tbody>
@@ -1139,9 +1160,9 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
         <tbody>
           <tr>
             <td>
-              <div class="sign-header">Dibuat Oleh :</div>
-              <div class="sign-name">${escPrint(s.dibuatNama || 'Erick')}</div>
-              <div class="sign-role">${escPrint(s.dibuatJabatan || 'Danru')}</div>
+              <div class="sign-header">Petugas Pemeriksa :</div>
+              <div class="sign-name">${escPrint(s.dibuatNama || 'Takamay Jason Hermantika Irsyad')}</div>
+              <div class="sign-role">${escPrint(s.dibuatJabatan || 'Junior HSE Analyst')}</div>
             </td>
             <td>
               <div class="sign-header">Diketahui Oleh :</div>
@@ -1150,8 +1171,8 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
             </td>
             <td>
               <div class="sign-header">Disetujui Oleh :</div>
-              <div class="sign-name">${escPrint(s.disetujuiNama || 'Oky Gusta Putra Pratama')}</div>
-              <div class="sign-role">${escPrint(s.disetujuiJabatan || 'Building Management')}</div>
+              <div class="sign-name">${escPrint(s.disetujuiNama || 'Hizri')}</div>
+              <div class="sign-role">${escPrint(s.disetujuiJabatan || 'Governance, Risk, HSE & Quality Group Head')}</div>
             </td>
           </tr>
         </tbody>
@@ -1274,7 +1295,7 @@ export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): str
     .map(
       () => `
         <th><div class="hyd-lap-v-wrap"><span class="hyd-lap-v-text">Standar</span></div></th>
-        <th><div class="hyd-lap-v-wrap"><span class="hyd-lap-v-text">Dibawah<br/>Standar</span></div></th>
+        <th><div class="hyd-lap-v-wrap"><span class="hyd-lap-v-text">Tidak<br/>Standar</span></div></th>
       `,
     )
     .join('');
@@ -1325,16 +1346,13 @@ export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): str
         <tbody>
           <tr>
             <td colspan="4" style="padding:6px;">
-              <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
-                <img src="${LOGO_DUTAGARUDA_B64}" alt="Dutagaruda" style="height:34px;width:auto;" />
-                <img src="${LOGO_K3_B64}" alt="K3" style="height:34px;width:auto;" />
-              </div>
+              <img src="${LOGO_DUTAGARUDA_B64}" alt="PT Dutagaruda Piranti Prima" style="height:36px;width:auto;margin:0 auto;display:block;" />
             </td>
             <td colspan="11" style="font-size:13pt;font-weight:700;">
               LAPORAN PEMERIKSAAN HYDRANT
             </td>
             <td colspan="2" style="padding:6px;">
-              <img src="${LOGO_ITJ_B64}" alt="ITJ" style="height:38px;width:auto;margin:0 auto;display:block;" />
+              <img src="${LOGO_K3_B64}" alt="Logo K3" style="height:36px;width:auto;margin:0 auto;display:block;" />
             </td>
           </tr>
           <tr>
@@ -1347,10 +1365,10 @@ export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): str
           </tr>
           <tr>
             <td colspan="7" style="text-align:left;font-weight:700;padding:5px 6px;">
-              Lokasi Pemeriksaan : ${escPrint(data.siteName || 'ITJ JPM DUKUH ATAS')}
+              Lokasi Pemeriksaan : ${escPrint(data.siteName || 'KANTOR PUSAT')}
             </td>
             <td colspan="10" style="text-align:left;font-weight:700;padding:5px 6px;">
-              Keterangan : Layak Digunakan (&#10003;), Tidak Layak Digunakan (X), Hilang (-)
+              Keterangan : Standar (&#10003;), Tidak Standar (X)
             </td>
           </tr>
           <tr>
@@ -1359,11 +1377,27 @@ export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): str
             <th colspan="12" style="padding:5px;font-size:9pt;">Item Alat</th>
             <th rowspan="3">Tanggal<br/>Pemeriksaan</th>
             <th rowspan="3">Petugas<br/>Pemeriksa</th>
-            <th rowspan="3">Keterangan</th>
+            <th rowspan="3">Catatan Temuan Tambahan &amp;<br/>Tindakan Rekomendasi</th>
           </tr>
           <tr>${toolHeaders}</tr>
           <tr>${subHeaders}</tr>
           ${rowsHtml}
+        </tbody>
+      </table>
+      <table class="sign-table" style="margin-top:12px;">
+        <tbody>
+          <tr>
+            <td style="width:50%;">
+              <div class="sign-header" style="margin-bottom:36px;">Petugas Pemeriksa :</div>
+              <div class="sign-name">Takamay Jason Hermantika Irsyad</div>
+              <div class="sign-role">Junior HSE Analyst</div>
+            </td>
+            <td style="width:50%;">
+              <div class="sign-header" style="margin-bottom:36px;">Mengetahui / Disetujui Oleh :</div>
+              <div class="sign-name">Hizri</div>
+              <div class="sign-role">Governance, Risk, HSE &amp; Quality Group Head</div>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -1430,7 +1464,7 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
           <th style="width:12%;">Kode<br/>Hydrant</th>
           <th style="width:27%;">Dokumentasi<br/>Pemeriksaan</th>
           <th style="width:28%;">Dokumentasi Checklist</th>
-          <th style="width:16%;">Status<br/>Penggunaan</th>
+          <th style="width:16%;">Status<br/>Standar</th>
         </tr>
       </thead>
     `
@@ -1510,7 +1544,7 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
     sheets.push(`
       <div class="print-sheet-portrait">
         ${renderKopHeaderJpm()}
-        <div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Catatan Hasil temuan</div>
+        <div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Catatan Temuan Tambahan &amp; Tindakan Rekomendasi</div>
         <table style="width:100%;border-collapse:collapse;border:none !important;">
           <tbody>${temuanRows.join('')}</tbody>
         </table>

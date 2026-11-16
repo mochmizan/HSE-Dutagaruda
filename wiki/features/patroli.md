@@ -36,17 +36,16 @@ langsung.
   `Hapus Foto Patroli` → `Ya, hapus`, aksen `#eb5757`); mutasi
   menginvalidasi `laporan-patroli` + `['umpan']` saat settle. Hati-hati
   saat mengendarai di atas data review.
-- `patrol-print` (Nov 16, tanpa Gotenberg): `UnduhPdfButton` membuka
+- `patrol-print` (tanpa Gotenberg): `UnduhPdfButton` membuka
   pratinjau prosedural `?cetak=patrol&bulan=YYYY-MM&autoprint=1`
   (cetak/simpan via dialog browser); PDF server
   (`POST /api/export/patrol-report/:refId`) kini generator PDF 1.4
-  murni (`apps/api/src/pdf/render.ts`, tanpa container). `Cetak`
+  murni (`apps/api/src/pdf/render.ts`). `Cetak`
   (window.print) di header: kop + grid feed + tanda tangan; umpan layar
   sembunyi saat cetak.
-- `patrol-cetak` (Nov 16): rute pratinjau `PatrolPrintPreview`
-  (procedural sheets + `PROCEDURAL_PRINT_CSS`), deep-link
-  `?cetak=patrol&bulan=` + `autoprint=1`; tombol `Pratinjau Cetak`
-  di laman.
+- `patrol-cetak`: rute pratinjau `PatrolPrintPreview` (procedural
+  sheets + `PROCEDURAL_PRINT_CSS`), deep-link `?cetak=patrol&bulan=`
+  + `autoprint=1`; tombol `Pratinjau Cetak` di laman.
 - `patrol-shell`: `PatrolPage` hanya orkestrasi (semua hook di sini, anak
   presentasional) dirender lewat `InspectionPageShell` dengan
   `KONFIG_PATROLI`. Judul shell `Laporan Patroli K3`.

@@ -33,14 +33,16 @@ export const feedApp = new Hono()
     db.select().from(p3kInspections).where(eq(p3kInspections.companyId, owned)).orderBy(asc(p3kInspections.period)),
     db.select().from(safetyPatrolReports).where(eq(safetyPatrolReports.companyId, owned)).orderBy(asc(safetyPatrolReports.patrolDate)),
   ]);
+  const patrolFiltered = patrol
+    .filter((r) => toPeriodKey(r.patrolDate) === periodStart)
+    .map((r) => ({ ...r, category: "patroli" as const }));
   return c.json({
     month,
     hydrant: hydrant.filter((r) => toPeriodKey(r.period) === periodStart).map((r) => ({ ...r, category: "hydrant" as const })),
     apar: apar.filter((r) => toPeriodKey(r.period) === periodStart).map((r) => ({ ...r, category: "apar" as const })),
     p3k: p3k.filter((r) => toPeriodKey(r.period) === periodStart).map((r) => ({ ...r, category: "p3k" as const })),
-    patrol: patrol
-      .filter((r) => toPeriodKey(r.patrolDate) === periodStart)
-      .map((r) => ({ ...r, category: "patroli" as const })),
+    patrol: patrolFiltered,
+    patroli: patrolFiltered,
   });
 });
 

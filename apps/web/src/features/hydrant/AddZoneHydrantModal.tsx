@@ -16,7 +16,6 @@ export interface AddZoneHydrantModalProps {
   onAddZone?: (zoneName: string) => void;
   onAddHydrantUnits: (newUnits: HydrantCreationItem[]) => void;
   onReassignUnitZone?: (unitId: string, newZoneName: string) => void;
-  // Optional backward compatibility
   lastUnitNumber?: number;
   onAddZoneAndUnits?: (data: {
     zoneName: string;
@@ -37,29 +36,22 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
   onReassignUnitZone,
   onAddZoneAndUnits,
 }) => {
-  // Single unified combobox state for Zona
   const [zoneInput, setZoneInput] = useState<string>('');
-
-  // Single unified combobox state for Hydrant
   const [hydrantInput, setHydrantInput] = useState<string>('');
-
-  // Inspector state
-  const [inspectorName, setInspectorName] = useState<string>('Alex Chen (Staff HSE)');
-
-  // Error message
+  const [inspectorName, setInspectorName] = useState<string>(
+    'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)',
+  );
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Initialize defaults on open
   useEffect(() => {
     if (isOpen) {
       setZoneInput(existingZones.length > 0 ? existingZones[0] : '');
       setHydrantInput('');
-      setInspectorName('Alex Chen (Staff HSE)');
+      setInspectorName('Takamay Jason Hermantika Irsyad (Junior HSE Analyst)');
       setErrorMessage('');
     }
   }, [isOpen, existingZones]);
 
-  // Handle ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -72,17 +64,14 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Determine if zone is new
   const isNewZone =
     Boolean(zoneInput.trim()) &&
     !existingZones.some((z) => z.toLowerCase() === zoneInput.trim().toLowerCase());
 
-  // Determine if hydrant is new
   const isNewHydrant =
     Boolean(hydrantInput.trim()) &&
     !existingUnits.some((u) => u.kode.toLowerCase() === hydrantInput.trim().toLowerCase());
 
-  // Combobox options
   const zoneOptions: UnifiedComboboxItem[] = existingZones.map((z) => ({
     id: z,
     label: z,
@@ -106,7 +95,6 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
 
     const targetHydrant = hydrantInput.trim();
 
-    // If no hydrant is specified, but a new zone was typed:
     if (!targetHydrant) {
       if (isNewZone) {
         onAddZone?.(targetZone);
@@ -117,23 +105,19 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
       return;
     }
 
-    // 1. Zone creation if new
     if (isNewZone && onAddZone) {
       onAddZone(targetZone);
     }
 
-    // 2. Hydrant handling: check if user picked an existing unit
     const matchedExistingUnit = existingUnits.find(
       (u) => u.kode.toLowerCase() === targetHydrant.toLowerCase()
     );
 
     if (matchedExistingUnit) {
-      // Reassign existing unit to the target zone
       if (onReassignUnitZone) {
         onReassignUnitZone(matchedExistingUnit.id, targetZone);
       }
     } else {
-      // Create new unit(s) - supports comma-separated codes if needed
       const codes = targetHydrant
         .split(',')
         .map((c) => c.trim())
@@ -179,7 +163,6 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
         aria-modal="true"
         aria-labelledby="unified-add-zone-hydrant-title"
       >
-        {/* Header */}
         <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-sidebar)]/60">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded bg-[#eb5757]/15 text-[#eb5757] flex items-center justify-center text-xs font-bold flex-shrink-0">
@@ -190,7 +173,7 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
                 id="unified-add-zone-hydrant-title"
                 className="text-xs font-bold text-[var(--primary)] tracking-tight"
               >
-                Kelola Zona & Hydrant
+                Kelola Zona &amp; Hydrant
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
                 Pilih dari daftar dropdown atau ketik langsung untuk baru
@@ -208,7 +191,6 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {errorMessage && (
             <div className="p-2 rounded bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
@@ -217,7 +199,6 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
             </div>
           )}
 
-          {/* 1. Unified Combobox: Zona */}
           <UnifiedCombobox
             label="Zona"
             value={zoneInput}
@@ -227,7 +208,6 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
             isNewItem={isNewZone}
           />
 
-          {/* 2. Unified Combobox: Hydrant */}
           <UnifiedCombobox
             label="Unit Hydrant"
             value={hydrantInput}
@@ -237,7 +217,6 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
             isNewItem={isNewHydrant}
           />
 
-          {/* 3. Petugas Pemeriksa */}
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-[var(--primary)]">
               Petugas Pemeriksa
@@ -247,14 +226,15 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
               onChange={(e) => setInspectorName(e.target.value)}
               className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] focus:outline-none focus:border-[#eb5757]"
             >
-              <option value="Alex Chen (Staff HSE)">Alex Chen (Staff HSE)</option>
-              <option value="Budi Santoso (Staff HSE)">Budi Santoso (Staff HSE)</option>
-              <option value="Siti Rahma (Inspector K3)">Siti Rahma (Inspector K3)</option>
-              <option value="Deni Kurniawan (Teknisi K3)">Deni Kurniawan (Teknisi K3)</option>
+              <option value="Takamay Jason Hermantika Irsyad (Junior HSE Analyst)">
+                Takamay Jason Hermantika Irsyad (Junior HSE Analyst)
+              </option>
+              <option value="Hizri (Governance, Risk, HSE & Quality Group Head)">
+                Hizri (Governance, Risk, HSE &amp; Quality Group Head)
+              </option>
             </select>
           </div>
 
-          {/* Action Buttons */}
           <div className="pt-2 border-t border-[var(--border)] flex items-center justify-end gap-2">
             <button
               type="button"

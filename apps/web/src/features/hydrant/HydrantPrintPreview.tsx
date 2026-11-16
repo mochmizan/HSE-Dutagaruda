@@ -44,9 +44,9 @@ function tanggalSingkat(iso?: string): string {
 }
 
 function statusTeksHydrant(status?: string): string {
-  if (status === 'LAYAK') return 'Layak\ndigunakan';
-  if (status === 'LAYAK_DENGAN_CATATAN') return 'Layak di\ngunakan\ndengan\ncatatan';
-  return 'Tidak layak\ndigunakan';
+  if (status === 'LAYAK') return 'Standar';
+  if (status === 'LAYAK_DENGAN_CATATAN') return 'Standar\ndengan\ncatatan';
+  return 'Tidak\nStandar';
 }
 
 interface BuktiHydrantSlot {
@@ -107,8 +107,7 @@ function useBuktiHydrant(inspeksiIds: string[]): { peta: Record<string, BuktiHyd
 
 function mapStatusAlat(st?: string): string {
   if (st === 'LAYAK') return 'STANDAR';
-  if (st === 'TIDAK_LAYAK') return 'DIBAWAH';
-  if (st === 'HILANG') return 'HILANG';
+  if (st === 'TIDAK_LAYAK' || st === 'HILANG') return 'DIBAWAH';
   return 'STANDAR';
 }
 
@@ -178,7 +177,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
 
   const payloadChecklist: HydrantMonthlyPrintPayload = useMemo(
     () => ({
-      siteName: (lokasi.siteName || 'JPM DUKUH ATAS').toUpperCase(),
+      siteName: (lokasi.siteName || 'KANTOR PUSAT').toUpperCase(),
       period: monthLabel,
       inspectionDate: tanggalDaftar,
       rows: units.map((u, idx) => {
@@ -199,7 +198,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
         .map((f, idx) => ({
           no: idx + 1,
           src: f.url,
-          caption: f.caption || 'Temuan dokumentasi',
+          caption: f.caption || 'Catatan temuan tambahan',
         })),
     }),
     [lokasi.siteName, monthLabel, tanggalDaftar, units, perUnit, buktiSlot, fotoTemuan.data],
@@ -209,7 +208,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
     () => ({
       tahun,
       bulan: namaBulan,
-      siteName: `ITJ ${(lokasi.siteName || 'JPM DUKUH ATAS').toUpperCase()}`,
+      siteName: (lokasi.siteName || 'KANTOR PUSAT').toUpperCase(),
       rows: units.map((u, idx) => {
         const insp = perUnit.get(u.id);
         return {
@@ -222,7 +221,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
           nozzle: mapStatusAlat(insp?.nozzle ?? u.draftDetails?.nozzle),
           valve: mapStatusAlat(insp?.valvePillar ?? u.draftDetails?.valvePillar),
           tanggal: tanggalSingkat(insp?.createdAt),
-          petugas: 'Favian',
+          petugas: 'Takamay Jason H. I.',
           keterangan: insp?.notes ?? u.completedReport?.summaryNotes ?? u.draftDetails?.notes ?? '',
         };
       }),

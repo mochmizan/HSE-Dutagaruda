@@ -13,10 +13,7 @@ interface AparInspectionOutcomeProps {
 }
 
 /**
- * Status akhir otomatis + catatan temuan + tindak lanjut.
- *
- * Select status menulis `isOverridden`; status otomatis hanya dihitung ulang
- * selama petugas belum menimpanya.
+ * Status akhir otomatis (Standar / Tidak Standar) + Catatan Temuan Tambahan + Tindakan Rekomendasi.
  */
 export const AparInspectionOutcome: React.FC<AparInspectionOutcomeProps> = ({
   overallStatus,
@@ -31,13 +28,13 @@ export const AparInspectionOutcome: React.FC<AparInspectionOutcomeProps> = ({
   <>
     {/* Auto-computed Status Bar with Manual Override */}
     <div className="p-3 rounded-[6px] border border-[var(--border)] bg-[var(--bg-sidebar)] space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
           <label className="text-xs font-semibold text-[var(--primary)]">
-            Hasil Status Akhir (Saran Otomatis)
+            Hasil Status Akhir (Standar / Tidak Standar)
           </label>
           <p className="text-[10px] text-[var(--muted)]">
-            Dihitung otomatis dari 7 komponen di atas. Anda dapat mengubahnya jika ada catatan khusus.
+            Dihitung otomatis dari 7 komponen di atas. Anda dapat menyesuaikan bila ada catatan khusus.
           </p>
         </div>
 
@@ -45,7 +42,7 @@ export const AparInspectionOutcome: React.FC<AparInspectionOutcomeProps> = ({
           value={overallStatus}
           onChange={(e) => onUbahOverallStatus(e.target.value as OverallStatus)}
           disabled={terbit}
-          className={`text-xs font-semibold px-2 py-1 rounded-[4px] border cursor-pointer tabular-nums disabled:opacity-60 disabled:cursor-not-allowed ${
+          className={`text-xs font-semibold px-2.5 py-1 rounded-[4px] border cursor-pointer tabular-nums disabled:opacity-60 disabled:cursor-not-allowed ${
             overallStatus === 'LAYAK'
               ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
               : overallStatus === 'LAYAK_DENGAN_CATATAN'
@@ -53,9 +50,9 @@ export const AparInspectionOutcome: React.FC<AparInspectionOutcomeProps> = ({
               : 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
           }`}
         >
-          <option value="LAYAK">LAYAK</option>
-          <option value="LAYAK_DENGAN_CATATAN">LAYAK DENGAN CATATAN</option>
-          <option value="TIDAK_LAYAK">TIDAK LAYAK</option>
+          <option value="LAYAK">STANDAR</option>
+          <option value="LAYAK_DENGAN_CATATAN">STANDAR DENGAN CATATAN</option>
+          <option value="TIDAK_LAYAK">TIDAK STANDAR</option>
         </select>
       </div>
 
@@ -66,7 +63,7 @@ export const AparInspectionOutcome: React.FC<AparInspectionOutcomeProps> = ({
       )}
     </div>
 
-    {/* Notes */}
+    {/* Catatan Temuan Tambahan */}
     <div className="space-y-1">
       <label className="text-xs font-semibold text-[var(--primary)]">
         Catatan Temuan Tambahan
@@ -76,23 +73,22 @@ export const AparInspectionOutcome: React.FC<AparInspectionOutcomeProps> = ({
         value={notes}
         onChange={(e) => onUbahNotes(e.target.value)}
         disabled={terbit}
-        placeholder="Contoh: Tekanan pada zona hijau, segel utuh, selang lentur siap pakai…"
+        placeholder="Tuliskan catatan temuan tambahan hasil pemeriksaan unit APAR…"
         className="w-full text-xs p-2.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2383e2] disabled:opacity-60 disabled:cursor-not-allowed"
       />
     </div>
 
-    {/* Tindak lanjut — opsional */}
+    {/* Tindakan Rekomendasi */}
     <div className="space-y-1">
       <label className="text-xs font-semibold text-[var(--primary)]">
-        Tindakan Rekomendasi / Tindak Lanjut{' '}
-        <span className="text-[10px] font-normal text-[var(--muted)]">(opsional)</span>
+        Tindakan Rekomendasi
       </label>
       <textarea
         rows={2}
         value={tindakLanjut}
         onChange={(e) => onUbahTindakLanjut(e.target.value)}
         disabled={terbit}
-        placeholder="Contoh: Isi ulang tabung dan ganti segel sebelum akhir bulan…"
+        placeholder="Tuliskan tindakan rekomendasi perbaikan / isi ulang tabung…"
         className="w-full text-xs p-2.5 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] placeholder-[var(--muted)] focus:outline-none focus:border-[#2383e2] disabled:opacity-60 disabled:cursor-not-allowed"
       />
     </div>

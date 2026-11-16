@@ -1,9 +1,11 @@
 import React from 'react';
-import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
+import { STANDARD_P3K_ITEMS, type P3kBoxType, type StandardP3kItemDefinition } from '../../lib/p3kItems';
 import { markFor, type P3kMonthData, type P3kMonthItemData } from './types';
 
 interface P3kInspectionBodyProps {
   draft: P3kMonthData;
+  itemsCatalog?: StandardP3kItemDefinition[];
+  boxType?: P3kBoxType;
   lengkap: number;
   kurang: number;
   kd: number;
@@ -15,7 +17,6 @@ interface P3kInspectionBodyProps {
 
 type ItemState = Record<number, P3kMonthItemData>;
 
-/** Satu baris kuantitas item: nomor, nama + standar, input angka, flag KD. */
 const BarisItem: React.FC<{
   id: number;
   name: string;
@@ -54,14 +55,13 @@ const BarisItem: React.FC<{
   </div>
 );
 
-/** Isi form modal inspeksi P3K: 21 kuantitas → ringkasan hasil.
- *
- * Presentasional saja: semua state di `P3kInspectionModal`. P3K tidak punya
- * blok foto (domain kertas tidak memintanya) dan tidak punya catatan
- * per komponen — cukup masukan, hasil, dan kontrol.
+/**
+ * Isi form modal inspeksi P3K: 21 kuantitas sesuai Tipe A, B, atau C → ringkasan hasil.
  */
 export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
   draft,
+  itemsCatalog = STANDARD_P3K_ITEMS,
+  boxType = 'A',
   lengkap,
   kurang,
   kd,
@@ -71,19 +71,32 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
   onUbahParaf,
 }) => {
   const items: ItemState = draft.items;
-  const penuh = lengkap === STANDARD_P3K_ITEMS.length;
+  const penuh = lengkap === itemsCatalog.length;
 
   return (
     <fieldset className="space-y-4 min-w-0 border-0 m-0 p-0">
+      <div className="rounded-[5px] border border-[#27ae60]/30 bg-[#27ae60]/[0.06] px-3 py-2 flex items-center justify-between text-xs">
+        <span className="font-semibold text-[var(--primary)]">
+          Standar Kuantitas: Kotak P3K Tipe {boxType}
+        </span>
+        <span className="text-[10px] text-[var(--secondary)]">
+          {boxType === 'A'
+            ? 'Lantai 2 (≤ 25 Pekerja)'
+            : boxType === 'B'
+            ? 'Lantai 3 (≤ 50 Pekerja)'
+            : '≤ 100 Pekerja'}
+        </span>
+      </div>
+
       {/* Masukan: 21 kuantitas aktual + flag kadaluarsa */}
       <section aria-label="Jumlah aktual 21 item">
-        {STANDARD_P3K_ITEMS.map((item) => {
+        {itemsCatalog.map((item) => {
           const row = items[item.id] ?? { actual: '', expired: false };
           return (
             <BarisItem
               key={item.id}
               id={item.id}
-              name={item.name}
+              name={item.displayName || item.name}
               standardQty={item.standardQty}
               unit={item.unit}
               row={row}
@@ -102,15 +115,15 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
           </span>
           {penuh ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-              LENGKAP
+              STANDAR (LENGKAP)
             </span>
           ) : (
             <span className="inline-flex items-center px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-              PERLU ISI ULANG
+              TIDAK STANDAR (PERLU ISI ULANG)
             </span>
           )}
           <span className="text-[10px] text-[var(--muted)] tabular-nums">
-            {lengkap}/21 lengkap · {kurang} kurang · {kd} kadaluarsa
+            {lengkap}/21 standar · {kurang} kurang · {kd} kadaluarsa
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 pt-2.5">
@@ -124,18 +137,18 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
             />
           </label>
           <label className="block text-[11px] text-[var(--secondary)]">
-            Paraf &amp; Inisial
+            Petugas Pemeriksa / Paraf
             <input
               type="text"
               value={draft.paraf}
               onChange={(e) => onUbahParaf(e.target.value)}
-              placeholder="Nama pemeriksa"
+              placeholder="Takamay Jason Hermantika Irsyad"
               className="mt-1 w-full text-xs bg-transparent border border-[var(--border)] rounded-[4px] px-2 py-1.5 focus:outline-none focus:border-[#27ae60] disabled:opacity-60"
             />
           </label>
         </div>
         <p className="mt-2 text-[10px] text-[var(--muted)]">
-          Tanda per sel: √ standar · × di bawah standar ·{' '}
+          Tanda per sel: √ standar · × tidak standar (kurang) ·{' '}
           <span className="font-bold text-red-600 dark:text-red-400">KD</span> kadaluarsa.
         </p>
       </section>
@@ -143,12 +156,15 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
   );
 };
 
-/** Hitung ringkasan draf untuk header + hasil. Dipakai modal (satu tempat). */
-export function ringkasanDraf(draft: P3kMonthData): { lengkap: number; kurang: number; kd: number } {
+/** Hitung ringkasan draf untuk header + hasil. */
+export function ringkasanDraf(
+  draft: P3kMonthData,
+  itemsCatalog: StandardP3kItemDefinition[] = STANDARD_P3K_ITEMS,
+): { lengkap: number; kurang: number; kd: number } {
   let lengkap = 0;
   let kurang = 0;
   let kd = 0;
-  for (const item of STANDARD_P3K_ITEMS) {
+  for (const item of itemsCatalog) {
     const mark = markFor(item.id, item.standardQty, draft);
     if (mark === 'standar') lengkap += 1;
     else if (mark === 'kurang') kurang += 1;

@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Building2,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import {
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { InspectionReport, InspectionCategory, CATEGORY_CONFIG } from '../../types/hse';
+import type { LokasiRingkas } from '../konteksLokasi';
 
 interface HseCalendarProps {
   currentDate: Date;
@@ -28,6 +30,9 @@ interface HseCalendarProps {
   onToday: () => void;
   reports: InspectionReport[];
   activeCategoryFilter: InspectionCategory | 'ALL';
+  sites?: LokasiRingkas[];
+  selectedSiteId?: string;
+  onSelectSiteId?: (siteId: string) => void;
 }
 
 export const HseCalendar: React.FC<HseCalendarProps> = ({
@@ -39,9 +44,10 @@ export const HseCalendar: React.FC<HseCalendarProps> = ({
   onToday,
   reports,
   activeCategoryFilter,
+  sites = [],
+  selectedSiteId = 'ALL',
+  onSelectSiteId,
 }) => {
-  // Calendar days grid calculation (Monday start)
-  // Industry-standard fixed 6-week layout (42 days) ensures consistent row height and prevents layout shifts
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -59,29 +65,42 @@ export const HseCalendar: React.FC<HseCalendarProps> = ({
 
   const weekHeaders = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 
-  // Filter reports by active category if not ALL
-  const filteredReports = activeCategoryFilter === 'ALL'
-    ? reports
-    : reports.filter((r) => r.category === activeCategoryFilter);
+  const siteFilteredReports =
+    !selectedSiteId || selectedSiteId === 'ALL'
+      ? reports
+      : reports.filter((r) => !r.siteId || r.siteId === selectedSiteId);
 
-  // Group reports by day string YYYY-MM-DD
+  const filteredReports =
+    activeCategoryFilter === 'ALL'
+      ? siteFilteredReports
+      : siteFilteredReports.filter((r) => r.category === activeCategoryFilter);
+
   const getDayReports = (day: Date) => {
     return filteredReports.filter((r) => isSameDay(parseISO(r.date), day));
   };
 
+  const opsiLokasi =
+    sites.length > 0
+      ? sites.map((s) => ({
+          id: s.id,
+          name:
+            !s.name || s.name.toLowerCase() === 'pabrik utama' || s.name.toLowerCase() === 'gedung utama'
+              ? 'Kantor Pusat'
+              : s.name,
+        }))
+      : [{ id: 'KANTOR_PUSAT', name: 'Kantor Pusat' }];
+
   return (
     <div className="flex flex-col bg-[var(--bg-main)] border border-[var(--border)] rounded-[8px] shadow-xs overflow-hidden select-none">
       {/* Calendar Header */}
-      <div className="h-11 px-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--bg-sidebar)]/50">
-        <div className="flex items-center gap-2">
-          {/* Month & Year Title in snug fixed width container so buttons never shift */}
+      <div className="min-h-11 py-1.5 px-4 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-2 bg-[var(--bg-sidebar)]/50">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="w-36 flex-shrink-0">
             <h2 className="text-sm font-semibold text-[var(--primary)] tracking-tight capitalize truncate">
               {format(currentDate, 'MMMM yyyy', { locale: idLocale })}
             </h2>
           </div>
 
-          {/* Navigation Controls in fixed position */}
           <div className="flex items-center gap-0.5">
             <button
               type="button"
@@ -110,17 +129,36 @@ export const HseCalendar: React.FC<HseCalendarProps> = ({
           >
             Hari Ini
           </button>
+
+          {/* Pilihan Bagian / Lokasi di Kalender (Kantor Pusat) */}
+          <div className="inline-flex items-center gap-1.5 pl-2 border-l border-[var(--border)]">
+            <Building2 size={13} className="text-[#2383e2] flex-shrink-0" />
+            <span className="text-[11px] font-medium text-[var(--secondary)]">Bagian:</span>
+            <select
+              aria-label="Pilih Bagian Kalender"
+              value={selectedSiteId}
+              onChange={(e) => onSelectSiteId?.(e.target.value)}
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-[4px] border border-[var(--border-strong)] bg-[var(--bg-main)] text-[var(--primary)] focus:outline-none focus:border-[#2383e2] cursor-pointer"
+            >
+              {opsiLokasi.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name === 'JPM Dukuh Atas' ? 'Kantor Pusat (JPM Dukuh Atas)' : s.name}
+                </option>
+              ))}
+              <option value="ALL">Semua Bagian</option>
+            </select>
+          </div>
         </div>
 
         {/* Category Legend */}
         <div className="hidden md:flex items-center gap-3 text-[11px] text-[var(--muted)]">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#eb5757]" />
-            <span>Hydrant</span>
+            <span className="w-2 h-2 rounded-full bg-[#f2994a]" />
+            <span>Inspeksi APAR</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#f2994a]" />
-            <span>APAR</span>
+            <span className="w-2 h-2 rounded-full bg-[#eb5757]" />
+            <span>Inspeksi Hydrant</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#27ae60]" />
@@ -128,7 +166,7 @@ export const HseCalendar: React.FC<HseCalendarProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#2f80ed]" />
-            <span>Patroli K3</span>
+            <span>Safety Patrol</span>
           </div>
         </div>
       </div>
@@ -142,7 +180,7 @@ export const HseCalendar: React.FC<HseCalendarProps> = ({
         ))}
       </div>
 
-      {/* Month Days Grid - Enforced fixed column widths & increased comfortable cell height */}
+      {/* Month Days Grid */}
       <div className="grid grid-cols-[repeat(7,minmax(0,1fr))] w-full divide-x divide-y divide-[var(--border)] bg-[var(--bg-main)]">
         {calendarDays.map((day, idx) => {
           const isCurrentMonth = isSameMonth(day, currentDate);
@@ -160,7 +198,6 @@ export const HseCalendar: React.FC<HseCalendarProps> = ({
                 isSelected ? 'ring-2 ring-[#2383e2] ring-inset bg-[#2383e2]/5' : 'hover:bg-[var(--bg-hover)]'
               }`}
             >
-              {/* Day Number Header */}
               <div className="flex items-center justify-between min-w-0 w-full">
                 <span
                   className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-medium leading-none tabular-nums flex-shrink-0 ${
@@ -181,14 +218,19 @@ export const HseCalendar: React.FC<HseCalendarProps> = ({
                 )}
               </div>
 
-              {/* Category Markers on this Date - Stacked full-width bars that never expand cell width */}
               <div className="flex flex-col gap-0.5 mt-0.5 w-full min-w-0 overflow-hidden">
                 {dayReports.slice(0, 2).map((rep) => {
                   const meta = CATEGORY_CONFIG[rep.category];
+                  const statusLabel =
+                    rep.overallStatus === 'TIDAK_LAYAK'
+                      ? 'TIDAK STANDAR'
+                      : rep.overallStatus === 'LAYAK_DENGAN_CATATAN'
+                      ? 'STANDAR (CATATAN)'
+                      : 'STANDAR';
                   return (
                     <div
                       key={rep.id}
-                      title={`${meta.label}: ${rep.assetCode} (${rep.overallStatus})`}
+                      title={`${meta.label}: ${rep.assetCode} (${statusLabel})`}
                       style={{
                         backgroundColor: meta.bgTint,
                         color: meta.colorHex,

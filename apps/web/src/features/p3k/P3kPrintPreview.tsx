@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { STANDARD_P3K_ITEMS } from '@/lib/p3kItems';
+import {
+  detectP3kBoxType,
+  getStandardP3kItemsForType,
+  P3K_BOX_TYPES,
+  type P3kBoxType,
+} from '@/lib/p3kItems';
 import {
   PROCEDURAL_PRINT_CSS,
   renderP3kYearlySheet,
@@ -29,6 +34,16 @@ function fmtTanggalSingkat(iso?: string): string {
   }
 }
 
+function bacaTipeAwal(): P3kBoxType {
+  try {
+    const p = new URLSearchParams(window.location.search).get('tipe')?.toUpperCase();
+    if (p === 'B' || p === 'C') return p;
+    return 'A';
+  } catch {
+    return 'A';
+  }
+}
+
 export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
   tahun,
   autoPrint,
@@ -37,16 +52,24 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
   const [year, setYear] = useState<string>(() =>
     /^\d{4}$/.test(tahun ?? '') ? (tahun as string) : String(new Date().getFullYear()),
   );
+  const [boxType, setBoxType] = useState<P3kBoxType>(bacaTipeAwal);
   const [unitKerja, setUnitKerja] = useState('HSE');
 
   const lokasi = useKonteksLokasi();
   const kotakQuery = useKotakP3k();
   const inspeksiQuery = useInspeksiP3k();
 
-  const kotak = useMemo(
-    () => (kotakQuery.data ?? []).find((b) => b.siteId === lokasi.siteId) ?? null,
+  const daftarKotakSite = useMemo(
+    () => (kotakQuery.data ?? []).filter((b) => b.siteId === lokasi.siteId),
     [kotakQuery.data, lokasi.siteId],
   );
+
+  const kotak = useMemo(() => {
+    const byType = daftarKotakSite.find((b) => detectP3kBoxType(b.name) === boxType);
+    return byType ?? daftarKotakSite[0] ?? null;
+  }, [daftarKotakSite, boxType]);
+
+  const itemsCatalog = useMemo(() => getStandardP3kItemsForType(boxType), [boxType]);
 
   const grid: P3kYearGrid = useMemo(
     () => (kotak ? petakanGridP3k([kotak], inspeksiQuery.data ?? [], year)[kotak.id] ?? {} : {}),
@@ -57,7 +80,7 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     const tanggalInspeksi = MONTH_KEYS.map((m) => fmtTanggalSingkat(grid[m]?.tanggal ?? ''));
     const parafInisial = MONTH_KEYS.map((m) => (grid[m]?.paraf ?? '').trim());
 
-    const items = STANDARD_P3K_ITEMS.map((std, idx) => {
+    const items = itemsCatalog.map((std, idx) => {
       const months = MONTH_KEYS.map((m) => {
         const mark = markFor(std.id, std.standardQty, grid[m]);
         if (mark === 'standar') return 'STANDAR';
@@ -77,22 +100,36 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
       if (kurangMonths.length) parts.push(`Kurang: ${kurangMonths.join(', ')}`);
       return {
         no: idx + 1,
-        itemName: std.name,
+        itemName: std.displayName || std.name,
         standardQty: std.standardQty,
         months,
         keterangan: parts.join(' · '),
       };
     });
 
+    const lokasiLabel =
+      boxType === 'A'
+        ? `${lokasi.siteName} — Lantai 2 (Kotak Tipe A)`
+        : boxType === 'B'
+        ? `${lokasi.siteName} — Lantai 3 (Kotak Tipe B)`
+        : `${lokasi.siteName} — Kotak Tipe C`;
+
     return {
       tahun: year,
       unitKerja,
-      siteName: lokasi.siteName.startsWith('ITJ') ? lokasi.siteName : `ITJ ${lokasi.siteName}`,
+      boxType,
+      siteName: lokasiLabel,
       tanggalInspeksi,
       parafInisial,
       items,
+      signatures: {
+        diperiksaNama: 'Takamay Jason Hermantika Irsyad',
+        diperiksaJabatan: 'Junior HSE Analyst',
+        mengetahuiNama: 'Hizri',
+        mengetahuiJabatan: 'Governance, Risk, HSE & Quality Group Head',
+      },
     };
-  }, [year, unitKerja, lokasi.siteName, grid]);
+  }, [year, unitKerja, boxType, lokasi.siteName, grid, itemsCatalog]);
 
   const sheetsHtml = useMemo(() => renderP3kYearlySheet(payload), [payload]);
   const memuat = kotakQuery.isPending || inspeksiQuery.isPending;
@@ -115,19 +152,30 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
           onClick={onKembali}
           className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
         >
-          ← Kembali ke Halaman P3K
+          ← Kembali ke Halaman Kotak P3K
         </button>
 
         <div className="flex flex-col">
           <h1 className="text-sm font-bold tracking-tight text-slate-900">
-            Pratinjau Cetak Inspeksi Kotak P3K (Tahunan Landscape)
+            Pratinjau Cetak Inspeksi Kotak P3K — {P3K_BOX_TYPES[boxType].label}
           </h1>
           <p className="text-xs text-slate-500 tabular-nums">
-            {lokasi.siteName} · Tahun {year}
+            {lokasi.siteName} · Tahun {year} · {P3K_BOX_TYPES[boxType].floorDefault}
           </p>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
+          <label className="font-semibold text-slate-700">Tipe Kotak:</label>
+          <select
+            value={boxType}
+            onChange={(e) => setBoxType(e.target.value as P3kBoxType)}
+            className="px-2.5 py-1 rounded-[4px] border border-slate-300 bg-white text-slate-900 font-semibold"
+          >
+            <option value="A">Tipe A — Lantai 2 (≤ 25 Pekerja)</option>
+            <option value="B">Tipe B — Lantai 3 (≤ 50 Pekerja)</option>
+            <option value="C">Tipe C (≤ 100 Pekerja)</option>
+          </select>
+
           <label className="font-semibold text-slate-700">Tahun:</label>
           <select
             value={year}

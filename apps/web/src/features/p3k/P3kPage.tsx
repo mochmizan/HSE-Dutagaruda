@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Eye, Printer, Search } from 'lucide-react';
-import { STANDARD_P3K_ITEMS } from '../../lib/p3kItems';
+import {
+  detectP3kBoxType,
+  getStandardP3kItemsForType,
+  matchP3kCatalogItem,
+  P3K_BOX_TYPES,
+  type P3kBoxType,
+} from '../../lib/p3kItems';
 import { P3kInspectionModal } from './P3kInspectionModal';
 import { P3kKepala } from './P3kKepala';
 import { P3kPrintHeader, P3kPrintSignatures } from './P3kPrintChrome';
@@ -35,10 +41,8 @@ interface P3kPageProps {
   onToggleCollapsed: () => void;
 }
 
-/** Saring baris grid: semua item, yang kurang, atau yang kadaluarsa. */
 type TabP3k = 'SEMUA' | 'KURANG' | 'KADALUARSA';
 
-/** Status terburuk satu baris item selama setahun: KD > kurang > baik. */
 function statusBaris(itemId: number, standardQty: number, grid: P3kYearGrid): 'kd' | 'kurang' | 'baik' {
   let adaKurang = false;
   for (const m of MONTH_KEYS) {
@@ -67,24 +71,77 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   const buatKotak = useBuatKotakP3k();
 
   const [year, setYear] = useState(() => String(new Date().getFullYear()));
+  const [boxType, setBoxType] = useState<P3kBoxType>('A');
+  const [selectedBoxId, setSelectedBoxId] = useState<string>('');
   const [unitKerja, setUnitKerja] = useState('HSE');
-  const [lokasiKerja, setLokasiKerja] = useState('ITJ JPM Dukuh Atas');
+  const [lokasiKerja, setLokasiKerja] = useState('Kantor Pusat — Lantai 2 (Kotak Tipe A)');
   const [activeMonth, setActiveMonth] = useState<string | null>(null);
   const [tabP3k, setTabP3k] = useState<TabP3k>('SEMUA');
   const [cariItem, setCariItem] = useState('');
 
-  const kotak = (kotakQuery.data ?? []).find((b) => b.siteId === lokasi.siteId) ?? null;
+  const daftarKotakSite = useMemo(
+    () => (kotakQuery.data ?? []).filter((b) => b.siteId === lokasi.siteId),
+    [kotakQuery.data, lokasi.siteId],
+  );
 
+  // Pilih kotak aktif: berdasarkan selectedBoxId, atau yang cocok dengan boxType, atau kotak pertama di site.
+  const kotak = useMemo(() => {
+    if (selectedBoxId) {
+      const found = daftarKotakSite.find((b) => b.id === selectedBoxId);
+      if (found) return found;
+    }
+    const byType = daftarKotakSite.find((b) => detectP3kBoxType(b.name) === boxType);
+    return byType ?? daftarKotakSite[0] ?? null;
+  }, [daftarKotakSite, selectedBoxId, boxType]);
+
+  // Pastikan setiap lokasi punya minimal Kotak Tipe A (Lantai 2) dan Kotak Tipe B (Lantai 3).
   const kotakDiusahakan = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!kotakQuery.isSuccess) return;
-    if (kotak) return;
     const sid = lokasi.siteId;
     if (!sid) return;
-    if (kotakDiusahakan.current.has(sid)) return;
-    kotakDiusahakan.current.add(sid);
-    void buatKotak.mutateAsync({ siteId: sid, name: lokasi.siteName }).catch(() => {});
-  }, [kotakQuery.isSuccess, kotak, lokasi.siteId, lokasi.siteName, buatKotak]);
+    const adaA = daftarKotakSite.some((b) => detectP3kBoxType(b.name) === 'A');
+    const adaB = daftarKotakSite.some((b) => detectP3kBoxType(b.name) === 'B');
+    const keyA = `${sid}:A`;
+    const keyB = `${sid}:B`;
+    if (!adaA && !kotakDiusahakan.current.has(keyA)) {
+      kotakDiusahakan.current.add(keyA);
+      void buatKotak.mutateAsync({ siteId: sid, name: 'Lantai 2 (Kotak Tipe A)' }).catch(() => {});
+    }
+    if (!adaB && !kotakDiusahakan.current.has(keyB)) {
+      kotakDiusahakan.current.add(keyB);
+      void buatKotak.mutateAsync({ siteId: sid, name: 'Lantai 3 (Kotak Tipe B)' }).catch(() => {});
+    }
+  }, [kotakQuery.isSuccess, daftarKotakSite, lokasi.siteId, buatKotak]);
+
+  const handleUbahBoxType = (tipe: P3kBoxType) => {
+    setBoxType(tipe);
+    const matchingBox = daftarKotakSite.find((b) => detectP3kBoxType(b.name) === tipe);
+    if (matchingBox) {
+      setSelectedBoxId(matchingBox.id);
+    } else {
+      setSelectedBoxId('');
+    }
+    const labelLantai =
+      tipe === 'A'
+        ? 'Kantor Pusat — Lantai 2 (Kotak Tipe A)'
+        : tipe === 'B'
+        ? 'Kantor Pusat — Lantai 3 (Kotak Tipe B)'
+        : 'Kantor Pusat — Kotak Tipe C';
+    setLokasiKerja(labelLantai);
+  };
+
+  const handlePilihKotak = (id: string) => {
+    setSelectedBoxId(id);
+    const target = daftarKotakSite.find((b) => b.id === id);
+    if (target) {
+      const detected = detectP3kBoxType(target.name);
+      setBoxType(detected);
+      setLokasiKerja(`Kantor Pusat — ${target.name}`);
+    }
+  };
+
+  const itemsCatalog = useMemo(() => getStandardP3kItemsForType(boxType), [boxType]);
 
   const bulanBerjalan = String(new Date().getMonth() + 1).padStart(2, '0');
   const grid: P3kYearGrid = useMemo(
@@ -106,39 +163,45 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
       const cell = grid[m];
       if (!isMonthFilled(cell)) continue;
       filled += 1;
-      for (const item of STANDARD_P3K_ITEMS) {
+      for (const item of itemsCatalog) {
         const mark = markFor(item.id, item.standardQty, cell);
         if (mark === 'kurang') kurang += 1;
         else if (mark === 'kd') kd += 1;
       }
     }
     return { filled, kurang, kd };
-  }, [grid]);
+  }, [grid, itemsCatalog]);
 
   const barisTampil = useMemo(() => {
     const q = cariItem.trim().toLowerCase();
-    return STANDARD_P3K_ITEMS.filter((item) => {
-      if (q && !item.name.toLowerCase().includes(q)) return false;
+    return itemsCatalog.filter((item) => {
+      const teksNama = `${item.name} ${item.displayName ?? ''}`.toLowerCase();
+      if (q && !teksNama.includes(q)) return false;
       if (tabP3k === 'SEMUA') return true;
       const st = statusBaris(item.id, item.standardQty, grid);
       return tabP3k === 'KADALUARSA' ? st === 'kd' : st === 'kurang';
     });
-  }, [cariItem, tabP3k, grid]);
+  }, [cariItem, tabP3k, grid, itemsCatalog]);
 
   const hitungTab = useMemo(() => {
     let kurang = 0;
     let kd = 0;
-    for (const item of STANDARD_P3K_ITEMS) {
+    for (const item of itemsCatalog) {
       const st = statusBaris(item.id, item.standardQty, grid);
       if (st === 'kd') kd += 1;
       else if (st === 'kurang') kurang += 1;
     }
     return { kurang, kd };
-  }, [grid]);
+  }, [grid, itemsCatalog]);
 
   /** Buka halaman prosedur cetak P3K (landscape A4 terisolasi mode gelap). */
   const bukaHalamanCetakP3k = (autoPrint = false) => {
-    const params = new URLSearchParams({ cetak: 'p3k', tahun: year });
+    const params = new URLSearchParams({
+      cetak: 'p3k',
+      tahun: year,
+      tipe: boxType,
+    });
+    if (kotak?.id) params.set('unit', kotak.id);
     if (autoPrint) params.set('autoprint', '1');
     window.open(
       `${window.location.origin}${window.location.pathname}?${params.toString()}`,
@@ -171,21 +234,31 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
 
   const handleSave = async (data: P3kMonthData) => {
     if (!activeMonth) return;
-    if (!kotak) {
+    let targetKotak = kotak;
+    if (!targetKotak && lokasi.siteId) {
+      targetKotak = await buatKotak.mutateAsync({
+        siteId: lokasi.siteId,
+        name: P3K_BOX_TYPES[boxType].floorDefault,
+      });
+    }
+    if (!targetKotak) {
       window.alert('Kotak P3K lokasi ini belum terdaftar. Muat ulang halaman lalu coba lagi.');
       throw new Error('Kotak P3K lokasi ini belum terdaftar.');
     }
     const bulan = `${year}-${activeMonth}`;
     const kepala = {
       inspectionDate: data.tanggal.trim() ? data.tanggal.trim() : undefined,
-      paraf: data.paraf.trim() ? data.paraf.trim() : undefined,
+      paraf: data.paraf.trim() ? data.paraf.trim() : 'Takamay Jason Hermantika Irsyad',
     };
     const simpanButir = async (inspectionId: string) => {
       const detail = await ambilButirP3k(inspectionId);
       const target = detail.items ?? [];
       await Promise.all(
-        STANDARD_P3K_ITEMS.map((std) => {
-          const butir = target.find((it) => it.itemName === std.name);
+        itemsCatalog.map((std) => {
+          const butir = target.find((it) => {
+            const m = matchP3kCatalogItem(it.itemName);
+            return m ? m.id === std.id : it.itemName === std.name;
+          });
           if (!butir) return Promise.resolve();
           const nilai = data.items[std.id];
           const actual = typeof nilai?.actual === 'number' ? nilai.actual : 0;
@@ -194,14 +267,18 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
             itemId: butir.id,
             body: {
               actualQty: actual,
-              status: nilai?.expired ? 'KADALUARSA' : actual >= std.standardQty ? 'STANDAR' : 'DIBAWAH_STANDAR',
+              status: nilai?.expired
+                ? 'KADALUARSA'
+                : actual >= std.standardQty
+                ? 'STANDAR'
+                : 'DIBAWAH_STANDAR',
             },
           });
         }),
       );
     };
     const ada = (inspeksiQuery.data ?? []).find(
-      (i) => i.boxId === kotak.id && i.period.startsWith(bulan),
+      (i) => i.boxId === targetKotak.id && i.period.startsWith(bulan),
     );
     if (ada) {
       if (kepala.inspectionDate !== undefined || kepala.paraf !== undefined) {
@@ -209,7 +286,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
       }
       await simpanButir(ada.id);
     } else {
-      const baru = await buatInspeksi.mutateAsync({ boxId: kotak.id, month: bulan, ...kepala });
+      const baru = await buatInspeksi.mutateAsync({ boxId: targetKotak.id, month: bulan, ...kepala });
       await simpanButir(baru.id);
     }
   };
@@ -250,7 +327,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
         </>
       }
       jangkarEkspor={jangkarEkspor}
-      namaBerkas={year}
+      namaBerkas={`${year}-Tipe-${boxType}`}
       onCetak={handlePrint}
       labelTambah="Isi Inspeksi Bulan Berjalan"
       onTambah={() => setActiveMonth(bulanBerjalan)}
@@ -269,13 +346,13 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
         <div className="no-print flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 pb-3 mb-3 border-b border-[var(--border)]">
           <div className="flex items-center gap-1 bg-[var(--bg-sidebar)] p-0.5 rounded-[5px] border border-[var(--border)] text-xs flex-wrap">
             <button type="button" onClick={() => setTabP3k('SEMUA')} className={KELAS_TAB_P3K(tabP3k === 'SEMUA')}>
-              <span>Semua Item</span>
+              <span>Semua Item (Tipe {boxType})</span>
               <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full tabular-nums bg-[var(--bg-hover)] text-[var(--muted)]">
-                {STANDARD_P3K_ITEMS.length}
+                {itemsCatalog.length}
               </span>
             </button>
             <button type="button" onClick={() => setTabP3k('KURANG')} className={KELAS_TAB_P3K(tabP3k === 'KURANG')}>
-              <span>Kurang</span>
+              <span>Tidak Standar (Kurang)</span>
               <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full tabular-nums bg-amber-500/15 text-amber-600 dark:text-amber-400">
                 {hitungTab.kurang}
               </span>
@@ -315,7 +392,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-[4px] bg-[#27ae60] hover:bg-[#219653] text-white shadow-2xs cursor-pointer pressable tabular-nums"
             >
               <Printer size={13} />
-              <span>Cetak Kartu Tahunan P3K</span>
+              <span>Cetak Kartu P3K (Tipe {boxType})</span>
             </button>
           </div>
         </div>
@@ -324,7 +401,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
         <div className="space-y-3 pb-8 flex-1">
           <div className="hidden print:block mb-2">
             <h2 className="text-xs font-bold text-black uppercase tracking-wider">
-              A. Hasil Pemeriksaan Kotak P3K
+              A. Hasil Pemeriksaan Kotak P3K (Tipe {boxType})
             </h2>
           </div>
           <div className="print:hidden">
@@ -334,6 +411,11 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
               onUbahUnitKerja={setUnitKerja}
               lokasiKerja={lokasiKerja}
               onUbahLokasiKerja={setLokasiKerja}
+              boxType={boxType}
+              onUbahBoxType={handleUbahBoxType}
+              daftarKotak={daftarKotakSite}
+              kotakAktifId={kotak?.id}
+              onPilihKotak={handlePilihKotak}
             />
           </div>
 
@@ -342,16 +424,22 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
               Tidak ada item yang cocok dengan saringan. Ubah tab atau kata kunci.
             </p>
           ) : (
-            <P3kTabel grid={grid} year={year} items={barisTampil} onPilihBulan={setActiveMonth} />
+            <P3kTabel
+              grid={grid}
+              year={year}
+              boxType={boxType}
+              items={barisTampil}
+              onPilihBulan={setActiveMonth}
+            />
           )}
 
           {stats.filled === 0 && (
             <div className="no-print py-8 text-center border border-dashed border-[var(--border)] rounded-[8px] bg-[var(--bg-sidebar)]/50">
               <p className="font-semibold text-sm text-[var(--primary)] tabular-nums">
-                Belum ada inspeksi tahun {year}
+                Belum ada inspeksi Kotak P3K Tipe {boxType} pada tahun {year}
               </p>
               <p className="text-xs text-[var(--muted)] mt-1">
-                Isi inspeksi bulan berjalan untuk mulai mencatat kelengkapan kotak P3K.
+                Isi inspeksi bulan berjalan untuk mulai mencatat kelengkapan Kotak P3K Tipe {boxType}.
               </p>
               <button
                 type="button"
@@ -364,8 +452,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
           )}
 
           <p className="mt-1.5 text-[11px] print:text-[7px] italic text-[var(--secondary)] print:text-black print:mt-0.5">
-            Catatan: Apabila jumlah di bawah standar, maka harus diisi kembali sesuai dengan jumlah
-            standar yang tercantum
+            Catatan: Apabila jumlah di bawah standar (Kotak P3K Tipe {boxType}), maka harus diisi kembali sesuai dengan jumlah standar yang tercantum.
           </p>
         </div>
       }
@@ -375,6 +462,8 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
           isOpen={activeMonth !== null}
           monthLabel={activeIdx >= 0 ? `${MONTH_NAMES[activeIdx]} ${year}` : ''}
           initial={activeData}
+          itemsCatalog={itemsCatalog}
+          boxType={boxType}
           rekam={rekamAktif}
           menyimpan={menyimpan}
           menghapusBulan={hapusInspeksi.isPending}

@@ -233,7 +233,7 @@ describe("petakanKartuApar", () => {
     const sel = kartu["A-01"]["2026"]["10"];
     expect(sel.tanggal).toBe("2026-10-05");
     expect(sel.kondisi.safetyPin).toBe("✓");
-    expect(sel.nama).toBe("Pengawas K3");
+    expect(sel.nama).toBe("Takamay Jason Hermantika Irsyad (Junior HSE Analyst)");
     expect(sel.paraf).toBe("");
   });
 

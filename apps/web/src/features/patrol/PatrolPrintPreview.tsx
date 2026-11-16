@@ -57,15 +57,23 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
   }, [umpanBulan, labelBulan]);
 
   const payload: PatrolReportPrintPayload = useMemo(() => {
-    const namaSite = (lokasi.siteName || 'JPM DUKUH ATAS').toUpperCase();
+    const namaSite = (lokasi.siteName || 'KANTOR PUSAT').toUpperCase();
     return {
-      siteName: namaSite.startsWith('ITJ') ? namaSite : `ITJ ${namaSite}`,
+      siteName: namaSite,
       patrolDate: tanggalPatrol,
       findings: umpanBulan.map((f, idx) => ({
         no: idx + 1,
-        src: f.photoUrl,
+        src: f.photoUrl || null,
         caption: f.caption,
       })),
+      signatures: {
+        dibuatNama: 'Takamay Jason Hermantika Irsyad',
+        dibuatJabatan: 'Junior HSE Analyst',
+        diketahuiNama: 'Rifaldi Apriansyah',
+        diketahuiJabatan: 'Operational & TR',
+        disetujuiNama: 'Hizri',
+        disetujuiJabatan: 'Governance, Risk, HSE & Quality Group Head',
+      },
     };
   }, [lokasi.siteName, tanggalPatrol, umpanBulan]);
 
@@ -90,7 +98,7 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
           onClick={onKembali}
           className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
         >
-          ← Kembali ke Halaman Patroli
+          ← Kembali ke Halaman Safety Patrol
         </button>
 
         <div className="flex flex-col">

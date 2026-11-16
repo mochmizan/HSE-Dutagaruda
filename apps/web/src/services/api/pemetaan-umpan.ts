@@ -5,7 +5,8 @@ import type { OverallStatus } from '@/types/domain';
 import * as k from './klien';
 import { periodeBaris } from './queries-dasar';
 
-const namaPetugas = 'Pengawas K3';
+export const NAMA_PETUGAS_DEFAULT = 'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)';
+export const NAMA_PENGESAH_DEFAULT = 'Hizri (Governance, Risk, HSE & Quality Group Head)';
 
 export interface TemuanPatroliTampil {
   id: string;
@@ -38,7 +39,7 @@ export interface KonteksUmpan {
 }
 
 export function petakanUmpanKeLaporan(
-  umpan: k.ApiUmpan | undefined,
+  umpan: (k.ApiUmpan & { patrol?: Array<k.ApiLaporanPatroli & { category?: string }> }) | undefined,
   ctx: KonteksUmpan,
 ): InspectionReport[] {
   if (!umpan) return [];
@@ -49,11 +50,11 @@ export function petakanUmpanKeLaporan(
       category: 'HYDRANT' as const,
       date: r.createdAt,
       period: periodeBaris(r.period),
-      siteId: r.companyId,
+      siteId: unit?.siteId ?? r.companyId,
       siteName: '',
       zoneName: unit ? ctx.zonaNama(unit.zoneId) : '–',
       assetCode: unit ? `Hydrant ${unit.kode}` : 'Hydrant',
-      inspectorName: namaPetugas,
+      inspectorName: NAMA_PETUGAS_DEFAULT,
       overallStatus: r.overallStatus as OverallStatus,
       summaryNotes: r.notes ?? undefined,
       hydrantDetails: {
@@ -73,11 +74,11 @@ export function petakanUmpanKeLaporan(
       category: 'APAR' as const,
       date: r.createdAt,
       period: periodeBaris(r.period),
-      siteId: r.companyId,
+      siteId: unit?.siteId ?? r.companyId,
       siteName: '',
       zoneName: unit ? ctx.zonaNama(unit.zoneId) : '–',
       assetCode: unit ? `APAR ${unit.kode}` : 'APAR',
-      inspectorName: namaPetugas,
+      inspectorName: NAMA_PETUGAS_DEFAULT,
       overallStatus: r.overallStatus as OverallStatus,
       summaryNotes: r.notes ?? undefined,
       aparDetails: {
@@ -101,25 +102,26 @@ export function petakanUmpanKeLaporan(
       category: 'P3K' as const,
       date: r.inspectionDate ?? r.createdAt,
       period: periodeBaris(r.period),
-      siteId: r.companyId,
+      siteId: box?.siteId ?? r.companyId,
       siteName: '',
       zoneName: '–',
       assetCode: box ? box.name : 'Kotak P3K',
-      inspectorName: namaPetugas,
+      inspectorName: NAMA_PETUGAS_DEFAULT,
       overallStatus: 'LAYAK' as OverallStatus,
       p3kDetails: { boxName: box?.name ?? '', itemsTotal: 21, itemsUnderStandard: 0, needsRestock: false },
     };
   });
-  const patroli: InspectionReport[] = (umpan.patroli ?? []).map((r) => ({
+  const daftarPatroli = umpan.patroli?.length ? umpan.patroli : (umpan.patrol ?? []);
+  const patroli: InspectionReport[] = daftarPatroli.map((r) => ({
     id: r.id,
     category: 'SAFETY_PATROL' as const,
     date: r.createdAt,
     period: periodeBaris(r.patrolDate),
-    siteId: r.companyId,
+    siteId: r.siteId || r.companyId,
     siteName: '',
     zoneName: ctx.zonaNama(r.siteId),
-    assetCode: 'Patroli K3',
-    inspectorName: namaPetugas,
+    assetCode: 'Safety Patrol',
+    inspectorName: NAMA_PETUGAS_DEFAULT,
     overallStatus: 'LAYAK' as OverallStatus,
     patrolDetails: {
       findingsCount: 0,
@@ -129,4 +131,3 @@ export function petakanUmpanKeLaporan(
   }));
   return [...hidran, ...apar, ...p3k, ...patroli];
 }
-

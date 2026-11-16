@@ -8,7 +8,7 @@ import type { OverallStatus } from '@/types/domain';
 import * as k from './klien';
 import { periodeBaris, type Period } from './queries-dasar';
 
-const namaPetugas = 'Pengawas K3';
+const namaPetugas = 'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)';
 
 export function petakanUnitHidran(
   units: k.ApiHydrantUnit[],
@@ -35,9 +35,6 @@ export function petakanUnitHidran(
         scheduledDate: 'Bulan Ini',
       };
     }
-    // Terbit = selesai. Rekam yang masih `DRAFT` (jangkar unggah foto, atau
-    // rekam terbit yang ditekan `Edit`) belum final, jadi tetap "sedang
-    // berjalan" sampai diterbitkan ulang.
     const status: HydrantUnitItem['status'] =
       insp.approvalStatus === 'DRAFT' ? 'SEDANG_BERJALAN' : 'SELESAI';
     return {
@@ -119,9 +116,6 @@ export function petakanUnitApar(
         draftDetails: {},
       };
     }
-    // Terbit = selesai. Rekam `DRAFT` (Simpan Draft, atau rekam terbit yang
-    // ditekan `Edit`) belum final, jadi tetap "sedang berjalan" sampai
-    // diterbitkan ulang.
     const status: AparUnitItem['status'] =
       insp.approvalStatus === 'DRAFT' ? 'SEDANG_BERJALAN' : 'SELESAI';
     return {

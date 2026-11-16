@@ -11,20 +11,17 @@ interface HydrantFindingsProps {
 }
 
 /**
- * Section B halaman Hydrant: catatan hasil temuan sebagai kartu foto.
- *
- * Dipisah dari HydrantPage. Hanya foto bertanda `temuan` yang sampai ke sini;
- * penyaringan itu dilakukan halaman, bukan komponen ini.
+ * Section B halaman Hydrant: Catatan Temuan Tambahan & Tindakan Rekomendasi.
  */
 export const HydrantFindings: React.FC<HydrantFindingsProps> = ({ findings, onTambah, onHapus, aksen }) => (
   <div className="space-y-4">
     <div className="flex items-center justify-between gap-3">
       <div>
         <h2 className="text-sm font-bold text-[var(--primary)] tracking-tight print:text-black print:text-sm">
-          B. Catatan Hasil temuan
+          B. Catatan Temuan Tambahan &amp; Tindakan Rekomendasi
         </h2>
         <p className="no-print text-xs text-[var(--muted)] mt-0.5">
-          Dokumentasi foto dan catatan fisik ketidaksesuaian unit hydrant di lapangan
+          Dokumentasi foto, catatan temuan tambahan, dan tindakan rekomendasi perbaikan hydrant
         </p>
       </div>
 
@@ -35,16 +32,16 @@ export const HydrantFindings: React.FC<HydrantFindingsProps> = ({ findings, onTa
         className="no-print px-3 py-1.5 text-xs font-semibold rounded-[4px] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <Camera size={13} strokeWidth={2.2} />
-        <span>Tambah Temuan</span>
+        <span>Tambah Catatan Temuan Tambahan</span>
       </button>
     </div>
 
     {findings.length === 0 ? (
       <div className="p-8 rounded-[6px] border border-dashed border-[var(--border)] text-center text-xs text-[var(--muted)] space-y-2">
         <Camera size={24} className="mx-auto text-[var(--muted)] opacity-60" />
-        <p className="font-semibold text-[var(--secondary)]">Belum ada catatan hasil temuan</p>
+        <p className="font-semibold text-[var(--secondary)]">Belum ada catatan temuan tambahan</p>
         <p className="text-[11px]">
-          Klik tombol &quot;+ Tambah Temuan&quot; untuk menambahkan dokumentasi foto temuan fisik.
+          Klik tombol &quot;Tambah Catatan Temuan Tambahan&quot; untuk menambahkan dokumentasi foto temuan dan tindakan rekomendasi.
         </p>
       </div>
     ) : (
