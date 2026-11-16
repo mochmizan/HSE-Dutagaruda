@@ -1,4 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://printers-mating-impacts-capabilities.trycloudflare.com/api/:path*"
+    },
+    { "source": "/storage/:path*", "destination": "https://printers-mating-impacts-capabilities.trycloudflare.com/storage/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
