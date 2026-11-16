@@ -1,0 +1,13 @@
+# VPS hse-dutagaruda (43.173.11.117): loopback-only, no host DB port, no source mounts.
+# Dipakai eksplisit: docker compose -f docker-compose.yml -f docker-compose.vps.yml ...
+# env: .env.vps (secrets, VPS-only) + garage.vps.toml (VPS-only).
+# Batas host bersama: tanpa bind 80/443 publik, tanpa prune/down di luar dir ini.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:18083:80"
+  postgres:
+    ports: !reset []
+  garage:
+    volumes:
+      - ./garage.vps.toml:/etc/garage.toml:ro
