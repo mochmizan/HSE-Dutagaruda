@@ -1,5 +1,9 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
+# better-sqlite3 (transitif via devDeps) dikompilasi node-gyp saat install;
+# tanpa python3/make/g++ build segar gagal (cache lama menutupi ini).
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 COPY package.json bun.lock ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
