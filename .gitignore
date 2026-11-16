@@ -19,5 +19,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# vercel CLI (project link + local env, never committed)
+.vercel/
+.env.local
+
 # verification proof artifacts (recreated every run, never committed)
 wiki/artifacts/
