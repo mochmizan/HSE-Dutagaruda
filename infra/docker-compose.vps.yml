@@ -11,3 +11,13 @@ services:
   garage:
     volumes:
       - ./garage.vps.toml:/etc/garage.toml:ro
+  # Terowongan publik outbound-only (tanpa bind host): cloudflared quick tunnel
+  # ke Caddy. URL https acak tampil di log; tidak ada secret di repo.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://caddy:80
+    depends_on:
+      - caddy
+    networks:
+      - hse
+    restart: unless-stopped
