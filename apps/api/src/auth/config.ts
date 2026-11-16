@@ -28,5 +28,18 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7,
     cookieCache: { enabled: true, maxAge: 300 },
   },
+  // Cookie lintas-situs (frontend Vercel → API VPS): peramban hanya mengirim
+  // cookie pihak ketiga bila SameSite=None + Secure + HTTPS. Aktif via
+  // COOKIE_LINTAS_SITUS=true (VPS produksi); lokal tetap bawaan (Lax).
+  ...(process.env.COOKIE_LINTAS_SITUS === "true"
+    ? {
+        advanced: {
+          cookies: {
+            session_token: { attributes: { sameSite: "none" as const, secure: true } },
+            session_data: { attributes: { sameSite: "none" as const, secure: true } },
+          },
+        },
+      }
+    : {}),
   plugins: [organization()],
 });

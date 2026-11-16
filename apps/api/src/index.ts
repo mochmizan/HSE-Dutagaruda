@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { hc } from "hono/client";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
+import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { auth } from "./auth/config.js";
 import { aparInspectionsApp, hydrantInspectionsApp, p3kInspectionsApp } from "./routes/inspections.js";
@@ -13,7 +14,32 @@ import { photosApp, uploadsApp } from "./routes/uploads.js";
 import { petaApp } from "./routes/peta.js";
 import { exportsApp, pdfJobsApp } from "./routes/exports.js";
 
+/**
+ * CORS lintas-situs (frontend Vercel → API VPS). Aktif hanya bila
+ * CORS_ORIGIN diisi (daftar koma, mis. https://hse-dutagaruda.vercel.app);
+ * lokal sampe-origin tidak berubah perilaku. credentials: true agar cookie
+ * sesi Better Auth terkirim; origin eksplisit (wildcard + cookie = ditolak
+ * peramban).
+ */
+const ASAL_CORS = (process.env.CORS_ORIGIN ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+function corsLintasSitus(): MiddlewareHandler {
+  return async (c, next) => {
+    if (ASAL_CORS.length === 0) return next();
+    return cors({
+      origin: ASAL_CORS,
+      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowHeaders: ["Content-Type", "Authorization", "Origin", "X-Requested-With"],
+      credentials: true,
+    })(c, next);
+  };
+}
+
 export const app = new Hono()
+  .use("/api/*", corsLintasSitus())
   .onError((err, c) => {
     if (err instanceof HTTPException) {
       return c.json(
