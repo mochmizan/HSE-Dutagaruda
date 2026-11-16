@@ -107,7 +107,8 @@ Real routes (all auth + `companyId` scoped unless noted; base
 - Foto: `GET /api/photos?inspectionKind=hydrant&inspectionId=<id>` (daftar),
   `GET /api/photos/:id` (302 ke presign singkat)
 - Ekspor PDF: `POST /api/export/:category/:refId` → job,
-  `GET /api/pdf-jobs/:id` (status + unduhan, ~2 detik per berkas).
+  `GET /api/pdf-jobs/:id` (status + unduhan, <1 detik per berkas —
+  generator murni tanpa Gotenberg).
   Kategori proven: `hydrant-monthly`, `p3k-yearly`,
   `patrol-report` (bukan `hydrant`/`p3k`/`patrol`).
 
