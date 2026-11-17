@@ -75,8 +75,10 @@ kepala cetak + tanda tangan statis 3 kolom, modals.
   `useState`+`useEffect`) + `AparInspectionShell` (backdrop+panel+form,
   `fixed inset-0 z-50`, `target===currentTarget` tutup, `body.overflow`
   lock, window Esc) + Header/Body/Photos/Checklist/Outcome/Footer
-  presentasional. Urutan body: Foto dulu (3 slot Kartu/Berat/Pengecekan,
-  `+N` untuk slot berfoto tambahan, slot Berat nonaktif untuk Powder) →
+  presentasional. Urutan body: Foto dulu (3 slot Checklist/Berat/
+  Dokumentasi Pengecekan, label ringkas tanpa wrap agar tombol Unggah Foto
+  tetap di baris 2, `+N` untuk slot berfoto tambahan, slot Berat nonaktif
+  untuk Powder) →
   grid checklist `grid-cols-2` → Outcome (status auto + override manual +
   `Catatan Temuan Tambahan` + `Tindak Lanjut` opsional, susun/urai notes)
   → Footer (kiri `Hapus unit` / `Kosongkan bulan ini`, kanan `Terbitkan` ↔
@@ -174,7 +176,8 @@ Preconditions:
   pemetaan lokal `kartuApar.ts` (`petakanKartuTahunan`, `formatNoList`,
   `hariMenujuKedaluwarsa`); tanpa `AparBadges.tsx` / `AparInspectionFields.ts`
   / `ReportDetailModal` — potret terbit tetap di dalam modal inspeksi.
-- Foto di dalam modal inspeksi (slot Kartu/Berat/Pengecekan per caption);
+- Foto di dalam modal inspeksi (slot Checklist/Berat/Dokumentasi
+  Pengecekan per caption);
   Section B HANYA foto bertanda `temuan` pada rekam jangkar bulan terpilih.
 - `NA` = HILANG: chip merah, dihitung tidak-layak, komentar wajib-diisi
   terbuka. Status akhir otomatis mengabaikan `NA` (lihat

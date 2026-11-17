@@ -69,10 +69,17 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     [kotakQuery.data, lokasi.siteId],
   );
 
+  const unitIdParam = useMemo(() => {
+    try { return new URLSearchParams(window.location.search).get('unit') ?? ''; } catch { return ''; }
+  }, []);
   const kotak = useMemo(() => {
+    if (unitIdParam) {
+      const exact = daftarKotakSite.find((b) => b.id === unitIdParam && detectP3kBoxType(b.name) === boxType);
+      if (exact) return exact;
+    }
     const byType = daftarKotakSite.find((b) => detectP3kBoxType(b.name) === boxType);
     return byType ?? daftarKotakSite[0] ?? null;
-  }, [daftarKotakSite, boxType]);
+  }, [daftarKotakSite, boxType, unitIdParam]);
 
   const itemsCatalog = useMemo(() => getStandardP3kItemsForType(boxType), [boxType]);
 

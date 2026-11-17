@@ -1,30 +1,19 @@
 # Inspeksi P3K
 
-Grid tahunan saja seperti formulir kertas (aksen `#27ae60`): 21 item × 12
-bulan, satu kolom tanda per bulan (√ / × / KD merah), baris `TANGGAL
-INSPEKSI` + `PARAF`, footnote Catatan, year switcher, Unit/Lokasi Kerja
-editable. Kepala halaman lewat cangkang bersama
-`features/inspeksi/InspectionPageShell.tsx` + `KONFIG_P3K` (remah
-`Inspeksi P3K`, `p3k-yearly`, ikon BriefcaseMedical): poros tahun via slot
-`poros` (`YearSwitcher` berpil seperti `MonthSwitcher` + tombol `Tahun Ini`
-saat bukan tahun berjalan), tombol tambah `Isi Inspeksi Bulan Berjalan`
-(biru `#2f80ed` di slot aksi yang sama seperti Hydrant/APAR — membuka form
-bulan berjalan; sebelumnya tanpa tombol tambah sehingga grid kosong tak
-punya pintu masuk), tombol `Cetak` netral
-(sebelumnya hijau — kini seragam keempat halaman). Statistik 2 kartu
-`KartuStatistik` (`grid-cols-2`, bentuk + ukuran angka sama dengan Hydrant:
-`Sel Di Bawah Standar` + `Selesai Diperiksa`; sebelumnya 3 kartu buatan
-sendiri di `grid-cols-3`). Saring sebaris gaya `FilterBar` di posisi yang
-sama (tab `Semua Item` / `Kurang` / `Kadaluarsa` + hitungan per tab + kotak
-cari, tanpa salinan komponen — JSX inline di `P3kPage`, menyaring baris
-item; status baris = tanda terburuk setahun: KD > kurang > baik). Grid +
-kop + Catatan + modal menempati slot shell; `P3kHeader.tsx` dihapus
-(satu-satunya pemakai sudah pindah). Klik header bulan = form input bulan
-itu (tetap berfungsi di samping tombol tambah). Satu baris petunjuk di
-bawah grid (`Klik singkatan bulan pada kepala tabel untuk mengisi bulan
-lain.`); status kosong (belum ada bulan terisi) memuat CTA gaya
-`EmptyUnits` (`Belum ada inspeksi tahun …` + tombol primer yang sama
-membuka form bulan berjalan). Cetak A4 landscape satu halaman.
+Multi-kotak per site ala Hydrant/APAR (aksen `#27ae60`): daftar unit
+`P3kUnitTable` (8 kolom: No. posisi mono tabular tanpa panah / Kode Kotak /
+Zona-Lantai / Tipe A-B-C / Verifikasi 21 Item / Status Standar / Petugas &
+Tanggal / Catatan via `KeteranganTeks`) + `P3kCards`, dialihkan shared
+`ViewToggle` (`Tabel`/`Kartu`) di dalam `FilterBar` (tab status + saringan
+zona + cari). Kepala lewat `InspectionPageShell` + `KONFIG_P3K`, statistik 2
+`KartuStatistik` (`grid-cols-2`), poros `MonthSwitcher` + `Bulan Ini`,
+tombol tambah `Tambah Zona & Kotak P3K` (biru `#2f80ed` slot aksi),
+`Pratinjau Cetak` + `Cetak Kartu Tahunan P3K` di badan (`A. Hasil
+Pemeriksaan Kotak P3K (Bulan Tahun)`). Cetak A4 landscape; deep-link
+`?cetak=p3k&tahun=YYYY&tipe=A|B|C&unit=<boxId>` (+ `autoprint=1`).
+Box key = `KODE · Zona · Kotak Tipe X` di `p3kBoxes.name` (parse/format di
+`p3kBoxMeta.ts`, tanpa migrasi DB); kuota 21 item mengikuti tipe
+(`getStandardP3kItemsForType`). Tombol `Unduh PDF` + `Cetak` netral di kepala.
 
 Grid dibangun di atas disiplin tabel Hydrant: kolom `No.` angka posisi
 (mono + tabular, tanpa panah — urutan katalog tetap), kolom `ITEM` rata
@@ -64,7 +53,11 @@ memaksa A4 landscape via injeksi `@page`.
 
 ## Sub-features
 
-- `p3k-open` membuka form input dari klik header bulan.
+- `p3k-open` membuka form input dari klik baris/kartu unit (21 dropdown
+  STANDAR / TIDAK STANDAR + flag KD, kuota per tipe kotak A/B/C).
+- `p3k-tambah`: `AddZoneP3kModal` (Zona/Lantai + Kode Kotak via
+  `UnifiedCombobox` aksen `#27ae60` + Tipe A/B/C + Petugas Pemeriksa;
+  Esc + backdrop close) → `POST /api/p3k-boxes`.
 - `p3k-save` menyimpan upsert 21 item + tanggal/paraf. Simpan-ulang
   lewat UI aman: simpan kedua lewat PATCH (tanpa 409). TETAPI POST
   langsung dobel ke `POST /api/p3k-inspections` untuk box+bulan sama
@@ -78,7 +71,7 @@ memaksa A4 landscape via injeksi `@page`.
   dulu, lalu modal menutup).
 - `p3k-print` (tanpa Gotenberg): `UnduhPdfButton` membuka pratinjau
   prosedural `?cetak=p3k&tahun=YYYY&autoprint=1` (cetak/simpan via
-  dialog browser); PDF server (`POST /api/export/p3k-yearly/:refId`
+  dialog browser); grid memakai ✓ (`&#10003;`) / X / KD; PDF server (`POST /api/export/p3k-yearly/:refId`
   → `GET /api/pdf-jobs/:id`) kini generator PDF 1.4 murni
   (`apps/api/src/pdf/render.ts`). Ada juga `Cetak` (window.print,
   A4 landscape via `@page`).
@@ -141,10 +134,10 @@ Preconditions:
 - Grid mulai kosong (empty start) itu normal; isi hanya dari input bulan.
 - Cetak memaksa A4 landscape via `@page` injeksi — verifikasi orientasi
   di PDF, bukan di layar.
-- Box key = nama site; site ganda = box ganda. Jangan asert satu box
-  global.
-- Auto-provision: `P3kPage` mendaftarkan box bernama site aktif sekali per
-  `siteId` (guard `useRef<Set>` — StrictMode double-effect tidak boleh
+- Box key = `KODE · Zona · Kotak Tipe X` (multi-kotak per site; dulunya
+  satu box bernama site). Jangan asert satu box global.
+- Auto-provision: `P3kPage` mendaftarkan `P3K-01 · Lantai 2 · Kotak Tipe A`
+  + `P3K-02 · Lantai 3 · Kotak Tipe B` sekali per `siteId` (guard `useRef<Set>` — StrictMode double-effect tidak boleh
   double-create; hook `useBuatKotakP3k` yang sama, 409/duplikat ditelan
   karena API tidak unique-guard nama, daftar dimuat ulang via invalidasi).
   Tanpa ini simpan selalu gagal (`Kotak P3K lokasi ini belum terdaftar…`)

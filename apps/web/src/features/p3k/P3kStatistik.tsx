@@ -2,52 +2,37 @@ import React from 'react';
 import { KartuStatistik } from '@/features/pageChrome';
 
 interface P3kStatistikProps {
-  filled: number;
-  kurang: number;
-  kd: number;
+  totalKotak: number;
+  jumlahZona: number;
+  selesai: number;
 }
 
 /**
- * Dua kartu ringkas di atas grid — bentuknya sama dengan halaman Hydrant
- * (`KartuStatistik`, grid 2 kolom): satu kartu temuan, satu kartu capaian.
- *
- * Sebelumnya P3K memasang tiga kartu buatan sendiri sehingga tinggi, ukuran
- * angka, dan warnanya menyimpang dari halaman master.
+ * Dua kartu ringkas di atas tabel Kotak P3K: Total Kotak P3K dan Selesai Diperiksa.
+ * Menyeragamkan tampilan dengan HydrantStats & AparStats.
  */
-export const P3kStatistik: React.FC<P3kStatistikProps> = ({ filled, kurang, kd }) => {
-  const persenTerisi = Math.round((filled / 12) * 100);
-
-  return (
-    <div className="no-print grid grid-cols-2 gap-3 mb-4">
-      <KartuStatistik
-        nada="netral"
-        judul="Sel Di Bawah Standar"
-        nilai={kurang}
-        satuan="Sel"
-        rincian={`${kd} item kadaluarsa`}
-        ikon="⚠️"
-        kaki="Isi ulang sesuai jumlah standar"
-      />
-      <KartuStatistik
-        nada="hijau"
-        judul="Selesai Diperiksa"
-        nilai={filled}
-        satuan="Bulan"
-        rincian="dari 12 bulan terdaftar"
-        ikon="✅"
-        lencana="Lengkap"
-        kaki="Grid tahunan sudah terisi"
-        isi={
-          <div className="mt-2">
-            <div className="flex h-1.5 rounded-full overflow-hidden bg-emerald-500/15">
-              <div className="bg-emerald-500" style={{ width: `${persenTerisi}%` }} />
-            </div>
-            <div className="mt-1.5 text-[10px] text-[var(--muted)] tabular-nums">
-              {persenTerisi}% bulan sudah punya hasil pemeriksaan
-            </div>
-          </div>
-        }
-      />
-    </div>
-  );
-};
+export const P3kStatistik: React.FC<P3kStatistikProps> = ({
+  totalKotak,
+  jumlahZona,
+  selesai,
+}) => (
+  <div className="no-print grid grid-cols-2 gap-3 mb-4">
+    <KartuStatistik
+      nada="netral"
+      judul="Total Kotak P3K"
+      nilai={totalKotak}
+      rincian={`${jumlahZona} Zona Terpantau · Kantor Pusat`}
+      ikon="🩹"
+      kaki="Wajib periksa 1x per bulan (Permenakertrans 15/2008)"
+    />
+    <KartuStatistik
+      nada="hijau"
+      judul="Selesai Diperiksa"
+      nilai={selesai}
+      rincian={`dari ${totalKotak} kotak P3K terdaftar`}
+      ikon="✅"
+      lencana="Terverifikasi"
+      kaki="Laporan pemeriksaan telah diterbitkan"
+    />
+  </div>
+);

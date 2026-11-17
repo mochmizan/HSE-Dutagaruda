@@ -10,7 +10,6 @@ interface AparInspectionPhotosProps {
   foto: FotoTampil[];
   mengunggah: boolean;
   terbit: boolean;
-  /** Potret nilai form saat unggah: foto ikut menyimpan status komponen. */
   nilaiDraf: NonNullable<AparUnitItem['draftDetails']>;
   powder: boolean;
   kode: string;
@@ -19,9 +18,9 @@ interface AparInspectionPhotosProps {
 }
 
 const SLOT = [
-  { slot: 'Kartu', keterangan: 'Kartu APAR', hint: 'Foto kartu gantung APAR (Time Stamp)' },
-  { slot: 'Berat', keterangan: 'Penimbangan CO2', hint: 'Foto hasil penimbangan (CO₂)' },
-  { slot: 'Pengecekan', keterangan: 'Pengecekan fisik', hint: 'Foto bukti awal pengecekan fisik' },
+  { slot: 'Checklist', keterangan: 'Kartu APAR', hint: 'Foto checklist APAR' },
+  { slot: 'Berat', keterangan: 'Penimbangan CO2', hint: 'Foto timbangan CO₂' },
+  { slot: 'Dokumentasi Pengecekan', keterangan: 'Pengecekan fisik', hint: 'Foto pengecekan fisik' },
 ] as const;
 
 function formatWaktuSekarang(): string {
@@ -29,8 +28,9 @@ function formatWaktuSekarang(): string {
 }
 
 /**
- * Langkah 1: Foto Bukti Fisik APAR dilakukan lebih awal sebelum melakukan inspeksi,
- * dilengkapi Time Stamp otomatis pada setiap slot dokumentasi.
+ * Langkah 1: Foto Bukti Fisik APAR dilakukan lebih awal sebelum melakukan inspeksi.
+ * - Label diubah: Kartu -> Checklist, Pengecekan -> Dokumentasi Pengecekan.
+ * - Subheading / deskripsi ringkas agar tombol Unggah Foto tetap sejajar di baris kedua.
  */
 export const AparInspectionPhotos: React.FC<AparInspectionPhotosProps> = ({
   foto,
@@ -61,7 +61,7 @@ export const AparInspectionPhotos: React.FC<AparInspectionPhotosProps> = ({
       </div>
 
       <p className="text-[11px] text-[var(--secondary)]">
-        Ambil/unggah foto bukti fisik APAR terlebih dahulu sebelum melakukan pemeriksaan 7 komponen di bawah.
+        Unggah foto bukti fisik APAR sebelum mengisi daftar 7 komponen.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start pt-1">
@@ -73,11 +73,11 @@ export const AparInspectionPhotos: React.FC<AparInspectionPhotosProps> = ({
               key={f.slot}
               className="rounded-[5px] border border-[var(--border)] bg-[var(--bg-main)] p-2.5 space-y-2"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-[var(--primary)]">{f.slot}</p>
-                  <p className="text-[10px] text-[var(--muted)]">
-                    {f.slot === 'Berat' && powder ? 'Nonaktif untuk APAR Powder (khusus CO₂)' : f.hint}
+                  <p className="text-[11px] font-semibold text-[var(--primary)] truncate">{f.slot}</p>
+                  <p className="text-[10px] text-[var(--muted)] truncate">
+                    {f.slot === 'Berat' && powder ? 'Khusus APAR CO₂' : f.hint}
                   </p>
                 </div>
                 {!terbit && (
@@ -95,7 +95,7 @@ export const AparInspectionPhotos: React.FC<AparInspectionPhotosProps> = ({
 
               {slotFoto.length === 0 ? (
                 <div className="rounded-[5px] border border-dashed border-[var(--border-strong)] py-4 flex items-center justify-center text-[10px] text-[var(--muted)]">
-                  Belum ada foto bukti ({f.slot})
+                  Belum ada foto ({f.slot})
                 </div>
               ) : (
                 <div className="space-y-2">

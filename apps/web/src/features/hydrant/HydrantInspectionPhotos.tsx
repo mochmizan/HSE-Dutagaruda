@@ -12,7 +12,6 @@ interface HydrantInspectionPhotosProps {
   foto: FotoTampil[];
   mengunggah: boolean;
   terbit: boolean;
-  /** Potret nilai form saat unggah: foto ikut menyimpan status komponen. */
   nilaiDraf: NonNullable<HydrantUnitItem['draftDetails']>;
   onUnggahFoto: (file: File, caption: string, nilai?: HydrantUnitItem['draftDetails']) => void;
   onHapusFoto: (fotoId: string) => void;
@@ -24,7 +23,7 @@ function formatWaktuSekarang(): string {
 
 /**
  * Langkah 1: Foto Bukti Fisik dilakukan lebih awal sebelum melakukan inspeksi,
- * dilengkapi Time Stamp otomatis saat pengambilan/pengunggahan foto.
+ * dilengkapi Time Stamp otomatis.
  */
 export const HydrantInspectionPhotos: React.FC<HydrantInspectionPhotosProps> = ({
   foto,
@@ -53,16 +52,18 @@ export const HydrantInspectionPhotos: React.FC<HydrantInspectionPhotosProps> = (
       </div>
 
       <p className="text-[11px] text-[var(--secondary)]">
-        Ambil/unggah foto bukti fisik unit hydrant terlebih dahulu sebelum mengisi daftar pemeriksaan 6 komponen di bawah.
+        Unggah foto bukti fisik unit hydrant sebelum mengisi daftar 6 komponen.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start pt-1">
         <div className="rounded-[5px] border border-[var(--border)] bg-[var(--bg-main)] p-2.5 space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold text-[var(--primary)]">Bukti Fisik &amp; Time Stamp</p>
-              <p className="text-[10px] text-[var(--muted)]">
-                Tercatat otomatis dengan waktu pengambilan
+              <p className="text-[11px] font-semibold text-[var(--primary)] truncate">
+                Dokumentasi Pengecekan
+              </p>
+              <p className="text-[10px] text-[var(--muted)] truncate">
+                Foto kondisi unit &amp; time stamp
               </p>
             </div>
             {!terbit && (
@@ -80,7 +81,7 @@ export const HydrantInspectionPhotos: React.FC<HydrantInspectionPhotosProps> = (
           {foto.length === 0 ? (
             <div className="rounded-[5px] border border-dashed border-[var(--border-strong)] py-4 px-2 flex flex-col items-center justify-center text-center text-[10px] text-[var(--muted)] gap-1">
               <Camera size={16} className="opacity-50" />
-              <span>Belum ada foto bukti awal — unggah foto untuk mencatat Time Stamp</span>
+              <span>Belum ada foto bukti</span>
             </div>
           ) : (
             <div className="space-y-2">
@@ -97,7 +98,7 @@ export const HydrantInspectionPhotos: React.FC<HydrantInspectionPhotosProps> = (
                   <div className="mt-1 px-1.5 py-0.5 rounded bg-black/75 text-white text-[9px] font-mono flex items-center justify-between tabular-nums">
                     <span className="inline-flex items-center gap-1">
                       <Clock size={9} />
-                      <span>Time Stamp Bukti</span>
+                      <span>Time Stamp</span>
                     </span>
                     <span>{waktuUnggahTerakhir}</span>
                   </div>

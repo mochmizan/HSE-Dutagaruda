@@ -15,6 +15,12 @@ const AKSEN = {
     pil: 'bg-[#f2994a]/10 text-[#f2994a]',
     garis: 'border-[#f2994a]/20',
   },
+  '#27ae60': {
+    fokus: 'focus:border-[#27ae60]',
+    teks: 'text-[#27ae60]',
+    pil: 'bg-[#27ae60]/10 text-[#27ae60]',
+    garis: 'border-[#27ae60]/20',
+  },
 } as const;
 
 export type UnifiedComboboxAccent = keyof typeof AKSEN;

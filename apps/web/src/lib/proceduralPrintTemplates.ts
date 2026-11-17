@@ -881,8 +881,8 @@ export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
       const mCells: string[] = [];
       for (let m = 0; m < 12; m++) {
         const st = item.months && item.months[m] ? String(item.months[m]).toUpperCase() : '';
-        const stdMark = st === 'STANDAR' ? '&radic;' : st === 'KADALUARSA' ? 'KD' : '';
-        const lowMark = st === 'DIBAWAH_STANDAR' ? '&radic;' : '';
+        const stdMark = st === 'STANDAR' ? '&#10003;' : st === 'KADALUARSA' ? 'KD' : '';
+        const lowMark = st === 'DIBAWAH_STANDAR' ? 'X' : '';
         mCells.push(`
           <td style="text-align:center;font-weight:600;">${stdMark}</td>
           <td class="p3k-grey-col" style="font-weight:600;">${lowMark}</td>

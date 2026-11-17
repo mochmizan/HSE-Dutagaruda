@@ -60,7 +60,7 @@ function useFotoSlotApar(inspeksiIds: string[]): { peta: Record<string, FotoSlot
               if (f.temuan) continue;
               const caption = (f.caption ?? '').trim().toLowerCase();
               const url = livePhotoUrl(f.id);
-              if (caption.includes('kartu') && !slot.kartu) slot.kartu = url;
+              if ((caption.includes('kartu') || caption.includes('checklist')) && !slot.kartu) slot.kartu = url;
               else if ((caption.includes('berat') || caption.includes('co2')) && !slot.berat) slot.berat = url;
               else slot.cek.push(url);
             }
