@@ -9,6 +9,7 @@
 
 import { liveGet, livePost, livePatch, livePut, liveDelete, livePostForm, liveApiBase } from './liveClient';
 import { ApiError } from './client';
+import { kompresFoto } from '@/lib/kompresFoto';
 
 export interface Halaman<T> {
   items: T[];
@@ -360,14 +361,14 @@ export type MasukanTemuan = { description: string; s3Key: string; locationNote?:
  * Unggah foto temuan patroli (multipart: file, description, locationNote?).
  * Kontrak: POST /api/safety-patrol-reports/:id/findings/photo → 201 temuan.
  */
-export const unggahFotoTemuanPatroli = (
+export const unggahFotoTemuanPatroli = async (
   reportId: string,
   file: File,
   description: string,
   locationNote?: string,
 ) => {
   const form = new FormData();
-  form.append('file', file);
+  form.append('file', await kompresFoto(file));
   form.append('description', description);
   if (locationNote) form.append('locationNote', locationNote);
   return livePostForm<ApiTemuanPatroli>(
@@ -468,7 +469,7 @@ export interface ApiFoto {
 }
 
 /** Unggah foto inspeksi (multipart). Hanya untuk inspeksi hidran dan APAR. */
-export const unggahFoto = (
+export const unggahFoto = async (
   inspectionKind: 'hydrant' | 'apar',
   inspectionId: string,
   file: File,
@@ -476,7 +477,7 @@ export const unggahFoto = (
   temuan = false,
 ) => {
   const form = new FormData();
-  form.append('file', file);
+  form.append('file', await kompresFoto(file));
   form.append('inspectionKind', inspectionKind);
   form.append('inspectionId', inspectionId);
   if (caption) form.append('caption', caption);
@@ -515,10 +516,10 @@ export interface ApiPeta {
 /** Daftar peta proyek aktif, sudah berurutan menurut `urutan`. */
 export const ambilPetaProyek = () => liveGet<{ items: ApiPeta[] }>('/project-maps');
 
-/** Unggah denah (multipart: file, nama?). */
-export const unggahPeta = (file: File, nama?: string) => {
+/** Unggah denah (multipart: file, nama?). Dikompresi seperti foto bukti. */
+export const unggahPeta = async (file: File, nama?: string) => {
   const form = new FormData();
-  form.append('file', file, file.name);
+  form.append('file', await kompresFoto(file));
   if (nama?.trim()) form.append('nama', nama.trim());
   return livePostForm<ApiPeta>('/project-maps', form);
 };
