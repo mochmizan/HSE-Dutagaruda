@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, CheckCircle2, Trash2, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { KeteranganTeks } from '@/features/pageChrome';
@@ -28,14 +28,13 @@ function fmtTgl(iso: string): string {
 interface P3kUnitTableProps {
   units: P3kUnitRow[];
   onBuka: (unit: P3kUnitRow) => void;
-  onHapus: (unit: P3kUnitRow) => void;
 }
 
 /**
  * Tabel Kotak P3K (cermin HydrantTable & AparTable):
  * No. | Kode Kotak | Zona / Lantai | Tipe Kotak | Verifikasi 21 Item | Status Standar | Petugas & Tanggal | Keterangan
  */
-export const P3kUnitTable: React.FC<P3kUnitTableProps> = ({ units, onBuka, onHapus }) => (
+export const P3kUnitTable: React.FC<P3kUnitTableProps> = ({ units, onBuka }) => (
   <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
     <table className="w-full table-fixed text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
       <colgroup>
@@ -47,7 +46,6 @@ export const P3kUnitTable: React.FC<P3kUnitTableProps> = ({ units, onBuka, onHap
         <col className="w-[140px]" />
         <col className="w-[180px]" />
         <col className="w-[160px]" />
-        <col className="w-[52px]" />
       </colgroup>
       <thead>
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
@@ -59,7 +57,6 @@ export const P3kUnitTable: React.FC<P3kUnitTableProps> = ({ units, onBuka, onHap
           <th className="py-2.5 px-3 text-center align-middle">Status Standar</th>
           <th className="py-2.5 px-3 text-center align-middle">Petugas &amp; Tanggal</th>
           <th className="py-2.5 px-3 text-center align-middle">Catatan Temuan Tambahan</th>
-          <th className="py-2.5 px-3 text-center align-middle print:hidden">Aksi</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-[var(--border)] text-xs">
@@ -148,21 +145,6 @@ export const P3kUnitTable: React.FC<P3kUnitTableProps> = ({ units, onBuka, onHap
 
               <td className="py-2.5 px-3 align-middle text-[11px] text-[var(--secondary)]">
                 <KeteranganTeks teks={u.notes} />
-              </td>
-
-              <td className="py-2.5 px-3 text-center align-middle print:hidden">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onHapus(u);
-                  }}
-                  title={`Hapus kotak ${u.kode}`}
-                  aria-label={`Hapus kotak ${u.kode}`}
-                  className="p-1.5 rounded-[4px] text-[var(--muted)] hover:text-[#eb5757] hover:bg-[#eb5757]/10 cursor-pointer pressable"
-                >
-                  <Trash2 size={14} />
-                </button>
               </td>
             </tr>
           );

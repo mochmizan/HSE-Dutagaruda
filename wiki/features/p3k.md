@@ -1,7 +1,7 @@
 # Inspeksi P3K
 
 Multi-kotak per site ala Hydrant/APAR (aksen `#27ae60`): daftar unit
-`P3kUnitTable` (8 kolom + `Aksi` hapus-pakai-`print:hidden`: No. posisi mono tabular tanpa panah / Kode Kotak /
+`P3kUnitTable` (8 kolom: No. posisi mono tabular tanpa panah / Kode Kotak /
 Zona-Lantai / Tipe A-B-C / Verifikasi 21 Item / Status Standar / Petugas &
 Tanggal / Catatan via `KeteranganTeks`) + `P3kCards`, dialihkan shared
 `ViewToggle` (`Tabel`/`Kartu`) di dalam `FilterBar` (tab status + saringan
@@ -58,11 +58,6 @@ memaksa A4 landscape via injeksi `@page`.
 - `p3k-tambah`: `AddZoneP3kModal` (Zona/Lantai + Kode Kotak via
   `UnifiedCombobox` aksen `#27ae60` + Tipe A/B/C + Petugas Pemeriksa;
   Esc + backdrop close) → `POST /api/p3k-boxes`.
-- `p3k-hapus-unit`: kolom `Aksi` di tabel + ikon tempat sampah di kartu →
-  `ConfirmModal` (`Hapus Kotak P3K`, merah `#eb5757`) → `DELETE
-  /api/p3k-boxes/:id` (`useHapusKotakP3k`, invalidasi kotak + umpan).
-  API 409 bila kotak masih punya rekaman inspeksi — pesan konfirmasi
-  menyuruh kosongkan dulu tiap bulannya lewat “Hapus Bulan Ini”.
 - `p3k-save` menyimpan upsert 21 item + tanggal/paraf. Simpan-ulang
   lewat UI aman: simpan kedua lewat PATCH (tanpa 409). TETAPI POST
   langsung dobel ke `POST /api/p3k-inspections` untuk box+bulan sama

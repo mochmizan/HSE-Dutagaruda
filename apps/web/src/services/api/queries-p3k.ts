@@ -42,19 +42,6 @@ export function useBuatKotakP3k() {
   });
 }
 
-/** Hapus kotak P3K (API 409 bila kotak masih punya rekaman inspeksi). */
-export function useHapusKotakP3k() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => k.hapusKotakP3k(id),
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: kunci.kotakP3k });
-      void qc.invalidateQueries({ queryKey: ['umpan'] });
-    },
-    onError: (err) => window.alert(gagal(err)),
-  });
-}
-
 /** Hapus inspeksi P3K bulan (bersama butir-butirnya). */
 export function useHapusInspeksiP3k() {
   const qc = useQueryClient();

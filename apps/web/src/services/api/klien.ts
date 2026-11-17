@@ -457,8 +457,6 @@ export const hapusLokasi = (id: string) => liveDelete<{ ok: boolean }>(`/sites/$
 export const buatKotakP3k = (body: { siteId: string; name: string }) =>
   livePost<ApiP3kBox>('/p3k-boxes', body);
 
-export const hapusKotakP3k = (id: string) => liveDelete(`/p3k-boxes/${id}`);
-
 // ── Foto (Garage via /api/uploads + /api/photos) ──
 
 export interface ApiFoto {
