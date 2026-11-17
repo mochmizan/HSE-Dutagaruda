@@ -166,8 +166,8 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
               onChange={(e) => setBoxType(e.target.value as P3kBoxType)}
               className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] focus:outline-none focus:border-[#27ae60]"
             >
-              <option value="A">Tipe A — Untuk 25 pekerja/buruh atau kurang (Lantai 2)</option>
-              <option value="B">Tipe B — Untuk 50 pekerja/buruh atau kurang (Lantai 3)</option>
+              <option value="A">Tipe A — Untuk 25 pekerja/buruh atau kurang</option>
+              <option value="B">Tipe B — Untuk 50 pekerja/buruh atau kurang</option>
               <option value="C">Tipe C — Untuk 100 pekerja/buruh atau kurang</option>
             </select>
           </div>

@@ -199,8 +199,8 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
               onChange={(e) => setBoxType(e.target.value as P3kBoxType)}
               className="px-2.5 py-1 rounded-[4px] border border-slate-300 bg-white text-slate-900 font-semibold"
             >
-              <option value="A">Tipe A — Lantai 2 (≤ 25 Pekerja)</option>
-              <option value="B">Tipe B — Lantai 3 (≤ 50 Pekerja)</option>
+              <option value="A">Tipe A (≤ 25 Pekerja)</option>
+              <option value="B">Tipe B (≤ 50 Pekerja)</option>
               <option value="C">Tipe C (≤ 100 Pekerja)</option>
             </select>
 

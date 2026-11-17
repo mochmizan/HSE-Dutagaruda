@@ -48,9 +48,9 @@ export const P3kKepala: React.FC<P3kKepalaProps> = ({
               </h2>
               <span className="px-2 py-0.5 rounded-[4px] bg-[#27ae60]/15 border border-[#27ae60]/35 text-[#27ae60] text-[10px] font-bold uppercase">
                 {boxType === 'A'
-                  ? 'Lantai 2 · Tipe A'
+                  ? 'Tipe A'
                   : boxType === 'B'
-                  ? 'Lantai 3 · Tipe B'
+                  ? 'Tipe B'
                   : 'Tipe C'}
               </span>
             </div>
@@ -87,8 +87,8 @@ export const P3kKepala: React.FC<P3kKepalaProps> = ({
           </span>
           {(
             [
-              { tipe: 'A' as const, judul: 'Tipe A — Lantai 2 (≤ 25 Pekerja)' },
-              { tipe: 'B' as const, judul: 'Tipe B — Lantai 3 (≤ 50 Pekerja)' },
+              { tipe: 'A' as const, judul: 'Tipe A (≤ 25 Pekerja)' },
+              { tipe: 'B' as const, judul: 'Tipe B (≤ 50 Pekerja)' },
               { tipe: 'C' as const, judul: 'Tipe C (≤ 100 Pekerja)' },
             ]
           ).map((pil) => {

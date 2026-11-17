@@ -92,9 +92,9 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
         </span>
         <span className="text-[10px] text-[var(--secondary)]">
           {boxType === 'A'
-            ? 'Lantai 2 (≤ 25 Pekerja)'
+            ? '(≤ 25 Pekerja)'
             : boxType === 'B'
-            ? 'Lantai 3 (≤ 50 Pekerja)'
+            ? '(≤ 50 Pekerja)'
             : '≤ 100 Pekerja'}
         </span>
       </div>
