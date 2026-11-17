@@ -12,7 +12,13 @@
  * tersemat data-URI dari `printLogos.ts` sehingga nol ketergantungan jaringan.
  */
 
-import { LOGO_DUTAGARUDA_B64, LOGO_K3_B64 } from './printLogos';
+import {
+  LOGO_DUTAGARUDA_B64,
+  LOGO_ITJ_B64,
+  LOGO_JPM_B64,
+  LOGO_K3_B64,
+  LOGO_PARTNERS_B64,
+} from './printLogos';
 
 export function escPrint(val: unknown): string {
   return String(val ?? '')
@@ -610,6 +616,36 @@ table.hyd-mon-table tbody tr {
 }
 `;
 
+
+export interface PrintSignerSlot {
+  header: string;
+  nama?: string;
+  jabatan?: string;
+  marginBottomPx?: number;
+}
+
+function renderDynamicSignTable(slots: PrintSignerSlot[], marginTopPx = 12): string {
+  const active = slots.filter((s) => (s.nama ?? '').trim().length > 0);
+  if (active.length === 0) return '';
+  const widthPct = `${Math.floor(100 / active.length)}%`;
+  const tds = active
+    .map(
+      (s) => `
+        <td style="width:${widthPct};">
+          <div class="sign-header" style="margin-bottom:${s.marginBottomPx ?? 48}px;">${escPrint(s.header)}</div>
+          <div class="sign-name">${escPrint((s.nama ?? '').trim())}</div>
+          ${(s.jabatan ?? '').trim() ? `<div class="sign-role">${escPrint((s.jabatan ?? '').trim())}</div>` : ''}
+        </td>
+      `,
+    )
+    .join('');
+  return `
+    <table class="sign-table" style="margin-top:${marginTopPx}px;">
+      <tbody><tr>${tds}</tr></tbody>
+    </table>
+  `;
+}
+
 export function renderKopHeaderJpm(): string {
   return `
     <div class="kop-header">
@@ -948,22 +984,18 @@ export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
       <div class="p3k-bottom-note">
         Catatan: Apabila jumlah dibawah standar, maka harus diisi kembali sesuai dengan jumlah standar yang tercantum
       </div>
-      <table class="sign-table" style="margin-top:8px;">
-        <tbody>
-          <tr>
-            <td style="width:50%;">
-              <div class="sign-header" style="margin-bottom:32px;">Diperiksa Oleh :</div>
-              <div class="sign-name">${escPrint(data.signatures?.diperiksaNama || 'Takamay Jason Hermantika Irsyad')}</div>
-              <div class="sign-role">${escPrint(data.signatures?.diperiksaJabatan || 'Junior HSE Analyst')}</div>
-            </td>
-            <td style="width:50%;">
-              <div class="sign-header" style="margin-bottom:32px;">Mengetahui / Disetujui Oleh :</div>
-              <div class="sign-name">${escPrint(data.signatures?.mengetahuiNama || 'Hizri')}</div>
-              <div class="sign-role">${escPrint(data.signatures?.mengetahuiJabatan || 'Governance, Risk, HSE & Quality Group Head')}</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      ${renderDynamicSignTable(
+        data.signatures
+          ? [
+              { header: 'Diperiksa Oleh :', nama: data.signatures.diperiksaNama, jabatan: data.signatures.diperiksaJabatan, marginBottomPx: 32 },
+              { header: 'Mengetahui / Disetujui Oleh :', nama: data.signatures.mengetahuiNama, jabatan: data.signatures.mengetahuiJabatan, marginBottomPx: 32 },
+            ]
+          : [
+              { header: 'Diperiksa Oleh :', nama: 'Takamay Jason Hermantika Irsyad', jabatan: 'Junior HSE Analyst', marginBottomPx: 32 },
+              { header: 'Mengetahui / Disetujui Oleh :', nama: 'Hizri', jabatan: 'Governance, Risk, HSE & Quality Group Head', marginBottomPx: 32 },
+            ],
+        8,
+      )}
     </div>
   `;
 }
@@ -1001,7 +1033,19 @@ export function renderPatrolReportSheets(data: PatrolReportPrintPayload): string
   if (pages.length === 0) pages.push([]);
 
   return pages
-    .map((pageItems) => {
+    .map((pageItems, pIdx) => {
+      const isLastPage = pIdx === pages.length - 1;
+      const patrolSignHtml =
+        isLastPage && data.signatures
+          ? renderDynamicSignTable(
+              [
+                { header: 'Dibuat Oleh :', nama: data.signatures.dibuatNama, jabatan: data.signatures.dibuatJabatan, marginBottomPx: 44 },
+                { header: 'Diketahui Oleh :', nama: data.signatures.diketahuiNama, jabatan: data.signatures.diketahuiJabatan, marginBottomPx: 44 },
+                { header: 'Disetujui Oleh :', nama: data.signatures.disetujuiNama, jabatan: data.signatures.disetujuiJabatan, marginBottomPx: 44 },
+              ],
+              18,
+            )
+          : '';
       const rows: string[] = [];
       for (let r = 0; r < pageItems.length; r += 2) {
         const left = pageItems[r];
@@ -1062,6 +1106,7 @@ export function renderPatrolReportSheets(data: PatrolReportPrintPayload): string
               ? '<p style="text-align:center;font-style:italic;font-size:10pt;margin-top:24px;">Tidak ada foto temuan pada periode ini.</p>'
               : `<table class="patrol-grid-table"><tbody>${rows.join('')}</tbody></table>`
           }
+          ${patrolSignHtml}
         </div>
       `;
     })
@@ -1152,31 +1197,19 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
   const s = docData.signers;
   const notesHtml =
     docData.notes && docData.notes.trim() ? `<div class="catatan-text">${escPrint(docData.notes)}</div>` : '';
+  const aparSignTable = renderDynamicSignTable(
+    [
+      { header: 'Petugas Pemeriksa :', nama: s.dibuatNama, jabatan: s.dibuatJabatan, marginBottomPx: 52 },
+      { header: 'Diketahui Oleh :', nama: s.diketahuiNama, jabatan: s.diketahuiJabatan, marginBottomPx: 52 },
+      { header: 'Disetujui Oleh :', nama: s.disetujuiNama, jabatan: s.disetujuiJabatan, marginBottomPx: 52 },
+    ],
+    8,
+  );
   const signHtml = `
     <div class="catatan-sign-section">
       <p class="catatan-label">Catatan :</p>
       ${notesHtml}
-      <table class="sign-table">
-        <tbody>
-          <tr>
-            <td>
-              <div class="sign-header">Petugas Pemeriksa :</div>
-              <div class="sign-name">${escPrint(s.dibuatNama || 'Takamay Jason Hermantika Irsyad')}</div>
-              <div class="sign-role">${escPrint(s.dibuatJabatan || 'Junior HSE Analyst')}</div>
-            </td>
-            <td>
-              <div class="sign-header">Diketahui Oleh :</div>
-              <div class="sign-name">${escPrint(s.diketahuiNama || 'Rifaldi Apriansyah')}</div>
-              <div class="sign-role">${escPrint(s.diketahuiJabatan || 'Operational & TR')}</div>
-            </td>
-            <td>
-              <div class="sign-header">Disetujui Oleh :</div>
-              <div class="sign-name">${escPrint(s.disetujuiNama || 'Hizri')}</div>
-              <div class="sign-role">${escPrint(s.disetujuiJabatan || 'Governance, Risk, HSE & Quality Group Head')}</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      ${aparSignTable}
     </div>
   `;
 
@@ -1258,6 +1291,7 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
     `);
   });
 
+
   return sheets.join('\n');
 }
 
@@ -1284,6 +1318,12 @@ export interface HydrantLaporanPrintPayload {
   bulan: string;
   siteName: string;
   rows: HydrantLaporanPrintRow[];
+  signatures?: {
+    petugasNama?: string;
+    petugasJabatan?: string;
+    mengetahuiNama?: string;
+    mengetahuiJabatan?: string;
+  };
 }
 
 export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): string {
@@ -1384,22 +1424,18 @@ export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): str
           ${rowsHtml}
         </tbody>
       </table>
-      <table class="sign-table" style="margin-top:12px;">
-        <tbody>
-          <tr>
-            <td style="width:50%;">
-              <div class="sign-header" style="margin-bottom:36px;">Petugas Pemeriksa :</div>
-              <div class="sign-name">Takamay Jason Hermantika Irsyad</div>
-              <div class="sign-role">Junior HSE Analyst</div>
-            </td>
-            <td style="width:50%;">
-              <div class="sign-header" style="margin-bottom:36px;">Mengetahui / Disetujui Oleh :</div>
-              <div class="sign-name">Hizri</div>
-              <div class="sign-role">Governance, Risk, HSE &amp; Quality Group Head</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      ${renderDynamicSignTable(
+        data.signatures
+          ? [
+              { header: 'Petugas Pemeriksa :', nama: data.signatures.petugasNama, jabatan: data.signatures.petugasJabatan, marginBottomPx: 36 },
+              { header: 'Mengetahui / Disetujui Oleh :', nama: data.signatures.mengetahuiNama, jabatan: data.signatures.mengetahuiJabatan, marginBottomPx: 36 },
+            ]
+          : [
+              { header: 'Petugas Pemeriksa :', nama: 'Takamay Jason Hermantika Irsyad', jabatan: 'Junior HSE Analyst', marginBottomPx: 36 },
+              { header: 'Mengetahui / Disetujui Oleh :', nama: 'Hizri', jabatan: 'Governance, Risk, HSE & Quality Group Head', marginBottomPx: 36 },
+            ],
+        12,
+      )}
     </div>
   `;
 }
@@ -1423,6 +1459,12 @@ export interface HydrantMonthlyPrintPayload {
   inspectionDate: string;
   rows: HydrantMonthlyPrintRow[];
   temuan: Array<{ no?: number; src: string | null; caption: string }>;
+  signatures?: {
+    petugasNama?: string;
+    petugasJabatan?: string;
+    mengetahuiNama?: string;
+    mengetahuiJabatan?: string;
+  };
 }
 
 export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): string {
@@ -1552,5 +1594,19 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
     `);
   }
 
+  const monSignHtml = data.signatures
+    ? renderDynamicSignTable(
+        [
+          { header: 'Petugas Pemeriksa :', nama: data.signatures.petugasNama, jabatan: data.signatures.petugasJabatan, marginBottomPx: 44 },
+          { header: 'Mengetahui / Disetujui Oleh :', nama: data.signatures.mengetahuiNama, jabatan: data.signatures.mengetahuiJabatan, marginBottomPx: 44 },
+        ],
+        16,
+      )
+    : '';
+  if (monSignHtml && sheets.length > 0) {
+    const lastIdx = sheets.length - 1;
+    sheets[lastIdx] = sheets[lastIdx].replace(/<\/div>\s*$/, `${monSignHtml}
+      </div>`);
+  }
   return sheets.join('\n');
 }

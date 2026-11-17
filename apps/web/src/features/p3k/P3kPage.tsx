@@ -248,7 +248,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
     const bulan = `${year}-${activeMonth}`;
     const kepala = {
       inspectionDate: data.tanggal.trim() ? data.tanggal.trim() : undefined,
-      paraf: data.paraf.trim() ? data.paraf.trim() : 'Takamay Jason Hermantika Irsyad',
+      paraf: data.paraf.trim() ? data.paraf.trim() : 'Takamay Jason H. I.',
     };
     const simpanButir = async (inspectionId: string) => {
       const detail = await ambilButirP3k(inspectionId);

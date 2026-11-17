@@ -105,6 +105,11 @@ kepala cetak + tanda tangan statis 3 kolom, modals.
   rows, `expiredDate` ISO → Indonesia multiline, foto caption `Kartu APAR` /
   `Penimbangan CO2` (landscape) / `Pengecekan fisik` (+ekstra) per rekam
   bulan, tanggal = `createdAt` terbaru, catatan = gabungan notes unik.
+  Kolom `Handsign / Penandatangan` di pratinjau (Checklist Bulanan:
+  Dibuat/Diketahui/Disetujui + jabatan; Kartu Tahunan: Nama Pemeriksa +
+  Paraf): penanda kosong dihilangkan per kolom oleh
+  `renderDynamicSignTable`, seluruh blok tanda tangan hilang bila semua
+  kosong.
   GAP: logo kop kiri JPM (pakai banner bersama kanan saja), nama penandatangan
   (jabatan fallback demo), foto/unit tanpa rekam bulan = sel kosong.
 - apar-kertas-pdf: `aparMonthly()` di `apps/api/src/pdf/templates.ts`

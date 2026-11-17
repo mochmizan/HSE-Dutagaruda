@@ -113,7 +113,11 @@ presentasional saja.
   yang SAMA (`HydrantPrintKertas` + `selaluTampil`, tanda tangan ikut) dari
   query live yang sama dengan laman; tombol `Pratinjau Cetak` di atas tabel
   Section A membuka tab baru, tombol `Cetak / Simpan PDF` memanggil
-  `window.print()`; kertas terang (putih/hitam) walau mode gelap.
+  `window.print()`; kertas terang (putih/hitam) walau mode gelap. Kolom `Handsign /
+Penandatangan` di pratinjau (Checklist Bulanan + Laporan: Petugas
+Pemeriksa, Mengetahui / Disetujui Oleh + jabatan): penanda kosong
+dihilangkan per kolom oleh `renderDynamicSignTable`, seluruh blok tanda
+tangan hilang bila semua kosong.
 - `hydrant-print-browser` (Nov 15): `Cetak` merender KEDUA kertas berurutan
   via `HydrantPrintKertas` (`HydrantPrintChrome.tsx`, `hidden print:block`,
   jeda halaman; kertas 2 lewat `@page` landscape bernama) dari data live

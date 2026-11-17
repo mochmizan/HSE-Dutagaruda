@@ -41,9 +41,11 @@ urutan asli; anak-anak presentasional tanpa hook:
 tutup bila `target === currentTarget`, panel `emil-modal` + `<form>`),
 `P3kInspectionHeader.tsx` (cip ikon + `Formulir Pemeriksaan: <Bulan Tahun>`
 + ringkasan + X, statis tanpa cermin rekam), `P3kInspectionBody.tsx`
-(masukan 21 kuantitas + flag KD → hasil: cip `LENGKAP`/`PERLU ISI ULANG` +
-hitungan + tanggal/paraf; tanpa blok foto — P3K tidak punya foto per
-domain; tanpa catatan per komponen; fieldset tak pernah terkunci —
+(masukan 21 dropdown STANDAR / TIDAK STANDAR + flag KD → hasil: cip
+`LENGKAP`/`PERLU ISI ULANG` + hitungan + tanggal/paraf; STANDAR menyimpan
+`actual = standardQty`, TIDAK STANDAR menyimpan `actual = 0`, jadi payload
+`p3kInspectionItems` dan grid √ / × / KD tidak berubah — tanpa migrasi DB;
+tanpa blok foto — P3K tidak punya foto per domain; tanpa catatan per komponen; fieldset tak pernah terkunci —
 selalu mod sunting), `P3kInspectionFooter.tsx` (kiri `Hapus Bulan Ini`
 selalu tampil, kanan `Terbitkan` selalu submit; pending hanya label
 `Menerbitkan…`/nonaktif, tanpa tukar tombol) + `P3kDeleteConfirmation`
@@ -82,7 +84,11 @@ memaksa A4 landscape via injeksi `@page`.
   A4 landscape via `@page`).
 - `p3k-cetak`: rute pratinjau `P3kPrintPreview` (procedural sheets
   + `PROCEDURAL_PRINT_CSS`), deep-link `?cetak=p3k&tahun=` +
-  `autoprint=1`; tombol `Pratinjau Cetak` di laman.
+  `autoprint=1`; tombol `Pratinjau Cetak` di laman. Kolom `Handsign /
+  Penandatangan` (Override Paraf Tabel, Diperiksa Oleh, Mengetahui /
+  Disetujui Oleh + jabatan): penanda kosong dihilangkan per kolom oleh
+  `renderDynamicSignTable`, seluruh blok tanda tangan hilang bila semua
+  kosong.
 - `p3k-shell`: `P3kPage` dirender lewat `InspectionPageShell`
   dengan `KONFIG_P3K`; tombol kembali `onBack` dihapus (Hydrant/APAR juga
   tidak memakainya — navigasi lewat sidebar); judul shell baru
@@ -145,6 +151,11 @@ Preconditions:
   karena DB live + seed mulai dengan 0 box. Provisioning hanya jalan
   setelah `kotakQuery.isSuccess` (bukan saat daftar masih memuat) dan
   butuh `siteId` non-kosong.
+- Paraf API maks 24 karakter (`z.string().max(24)` di
+  `routes/schemas.ts`): default paraf form WAJIB muat — `'Takamay Jason H. I.'`
+  (nama lengkap 28 karakter = 400 `too_big` dan simpan bulan baru selalu
+  gagal; sempat lolos karena bulan terisi memakai paraf tersimpan yang
+  valid).
 - Potret terbit P3K TIDAK dipakai: tidak ada `approval_status` dan tidak
   ada cermin-terbit — bulan terisi selalu terbuka langsung sunting;
   `Terbitkan` = simpan ulang (upsert), `Hapus Bulan Ini` selalu tampil

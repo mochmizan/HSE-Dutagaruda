@@ -45,7 +45,11 @@ langsung.
   sembunyi saat cetak.
 - `patrol-cetak`: rute pratinjau `PatrolPrintPreview` (procedural
   sheets + `PROCEDURAL_PRINT_CSS`), deep-link `?cetak=patrol&bulan=`
-  + `autoprint=1`; tombol `Pratinjau Cetak` di laman.
+  + `autoprint=1`; tombol `Pratinjau Cetak` di laman. Kolom
+  `Handsign / Penandatangan` (Dibuat/Diketahui/Disetujui + jabatan,
+  halaman terakhir): penanda kosong dihilangkan per kolom oleh
+  `renderDynamicSignTable`, seluruh blok tanda tangan hilang bila semua
+  kosong.
 - `patrol-shell`: `PatrolPage` hanya orkestrasi (semua hook di sini, anak
   presentasional) dirender lewat `InspectionPageShell` dengan
   `KONFIG_PATROLI`. Judul shell `Laporan Patroli K3`.

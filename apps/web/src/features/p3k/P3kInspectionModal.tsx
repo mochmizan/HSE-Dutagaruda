@@ -23,9 +23,19 @@ interface P3kInspectionModalProps {
 
 type ItemState = Record<number, P3kMonthItemData>;
 
-function cloneItems(src: Record<number, P3kMonthItemData>): ItemState {
+function initItems(
+  src: Record<number, P3kMonthItemData>,
+  catalog: StandardP3kItemDefinition[],
+): ItemState {
   const next: ItemState = {};
-  for (const [k, v] of Object.entries(src)) next[Number(k)] = { ...v };
+  for (const std of catalog) {
+    const existing = src[std.id];
+    if (existing && existing.actual !== '') {
+      next[std.id] = { ...existing };
+    } else {
+      next[std.id] = { actual: std.standardQty, expired: existing?.expired ?? false };
+    }
+  }
   return next;
 }
 
@@ -50,10 +60,10 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    setItems(cloneItems(initial.items));
+    setItems(initItems(initial.items, itemsCatalog));
     setTanggal(initial.tanggal);
-    setParaf(initial.paraf || 'Takamay Jason Hermantika Irsyad');
-  }, [isOpen, initial]);
+    setParaf(initial.paraf || 'Takamay Jason H. I.');
+  }, [isOpen, initial, itemsCatalog]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -74,12 +84,13 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   const draft: P3kMonthData = { items, tanggal, paraf };
   const { lengkap, kurang, kd } = ringkasanDraf(draft, itemsCatalog);
 
-  const setActual = (id: number, raw: string) => {
+  const setStatus = (id: number, status: 'STANDAR' | 'TIDAK_STANDAR', standardQty: number) => {
     setItems((prev) => {
-      const row = prev[id] ?? { actual: '', expired: false };
-      if (raw === '') return { ...prev, [id]: { ...row, actual: '' } };
-      const n = Number.parseInt(raw, 10);
-      return { ...prev, [id]: { ...row, actual: Number.isNaN(n) ? row.actual : Math.max(0, n) } };
+      const row = prev[id] ?? { actual: standardQty, expired: false };
+      return {
+        ...prev,
+        [id]: { ...row, actual: status === 'STANDAR' ? standardQty : 0 },
+      };
     });
   };
 
@@ -124,7 +135,7 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
         lengkap={lengkap}
         kurang={kurang}
         kd={kd}
-        onUbahActual={setActual}
+        onUbahStatus={setStatus}
         onUbahExpired={setExpired}
         onUbahTanggal={setTanggal}
         onUbahParaf={setParaf}

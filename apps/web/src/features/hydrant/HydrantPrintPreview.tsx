@@ -21,11 +21,8 @@ import { useKonteksLokasi } from '@/features/konteksLokasi';
 export type ModeCetakHydrant = 'checklist' | 'laporan' | 'semua';
 
 interface HydrantPrintPreviewProps {
-  /** Kunci bulan YYYY-MM dari query `?bulan=`; bawaan = bulan berjalan. */
   bulan?: string;
-  /** Mode cetak awal (`checklist` = Portrait, `laporan` = Landscape, `semua` = keduanya). */
   modeAwal?: ModeCetakHydrant;
-  /** Cetak otomatis begitu muatan siap. */
   autoPrint?: boolean;
   onKembali: () => void;
 }
@@ -120,6 +117,12 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
   const period = /^\d{4}-\d{2}$/.test(bulan ?? '') ? (bulan as string) : bulanBerjalan();
   const [mode, setMode] = useState<ModeCetakHydrant>(modeAwal);
 
+  // Handsign / Penandatangan (kosongkan jika tidak ingin dicetak)
+  const [petugasNama, setPetugasNama] = useState('Takamay Jason Hermantika Irsyad');
+  const [petugasJabatan, setPetugasJabatan] = useState('Junior HSE Analyst');
+  const [mengetahuiNama, setMengetahuiNama] = useState('Hizri');
+  const [mengetahuiJabatan, setMengetahuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
+
   const lokasi = useKonteksLokasi();
   const unitQuery = useUnitHidran();
   const inspeksiQuery = useInspeksiHidran();
@@ -200,8 +203,26 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
           src: f.url,
           caption: f.caption || 'Catatan temuan tambahan',
         })),
+      signatures: {
+        petugasNama,
+        petugasJabatan,
+        mengetahuiNama,
+        mengetahuiJabatan,
+      },
     }),
-    [lokasi.siteName, monthLabel, tanggalDaftar, units, perUnit, buktiSlot, fotoTemuan.data],
+    [
+      lokasi.siteName,
+      monthLabel,
+      tanggalDaftar,
+      units,
+      perUnit,
+      buktiSlot,
+      fotoTemuan.data,
+      petugasNama,
+      petugasJabatan,
+      mengetahuiNama,
+      mengetahuiJabatan,
+    ],
   );
 
   const payloadLaporan: HydrantLaporanPrintPayload = useMemo(
@@ -221,12 +242,18 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
           nozzle: mapStatusAlat(insp?.nozzle ?? u.draftDetails?.nozzle),
           valve: mapStatusAlat(insp?.valvePillar ?? u.draftDetails?.valvePillar),
           tanggal: tanggalSingkat(insp?.createdAt),
-          petugas: 'Takamay Jason H. I.',
+          petugas: petugasNama.trim(),
           keterangan: insp?.notes ?? u.completedReport?.summaryNotes ?? u.draftDetails?.notes ?? '',
         };
       }),
+      signatures: {
+        petugasNama,
+        petugasJabatan,
+        mengetahuiNama,
+        mengetahuiJabatan,
+      },
     }),
-    [tahun, namaBulan, lokasi.siteName, units, perUnit],
+    [tahun, namaBulan, lokasi.siteName, units, perUnit, petugasNama, petugasJabatan, mengetahuiNama, mengetahuiJabatan],
   );
 
   const sheetsHtml = useMemo(() => {
@@ -254,67 +281,103 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
         isLandscape ? '8mm 10mm' : '10mm 12mm'
       }; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
-      <div className="no-print flex flex-wrap items-center gap-3 pb-3 mb-4 border-b border-slate-300 bg-white px-4 py-3 rounded-[6px] shadow-xs">
-        <button
-          type="button"
-          onClick={onKembali}
-          className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
-        >
-          ← Kembali ke Halaman Hydrant
-        </button>
+      <div className="no-print space-y-3 pb-3 mb-4 border-b border-slate-300 bg-white px-4 py-3 rounded-[6px] shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onKembali}
+            className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
+          >
+            ← Kembali ke Halaman Hydrant
+          </button>
 
-        <div className="flex flex-col">
-          <h1 className="text-sm font-bold tracking-tight text-slate-900">
-            {mode === 'checklist'
-              ? 'Pratinjau Cetak Checklist Bulanan Hydrant'
-              : mode === 'laporan'
-                ? 'Pratinjau Cetak Laporan Pemeriksaan Hydrant'
-                : 'Pratinjau Cetak Hydrant Lengkap'}
-          </h1>
-          <p className="text-xs text-slate-500 tabular-nums">
-            {lokasi.siteName} · Periode {period}
-          </p>
+          <div className="flex flex-col">
+            <h1 className="text-sm font-bold tracking-tight text-slate-900">
+              {mode === 'checklist'
+                ? 'Pratinjau Cetak Checklist Bulanan Hydrant'
+                : mode === 'laporan'
+                  ? 'Pratinjau Cetak Laporan Pemeriksaan Hydrant'
+                  : 'Pratinjau Cetak Hydrant Lengkap'}
+            </h1>
+            <p className="text-xs text-slate-500 tabular-nums">
+              {lokasi.siteName} · Periode {period}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-[5px] border border-slate-300 text-xs">
+            <button
+              type="button"
+              onClick={() => setMode('checklist')}
+              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'checklist' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              1. Checklist Bulanan (Portrait)
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('laporan')}
+              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'laporan' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              2. Laporan Pemeriksaan (Landscape)
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('semua')}
+              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'semua' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Gabungan Keduanya
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            disabled={memuat}
+            className="ml-auto px-4 py-1.5 text-xs font-semibold rounded-[4px] text-white bg-[#2f80ed] hover:bg-[#2b77d4] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed tabular-nums"
+          >
+            {memuat ? 'Memuat…' : 'Cetak / Simpan PDF'}
+          </button>
         </div>
 
-        {/* Pengalih 2 Dokumen Hydrant: Checklist Bulanan (Portrait) vs Laporan Pemeriksaan (Landscape) */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-[5px] border border-slate-300 text-xs">
-          <button
-            type="button"
-            onClick={() => setMode('checklist')}
-            className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-              mode === 'checklist' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            1. Checklist Bulanan (Portrait)
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('laporan')}
-            className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-              mode === 'laporan' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            2. Laporan Pemeriksaan (Landscape)
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('semua')}
-            className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-              mode === 'semua' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Gabungan Keduanya
-          </button>
+        {/* Kolom Handsign / Penandatangan — kosongkan jika tidak dicetak */}
+        <div className="pt-2.5 border-t border-slate-200 flex flex-wrap items-end gap-2 text-[11px]">
+          <span className="font-bold text-slate-700 mr-1 self-center">
+            Handsign / Penandatangan <span className="font-normal text-slate-500">(kosongkan jika tidak dicetak):</span>
+          </span>
+          <input
+            type="text"
+            value={petugasNama}
+            onChange={(e) => setPetugasNama(e.target.value)}
+            placeholder="Nama Petugas Pemeriksa"
+            className="w-52 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
+          />
+          <input
+            type="text"
+            value={petugasJabatan}
+            onChange={(e) => setPetugasJabatan(e.target.value)}
+            placeholder="Jabatan Petugas"
+            className="w-40 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
+          />
+          <input
+            type="text"
+            value={mengetahuiNama}
+            onChange={(e) => setMengetahuiNama(e.target.value)}
+            placeholder="Mengetahui / Disetujui Oleh"
+            className="w-44 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
+          />
+          <input
+            type="text"
+            value={mengetahuiJabatan}
+            onChange={(e) => setMengetahuiJabatan(e.target.value)}
+            placeholder="Jabatan Mengetahui"
+            className="w-52 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
+          />
         </div>
-
-        <button
-          type="button"
-          onClick={() => window.print()}
-          disabled={memuat}
-          className="ml-auto px-4 py-1.5 text-xs font-semibold rounded-[4px] text-white bg-[#2f80ed] hover:bg-[#2b77d4] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed tabular-nums"
-        >
-          {memuat ? 'Memuat…' : 'Cetak / Simpan PDF'}
-        </button>
       </div>
 
       {memuat ? (

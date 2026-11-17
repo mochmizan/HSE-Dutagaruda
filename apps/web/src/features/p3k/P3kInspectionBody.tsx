@@ -9,7 +9,7 @@ interface P3kInspectionBodyProps {
   lengkap: number;
   kurang: number;
   kd: number;
-  onUbahActual: (id: number, raw: string) => void;
+  onUbahStatus: (id: number, status: 'STANDAR' | 'TIDAK_STANDAR', standardQty: number) => void;
   onUbahExpired: (id: number, value: boolean) => void;
   onUbahTanggal: (value: string) => void;
   onUbahParaf: (value: string) => void;
@@ -23,40 +23,51 @@ const BarisItem: React.FC<{
   standardQty: number;
   unit: string;
   row: P3kMonthItemData;
-  onUbahActual: (raw: string) => void;
+  onUbahStatus: (status: 'STANDAR' | 'TIDAK_STANDAR') => void;
   onUbahExpired: (value: boolean) => void;
-}> = ({ id, name, standardQty, unit, row, onUbahActual, onUbahExpired }) => (
-  <div className="flex items-center gap-2 py-1.5 border-b border-[var(--border)]/60 last:border-none">
-    <span className="w-6 text-[11px] text-[var(--muted)] tabular-nums">{id}</span>
-    <span className="flex-1 text-xs text-[var(--primary)]">
-      {name}
-      <span className="block text-[10px] text-[var(--muted)] tabular-nums">
-        Standar: {standardQty} {unit}
+}> = ({ id, name, standardQty, unit, row, onUbahStatus, onUbahExpired }) => {
+  const currentStatus: 'STANDAR' | 'TIDAK_STANDAR' =
+    row.actual === '' || Number(row.actual) >= standardQty ? 'STANDAR' : 'TIDAK_STANDAR';
+  const tidakStandar = currentStatus === 'TIDAK_STANDAR';
+
+  return (
+    <div className="flex items-center gap-2 py-1.5 border-b border-[var(--border)]/60 last:border-none">
+      <span className="w-6 text-[11px] text-[var(--muted)] tabular-nums">{id}</span>
+      <span className="flex-1 text-xs text-[var(--primary)]">
+        {name}
+        <span className="block text-[10px] text-[var(--muted)] tabular-nums">
+          Kuota Standar: {standardQty} {unit}
+        </span>
       </span>
-    </span>
-    <input
-      type="number"
-      min={0}
-      value={row.actual}
-      onChange={(e) => onUbahActual(e.target.value)}
-      placeholder="0"
-      aria-label={`Jumlah aktual ${name}`}
-      className="w-16 text-center text-xs bg-transparent border border-[var(--border)] rounded-[4px] px-1.5 py-1 tabular-nums focus:outline-none focus:border-[#27ae60] disabled:opacity-60"
-    />
-    <label className="flex items-center gap-1 text-[10px] text-[var(--muted)] cursor-pointer whitespace-nowrap">
-      <input
-        type="checkbox"
-        checked={row.expired}
-        onChange={(e) => onUbahExpired(e.target.checked)}
-        className="accent-[#eb5757] w-3.5 h-3.5 cursor-pointer disabled:cursor-not-allowed"
-      />
-      KD
-    </label>
-  </div>
-);
+      <select
+        value={currentStatus}
+        onChange={(e) => onUbahStatus(e.target.value as 'STANDAR' | 'TIDAK_STANDAR')}
+        aria-label={`Status ${name}`}
+        className={`w-36 text-xs font-semibold px-2 py-1 rounded-[4px] border focus:outline-none cursor-pointer ${
+          tidakStandar
+            ? 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
+            : 'border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+        }`}
+      >
+        <option value="STANDAR">STANDAR</option>
+        <option value="TIDAK_STANDAR">TIDAK STANDAR</option>
+      </select>
+      <label className="flex items-center gap-1 text-[10px] text-[var(--muted)] cursor-pointer whitespace-nowrap">
+        <input
+          type="checkbox"
+          checked={row.expired}
+          onChange={(e) => onUbahExpired(e.target.checked)}
+          className="accent-[#eb5757] w-3.5 h-3.5 cursor-pointer disabled:cursor-not-allowed"
+        />
+        KD
+      </label>
+    </div>
+  );
+};
 
 /**
- * Isi form modal inspeksi P3K: 21 kuantitas sesuai Tipe A, B, atau C → ringkasan hasil.
+ * Isi form modal inspeksi P3K: 21 item menggunakan dropdown STANDAR / TIDAK STANDAR
+ * (tanpa input angka manual) + flag KD kadaluarsa.
  */
 export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
   draft,
@@ -65,7 +76,7 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
   lengkap,
   kurang,
   kd,
-  onUbahActual,
+  onUbahStatus,
   onUbahExpired,
   onUbahTanggal,
   onUbahParaf,
@@ -77,7 +88,7 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
     <fieldset className="space-y-4 min-w-0 border-0 m-0 p-0">
       <div className="rounded-[5px] border border-[#27ae60]/30 bg-[#27ae60]/[0.06] px-3 py-2 flex items-center justify-between text-xs">
         <span className="font-semibold text-[var(--primary)]">
-          Standar Kuantitas: Kotak P3K Tipe {boxType}
+          Standar Kelengkapan: Kotak P3K Tipe {boxType}
         </span>
         <span className="text-[10px] text-[var(--secondary)]">
           {boxType === 'A'
@@ -88,10 +99,10 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
         </span>
       </div>
 
-      {/* Masukan: 21 kuantitas aktual + flag kadaluarsa */}
-      <section aria-label="Jumlah aktual 21 item">
+      {/* Masukan: 21 dropdown STANDAR / TIDAK STANDAR + flag kadaluarsa */}
+      <section aria-label="Status kelengkapan 21 item">
         {itemsCatalog.map((item) => {
-          const row = items[item.id] ?? { actual: '', expired: false };
+          const row = items[item.id] ?? { actual: item.standardQty, expired: false };
           return (
             <BarisItem
               key={item.id}
@@ -100,7 +111,7 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
               standardQty={item.standardQty}
               unit={item.unit}
               row={row}
-              onUbahActual={(raw) => onUbahActual(item.id, raw)}
+              onUbahStatus={(status) => onUbahStatus(item.id, status, item.standardQty)}
               onUbahExpired={(value) => onUbahExpired(item.id, value)}
             />
           );
@@ -123,7 +134,7 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
             </span>
           )}
           <span className="text-[10px] text-[var(--muted)] tabular-nums">
-            {lengkap}/21 standar · {kurang} kurang · {kd} kadaluarsa
+            {lengkap}/21 standar · {kurang} tidak standar · {kd} kadaluarsa
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 pt-2.5">
@@ -148,7 +159,7 @@ export const P3kInspectionBody: React.FC<P3kInspectionBodyProps> = ({
           </label>
         </div>
         <p className="mt-2 text-[10px] text-[var(--muted)]">
-          Tanda per sel: √ standar · × tidak standar (kurang) ·{' '}
+          Tanda per sel: √ standar · × tidak standar ·{' '}
           <span className="font-bold text-red-600 dark:text-red-400">KD</span> kadaluarsa.
         </p>
       </section>
