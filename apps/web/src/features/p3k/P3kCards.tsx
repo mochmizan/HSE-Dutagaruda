@@ -1,5 +1,5 @@
 import React from 'react';
-import { BriefcaseMedical, CheckCircle2, ChevronRight, ExternalLink, X } from 'lucide-react';
+import { BriefcaseMedical, CheckCircle2, ChevronRight, ExternalLink, Trash2, X } from 'lucide-react';
 import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import type { P3kUnitRow } from './P3kUnitTable';
@@ -7,6 +7,7 @@ import type { P3kUnitRow } from './P3kUnitTable';
 interface P3kCardsProps {
   units: P3kUnitRow[];
   onBuka: (unit: P3kUnitRow) => void;
+  onHapus: (unit: P3kUnitRow) => void;
   aksen: string;
 }
 
@@ -16,7 +17,7 @@ function fmtTgl(iso: string): string {
   return isValid(t) ? format(t, 'dd MMM yyyy', { locale: idLocale }) : iso;
 }
 
-export const P3kCards: React.FC<P3kCardsProps> = ({ units, onBuka, aksen }) => (
+export const P3kCards: React.FC<P3kCardsProps> = ({ units, onBuka, onHapus, aksen }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
     {units.map((u) => {
       const isCompleted = u.status === 'SELESAI';
@@ -78,6 +79,17 @@ export const P3kCards: React.FC<P3kCardsProps> = ({ units, onBuka, aksen }) => (
               {isCompleted ? fmtTgl(u.inspectionDate) : 'Bulan Ini'}
             </span>
 
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onHapus(u)}
+                title={`Hapus kotak ${u.kode}`}
+                aria-label={`Hapus kotak ${u.kode}`}
+                className="p-1.5 rounded-[4px] text-[var(--muted)] hover:text-[#eb5757] hover:bg-[#eb5757]/10 cursor-pointer pressable"
+              >
+                <Trash2 size={13} />
+              </button>
+
             {isCompleted ? (
               <button
                 type="button"
@@ -98,6 +110,7 @@ export const P3kCards: React.FC<P3kCardsProps> = ({ units, onBuka, aksen }) => (
                 <ChevronRight size={12} />
               </button>
             )}
+            </div>
           </div>
         </div>
       );

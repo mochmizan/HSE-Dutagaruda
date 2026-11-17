@@ -16,6 +16,7 @@ import { petakanGridP3k } from './petaApi';
 import {
   useKotakP3k,
   useBuatKotakP3k,
+  useHapusKotakP3k,
   useInspeksiP3k,
   useSimpanInspeksiP3k,
   useUbahButirP3k,
@@ -26,6 +27,7 @@ import { ambilButirP3k } from '@/services/api/klien';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
 import { InspectionPageShell, KONFIG_P3K } from '@/features/inspeksi';
 import { FilterBar, type FilterTab } from '@/features/pageChrome';
+import { ConfirmModal } from '@/components/ui';
 import { MonthSwitcher, type ViewMode } from '@/components/ui';
 import {
   MONTH_NAMES,
@@ -50,6 +52,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   const ubahButir = useUbahButirP3k();
   const hapusInspeksi = useHapusInspeksiP3k();
   const buatKotak = useBuatKotakP3k();
+  const hapusKotak = useHapusKotakP3k();
 
   const [period, setPeriod] = useState<string>(bulanBerjalan);
   const [filterTab, setFilterTab] = useState<FilterTab>('ALL');
@@ -59,6 +62,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
 
   const [isAddBoxOpen, setIsAddBoxOpen] = useState(false);
   const [activeBoxId, setActiveBoxId] = useState<string | null>(null);
+  const [hapusTarget, setHapusTarget] = useState<P3kUnitRow | null>(null);
 
   const year = period.slice(0, 4);
   const monthKey = period.slice(5, 7);
@@ -371,11 +375,16 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
               </button>
             </div>
           ) : viewMode === 'TABLE' ? (
-            <P3kUnitTable units={filteredUnits} onBuka={(u) => setActiveBoxId(u.id)} />
+            <P3kUnitTable
+              units={filteredUnits}
+              onBuka={(u) => setActiveBoxId(u.id)}
+              onHapus={(u) => setHapusTarget(u)}
+            />
           ) : (
             <P3kCards
               units={filteredUnits}
               onBuka={(u) => setActiveBoxId(u.id)}
+              onHapus={(u) => setHapusTarget(u)}
               aksen={KONFIG_P3K.aksen}
             />
           )}
@@ -395,6 +404,21 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
               boxType: u.boxType,
             }))}
             onAddP3kBox={handleAddP3kBox}
+          />
+          <ConfirmModal
+            isOpen={hapusTarget !== null}
+            title="Hapus Kotak P3K"
+            message={
+              hapusTarget
+                ? `Kotak ${hapusTarget.kode} (${hapusTarget.zoneName} · Tipe ${hapusTarget.boxType}) akan dihapus permanen. Kotak yang sudah punya rekaman inspeksi tidak bisa dihapus — kosongkan dulu tiap bulannya lewat “Hapus Bulan Ini”. Lanjutkan?`
+                : ''
+            }
+            confirmLabel={hapusKotak.isPending ? 'Menghapus…' : 'Ya, hapus'}
+            accent="#eb5757"
+            onClose={() => setHapusTarget(null)}
+            onConfirm={() => {
+              if (hapusTarget) hapusKotak.mutate(hapusTarget.id);
+            }}
           />
           <P3kInspectionModal
             isOpen={activeBoxId !== null}
