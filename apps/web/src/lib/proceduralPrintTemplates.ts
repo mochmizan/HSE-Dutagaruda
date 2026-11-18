@@ -569,8 +569,8 @@ table.hyd-mon-table th,
 table.hyd-mon-table td {
   border: 1px solid #111827 !important;
   padding: 4px 6px !important;
-  vertical-align: top;
-  text-align: left;
+  vertical-align: middle;
+  text-align: center;
   font-size: 10.5pt !important;
   color: #000000 !important;
   background: #ffffff !important;

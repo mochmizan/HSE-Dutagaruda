@@ -233,3 +233,4 @@ Preconditions:
 - `HydrantInspectionPhotos.tsx` kini menyediakan dua slot unggahan: `Checklist` (`Checklist Hydrant`) dan `Dokumentasi Pengecekan` (`Bukti inspeksi`).
 - `HydrantInspectionFooter.tsx` memakai konfirmasi ketik `HAPUS` dan `DELETE ...?force=1` agar unit/inspeksi dapat dihapus langsung tanpa menunggu anak data kosong.
 - `renderHydrantLaporanSheet` memisahkan kolom `Catatan Temuan Tambahan` dan `Tindakan Rekomendasi`, dan `HydrantPrintPreview.tsx` memakai `PrintCustomizationBar` (header & handsign dapat dikustomisasi penuh, tanpa latar biru `bg-slate-100`).
+- `hyd-mon-table` (cetak bulanan): sel isi `vertical-align: middle; text-align: center` menyamakan `apar-table` (sebelumnya `top`/`left` sehingga teks menempel atas-kiri pada baris 225px).
