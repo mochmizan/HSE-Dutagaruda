@@ -13,6 +13,7 @@ import { useKonteksLokasi } from '@/features/konteksLokasi';
 import { petakanTemuanPatroli, useLaporanPatroli } from '@/services/api/queries';
 
 interface PatrolPrintPreviewProps {
+  variant?: 'keamanan' | 'kebersihan';
   bulan?: string;
   autoPrint?: boolean;
   onKembali: () => void;
@@ -23,10 +24,15 @@ function bulanBerjalan(): string {
 }
 
 export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
+  variant = 'keamanan',
   bulan,
   autoPrint,
   onKembali,
 }) => {
+  const isKebersihan = variant === 'kebersihan';
+  const defaultTitle = isKebersihan
+    ? 'LAPORAN KEGIATAN SAFETY PATROL KEBERSIHAN'
+    : 'LAPORAN KEGIATAN SAFETY PATROL KEAMANAN';
   const period = /^\d{4}-\d{2}$/.test(bulan ?? '') ? (bulan as string) : bulanBerjalan();
   const lokasi = useKonteksLokasi();
   const laporanQuery = useLaporanPatroli();
@@ -34,7 +40,7 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
   const { config: headerLogos, setConfig: setHeaderLogos } = usePrintHeaderImages();
 
   // Customizable Header
-  const [judulDokumen, setJudulDokumen] = useState('LAPORAN KEGIATAN SAFETY PATROL');
+  const [judulDokumen, setJudulDokumen] = useState(defaultTitle);
   const [headerLokasi, setHeaderLokasi] = useState('');
   const [headerTanggal, setHeaderTanggal] = useState('');
 
@@ -53,7 +59,15 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
     () => (laporanQuery.data ?? []).filter((l) => l.siteId === lokasi.siteId),
     [laporanQuery.data, lokasi.siteId],
   );
-  const findings = useMemo(() => petakanTemuanPatroli(laporanSite), [laporanSite]);
+  const findings = useMemo(
+    () =>
+      petakanTemuanPatroli(laporanSite).filter((f) =>
+        isKebersihan
+          ? f.locationNote.startsWith('[KEBERSIHAN]')
+          : !f.locationNote.startsWith('[KEBERSIHAN]'),
+      ),
+    [laporanSite, isKebersihan],
+  );
 
   const umpanBulan = useMemo(
     () =>
@@ -78,7 +92,7 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
     const namaSite = (headerLokasi.trim() || lokasi.siteName || 'KANTOR PUSAT').toUpperCase();
     return {
       headerLogos,
-      documentTitle: judulDokumen.trim() || 'LAPORAN KEGIATAN SAFETY PATROL',
+      documentTitle: judulDokumen.trim() || defaultTitle,
       siteName: namaSite,
       patrolDate: headerTanggal.trim() || tanggalPatrolDefault,
       findings: umpanBulan.map((f, idx) => ({
@@ -129,7 +143,7 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
   }, [autoPrint, memuat]);
 
   const resetDefaults = () => {
-    setJudulDokumen('LAPORAN KEGIATAN SAFETY PATROL');
+    setJudulDokumen(defaultTitle);
     setHeaderLokasi('');
     setHeaderTanggal('');
     setDibuatHeader('Dibuat Oleh :');
@@ -148,9 +162,9 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
       <style>{`@page { size: A4 portrait; margin: 10mm 12mm; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
       <PrintCustomizationBar
-        backLabel="← Kembali ke Halaman Safety Patrol"
+        backLabel={isKebersihan ? "← Kembali ke Safety Patrol Kebersihan" : "← Kembali ke Safety Patrol Keamanan"}
         onKembali={onKembali}
-        title="Pratinjau Cetak Laporan Kegiatan Safety Patrol"
+        title={isKebersihan ? "Pratinjau Cetak Safety Patrol Kebersihan" : "Pratinjau Cetak Safety Patrol Keamanan"}
         subtitle={`${lokasi.siteName} · Periode ${period} (${umpanBulan.length} foto temuan)`}
         memuat={memuat}
         onPrint={() => window.print()}

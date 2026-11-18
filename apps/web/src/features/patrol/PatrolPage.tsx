@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { ConfirmModal } from '@/components/ui';
-import { InspectionPageShell, KONFIG_PATROLI } from '@/features/inspeksi';
+import { InspectionPageShell, KONFIG_PATROLI, KONFIG_PATROLI_KEBERSIHAN } from '@/features/inspeksi';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
 import {
   petakanTemuanPatroli,
@@ -19,12 +19,20 @@ import { PatrolStats } from './PatrolStats';
 import type { DrafFotoPatroli } from './types';
 import type { ApiLaporanPatroli } from '@/services/api/klien';
 
+export type PatrolVariant = 'keamanan' | 'kebersihan';
+
 interface PatrolPageProps {
+  variant?: PatrolVariant;
   isCollapsed: boolean;
   onToggleCollapsed: () => void;
 }
 
-export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCollapsed }) => {
+export const PatrolPage: React.FC<PatrolPageProps> = ({
+  variant = 'keamanan',
+  isCollapsed,
+  onToggleCollapsed,
+}) => {
+  const isKebersihan = variant === 'kebersihan';
   const lokasi = useKonteksLokasi();
   const qc = useQueryClient();
   const laporanQuery = useLaporanPatroli();
@@ -65,7 +73,15 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
     () => (laporanQuery.data ?? []).filter((l) => l.siteId === lokasi.siteId),
     [laporanQuery.data, lokasi.siteId],
   );
-  const findings = useMemo(() => petakanTemuanPatroli(laporanSite), [laporanSite]);
+  const findings = useMemo(
+    () =>
+      petakanTemuanPatroli(laporanSite).filter((f) =>
+        isKebersihan
+          ? f.locationNote.startsWith('[KEBERSIHAN]')
+          : !f.locationNote.startsWith('[KEBERSIHAN]'),
+      ),
+    [laporanSite, isKebersihan],
+  );
 
   const umpanBulan = useMemo(
     () =>
@@ -97,7 +113,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
         patrolDate: draf.tanggal,
         file: draf.file,
         description: draf.caption,
-        locationNote: lokasiKerja || undefined,
+        locationNote: isKebersihan ? `[KEBERSIHAN] ${lokasiKerja || lokasi.siteName || 'Kantor Pusat'}` : (lokasiKerja || undefined),
       },
       { onSuccess: () => setIsAddOpen(false) },
     );
@@ -116,7 +132,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
 
   /** Buka halaman prosedur cetak Safety Patrol (portrait A4 terisolasi mode gelap). */
   const bukaHalamanCetakPatrol = (autoPrint = false) => {
-    const params = new URLSearchParams({ cetak: 'patrol', bulan: periode });
+    const params = new URLSearchParams({ cetak: isKebersihan ? 'patrol-kebersihan' : 'patrol', bulan: periode });
     if (autoPrint) params.set('autoprint', '1');
     window.open(
       `${window.location.origin}${window.location.pathname}?${params.toString()}`,
@@ -127,7 +143,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
 
   return (
     <InspectionPageShell
-      config={KONFIG_PATROLI}
+      config={isKebersihan ? KONFIG_PATROLI_KEBERSIHAN : KONFIG_PATROLI}
       namaProyek={lokasi.namaProyek}
       siteName={lokasi.siteName}
       isCollapsed={isCollapsed}

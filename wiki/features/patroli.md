@@ -103,3 +103,4 @@ Preconditions:
 ## Pembaruan Terakhir
 - `PatrolPage.tsx` memakai konfirmasi ketik `HAPUS` saat menghapus temuan patroli.
 - `PatrolPrintPreview.tsx` memakai `PrintCustomizationBar` (header & handsign dapat dikustomisasi penuh, tanpa latar biru `bg-slate-100`).
+- `Safety Patrol` kini dipisah menjadi dua menu: **Safety Patrol Keamanan** (`patrol`) dan **Safety Patrol Kebersihan** (`patrol-kebersihan`, ditandai awalan `[KEBERSIHAN]` pada `locationNote` tanpa migrasi DB).

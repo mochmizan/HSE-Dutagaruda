@@ -14,6 +14,7 @@ export interface TemuanPatroliTampil {
   photoUrl: string;
   caption: string;
   tanggal: string;
+  locationNote: string;
 }
 
 export function petakanTemuanPatroli(
@@ -27,6 +28,7 @@ export function petakanTemuanPatroli(
       photoUrl: f.s3Key.startsWith('draft/') ? '' : k.urlFotoTemuanPatroli(f.id),
       caption: f.description,
       tanggal: l.patrolDate,
+      locationNote: f.locationNote ?? '',
     })),
   );
 }

@@ -10,7 +10,7 @@ export type IkonKategoriInspeksi = 'Flame' | 'ShieldCheck' | 'BriefcaseMedical' 
  * deskripsi, label tambah, kategori ekspor, ikon, aksen).
  */
 export interface InspectionCategoryConfig {
-  kunci: 'hydrant' | 'apar' | 'p3k' | 'patroli';
+  kunci: 'hydrant' | 'apar' | 'p3k' | 'patroli' | 'patroli-kebersihan';
   aksen: string;
   judul: string;
   deskripsi: string;
@@ -62,4 +62,11 @@ export const KONFIG_PATROLI: InspectionCategoryConfig = {
   labelTambah: 'Tambah Foto',
   kategoriEkspor: 'patrol-report',
   ikon: 'Camera',
+};
+
+export const KONFIG_PATROLI_KEBERSIHAN: InspectionCategoryConfig = {
+  ...KONFIG_PATROLI,
+  kunci: 'patroli-kebersihan',
+  judul: 'Safety Patrol Kebersihan',
+  deskripsi: 'Dokumentasi foto temuan patroli kebersihan lingkungan kerja',
 };

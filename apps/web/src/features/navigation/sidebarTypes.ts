@@ -1,7 +1,7 @@
 /** Tipe bersama untuk potongan-potongan bilah samping. */
 
 /** Tampilan yang bisa dituju dari baris kategori lokasi. */
-export type ViewHalaman = 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol';
+export type ViewHalaman = 'dashboard' | 'hydrant' | 'apar' | 'p3k' | 'patrol' | 'patrol-kebersihan';
 
 /** Menu konteks klik-kanan untuk ganti nama / hapus proyek maupun lokasi. */
 export interface MenuAksi {

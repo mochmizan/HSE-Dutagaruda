@@ -21,7 +21,9 @@ type AppView =
   | 'p3k'
   | 'p3k-cetak'
   | 'patrol'
-  | 'patrol-cetak';
+  | 'patrol-cetak'
+  | 'patrol-kebersihan'
+  | 'patrol-kebersihan-cetak';
 
 function ambilParamCetak(nama: string): string | null {
   try {
@@ -42,6 +44,7 @@ function bacaCetakAwal(): AppView {
     if (cetak === 'hydrant') return 'hydrant-cetak';
     if (cetak === 'apar') return 'apar-cetak';
     if (cetak === 'p3k') return 'p3k-cetak';
+    if (cetak === 'patrol-kebersihan') return 'patrol-kebersihan-cetak';
     if (cetak === 'patrol' || cetak === 'patroli') return 'patrol-cetak';
     return 'dashboard';
   } catch {
@@ -276,7 +279,9 @@ function AppIsi() {
           ? 'p3k'
           : currentView === 'patrol-cetak'
             ? 'patrol'
-            : currentView;
+            : currentView === 'patrol-kebersihan-cetak'
+              ? 'patrol-kebersihan'
+              : currentView;
 
   return (
     <div className="flex h-screen w-screen bg-[var(--bg-main)] text-[var(--primary)] overflow-hidden font-sans select-none">
@@ -429,6 +434,7 @@ function AppIsi() {
       ) : currentView === 'patrol-cetak' ? (
         <Suspense fallback={<HalamanMemuat />}>
           <PatrolPrintPreview
+            variant="keamanan"
             bulan={bulanCetak}
             autoPrint={autoPrint}
             onKembali={() => {
@@ -437,9 +443,30 @@ function AppIsi() {
             }}
           />
         </Suspense>
+      ) : currentView === 'patrol-kebersihan-cetak' ? (
+        <Suspense fallback={<HalamanMemuat />}>
+          <PatrolPrintPreview
+            variant="kebersihan"
+            bulan={bulanCetak}
+            autoPrint={autoPrint}
+            onKembali={() => {
+              bersihkanQueryCetak();
+              setCurrentView('patrol-kebersihan');
+            }}
+          />
+        </Suspense>
+      ) : currentView === 'patrol-kebersihan' ? (
+        <Suspense fallback={<HalamanMemuat />}>
+          <PatrolPage
+            variant="kebersihan"
+            isCollapsed={isCollapsed}
+            onToggleCollapsed={toggleCollapsed}
+          />
+        </Suspense>
       ) : (
         <Suspense fallback={<HalamanMemuat />}>
           <PatrolPage
+            variant="keamanan"
             isCollapsed={isCollapsed}
             onToggleCollapsed={toggleCollapsed}
           />

@@ -136,8 +136,15 @@ export const SidebarLokasi: React.FC<SidebarLokasiProps> = ({
                   },
                   {
                     view: 'patrol',
-                    label: 'Safety Patrol',
+                    label: 'Safety Patrol Keamanan',
                     ikon: <span className="text-xs leading-none">🚶</span>,
+                    badge: 0,
+                    badgeKelas: '',
+                  },
+                  {
+                    view: 'patrol-kebersihan',
+                    label: 'Safety Patrol Kebersihan',
+                    ikon: <span className="text-xs leading-none">🧹</span>,
                     badge: 0,
                     badgeKelas: '',
                   },
