@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { ApiInspeksiP3k } from '@/services/api/klien';
 import { STANDARD_P3K_ITEMS, type P3kBoxType, type StandardP3kItemDefinition } from '@/lib/p3kItems';
 import { P3kInspectionBody, ringkasanDraf } from './P3kInspectionBody';
-import { P3kDeleteConfirmation, P3kInspectionFooter } from './P3kInspectionFooter';
+import { P3kDeleteConfirmation, P3kInspectionFooter, type CakupanHapusP3k } from './P3kInspectionFooter';
 import { P3kInspectionHeader } from './P3kInspectionHeader';
 import { P3kInspectionShell } from './P3kInspectionShell';
 import type { P3kMonthData, P3kMonthItemData } from './types';
@@ -10,15 +10,18 @@ import type { P3kMonthData, P3kMonthItemData } from './types';
 interface P3kInspectionModalProps {
   isOpen: boolean;
   monthLabel: string;
+  unitKode?: string;
   initial: P3kMonthData;
   itemsCatalog?: StandardP3kItemDefinition[];
   boxType?: P3kBoxType;
   rekam: ApiInspeksiP3k | null;
   menyimpan: boolean;
   menghapusBulan: boolean;
+  menghapusUnit?: boolean;
   onClose: () => void;
   onSave: (data: P3kMonthData) => Promise<void>;
   onClear: () => void;
+  onHapusUnit?: () => void;
 }
 
 type ItemState = Record<number, P3kMonthItemData>;
@@ -42,21 +45,23 @@ function initItems(
 export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
   isOpen,
   monthLabel,
+  unitKode = '',
   initial,
   itemsCatalog = STANDARD_P3K_ITEMS,
   boxType = 'A',
   rekam,
   menyimpan,
   menghapusBulan,
+  menghapusUnit = false,
   onClose,
   onSave,
   onClear,
+  onHapusUnit,
 }) => {
   const [items, setItems] = useState<ItemState>({});
   const [tanggal, setTanggal] = useState('');
   const [paraf, setParaf] = useState('');
-  const [konfirmasiHapus, setKonfirmasiHapus] = useState(false);
-  void rekam;
+  const [konfirmasiHapus, setKonfirmasiHapus] = useState<CakupanHapusP3k | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -121,10 +126,15 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
       }
       konfirmasi={
         <P3kDeleteConfirmation
-          terbuka={konfirmasiHapus}
+          konfirmasi={konfirmasiHapus}
+          unitKode={unitKode || monthLabel}
           monthLabel={monthLabel}
-          onTutup={() => setKonfirmasiHapus(false)}
-          onKonfirmasi={onClear}
+          onTutup={() => setKonfirmasiHapus(null)}
+          onKonfirmasi={(cakupan) => {
+            setKonfirmasiHapus(null);
+            if (cakupan === 'BULAN') onClear();
+            else onHapusUnit?.();
+          }}
         />
       }
     >
@@ -142,9 +152,12 @@ export const P3kInspectionModal: React.FC<P3kInspectionModalProps> = ({
       />
 
       <P3kInspectionFooter
+        adaUnit={Boolean(onHapusUnit)}
+        adaInspeksi={Boolean(rekam)}
         menghapusBulan={menghapusBulan || menyimpan}
+        menghapusUnit={menghapusUnit}
         menyimpan={menyimpan}
-        onMintaKonfirmasi={() => setKonfirmasiHapus(true)}
+        onMintaKonfirmasi={setKonfirmasiHapus}
       />
     </P3kInspectionShell>
   );

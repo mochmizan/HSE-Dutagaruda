@@ -106,7 +106,8 @@ export const AparDeleteConfirmation: React.FC<AparDeleteConfirmationProps> = ({
         : `Unit APAR ${unitKode} beserta seluruh rekaman inspeksi dan fotonya akan dihapus permanen. Lanjutkan?`
     }
     confirmLabel="Ya, hapus"
-    accent="#f2994a"
+    accent="#eb5757"
+    requireText="HAPUS"
     onClose={onTutup}
     onConfirm={() => {
       const mode = konfirmasi;

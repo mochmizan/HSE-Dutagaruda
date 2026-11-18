@@ -7,3 +7,5 @@ export * from './ConfirmModal';
 export * from './FileFotoButton';
 export * from './UnduhPdfButton';
 export * from './UnifiedCombobox';
+
+export { PrintCustomizationBar, type PrintHeaderField, type PrintSignerField } from './PrintCustomizationBar';

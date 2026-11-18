@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { PrintCustomizationBar } from '@/components/ui';
 import {
   PROCEDURAL_PRINT_CSS,
   renderHydrantLaporanSheet,
@@ -17,6 +18,7 @@ import {
   useUnitHidran,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
+import { LABEL_KOMPONEN, uraiCatatan } from './catatanHidran';
 
 export type ModeCetakHydrant = 'checklist' | 'laporan' | 'semua';
 
@@ -73,15 +75,22 @@ function useBuktiHydrant(inspeksiIds: string[]): { peta: Record<string, BuktiHyd
               .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
             const bukti = items.filter((f) => !f.temuan);
             const temuan = items.filter((f) => f.temuan);
+
+            const checklistFoto = bukti.find((f) => /checklist|kartu/i.test(f.caption ?? ''));
+            const pemeriksaanFoto =
+              bukti.find((f) => f.id !== checklistFoto?.id) ?? bukti[0];
+
             return [
               id,
               {
-                pemeriksaan: bukti[0] ? livePhotoUrl(bukti[0].id) : undefined,
-                checklist: bukti[1]
-                  ? livePhotoUrl(bukti[1].id)
-                  : temuan[0]
-                    ? livePhotoUrl(temuan[0].id)
-                    : undefined,
+                pemeriksaan: pemeriksaanFoto ? livePhotoUrl(pemeriksaanFoto.id) : undefined,
+                checklist: checklistFoto
+                  ? livePhotoUrl(checklistFoto.id)
+                  : bukti[1]
+                    ? livePhotoUrl(bukti[1].id)
+                    : temuan[0]
+                      ? livePhotoUrl(temuan[0].id)
+                      : undefined,
               },
             ] as const;
           } catch {
@@ -108,6 +117,20 @@ function mapStatusAlat(st?: string): string {
   return 'STANDAR';
 }
 
+function splitCatatanHydrant(raw: string): { temuan: string; rekomendasi: string } {
+  const parsed = uraiCatatan(raw);
+  const temuanParts: string[] = [];
+  for (const [key, label] of Object.entries(LABEL_KOMPONEN)) {
+    const val = parsed.catatanKomponen[key]?.trim();
+    if (val) temuanParts.push(`${label}: ${val}`);
+  }
+  if (parsed.tambahan.trim()) temuanParts.push(parsed.tambahan.trim());
+  return {
+    temuan: temuanParts.join('\n'),
+    rekomendasi: parsed.tindakLanjut.trim(),
+  };
+}
+
 export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
   bulan,
   modeAwal = 'checklist',
@@ -116,12 +139,6 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
 }) => {
   const period = /^\d{4}-\d{2}$/.test(bulan ?? '') ? (bulan as string) : bulanBerjalan();
   const [mode, setMode] = useState<ModeCetakHydrant>(modeAwal);
-
-  // Handsign / Penandatangan (kosongkan jika tidak ingin dicetak)
-  const [petugasNama, setPetugasNama] = useState('Takamay Jason Hermantika Irsyad');
-  const [petugasJabatan, setPetugasJabatan] = useState('Junior HSE Analyst');
-  const [mengetahuiNama, setMengetahuiNama] = useState('Hizri');
-  const [mengetahuiJabatan, setMengetahuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
 
   const lokasi = useKonteksLokasi();
   const unitQuery = useUnitHidran();
@@ -159,10 +176,10 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
     return new Date(y, m - 1, 1);
   }, [period]);
   const monthLabel = format(monthDate, 'MMMM yyyy', { locale: idLocale });
-  const namaBulan = format(monthDate, 'MMMM', { locale: idLocale });
-  const tahun = period.slice(0, 4);
+  const namaBulanDefault = format(monthDate, 'MMMM', { locale: idLocale });
+  const tahunDefault = period.slice(0, 4);
 
-  const tanggalDaftar = useMemo(() => {
+  const tanggalDaftarDefault = useMemo(() => {
     const hari = [
       ...new Set(
         inspeksiBulan
@@ -178,11 +195,31 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
     return `${hari.slice(0, -1).join(', ')} dan ${hari[hari.length - 1]} ${monthLabel}`;
   }, [inspeksiBulan, monthLabel]);
 
+  // Customizable Header fields
+  const [judulChecklist, setJudulChecklist] = useState('CHECKLIST BULANAN HYDRANT');
+  const [judulLaporan, setJudulLaporan] = useState('LAPORAN PEMERIKSAAN HYDRANT');
+  const [headerLokasi, setHeaderLokasi] = useState('');
+  const [headerPeriode, setHeaderPeriode] = useState('');
+  const [headerTanggal, setHeaderTanggal] = useState('');
+  const [headerKeterangan, setHeaderKeterangan] = useState('Keterangan : Standar (✓), Tidak Standar (X)');
+
+  // Handsign / Penandatangan (kosongkan jika tidak ingin dicetak)
+  const [petugasHeader, setPetugasHeader] = useState('Petugas Pemeriksa :');
+  const [petugasNama, setPetugasNama] = useState('Takamay Jason Hermantika Irsyad');
+  const [petugasJabatan, setPetugasJabatan] = useState('Junior HSE Analyst');
+  const [mengetahuiHeader, setMengetahuiHeader] = useState('Mengetahui / Disetujui Oleh :');
+  const [mengetahuiNama, setMengetahuiNama] = useState('Hizri');
+  const [mengetahuiJabatan, setMengetahuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
+
+  const resolvedSite = (headerLokasi.trim() || lokasi.siteName || 'KANTOR PUSAT').toUpperCase();
+
   const payloadChecklist: HydrantMonthlyPrintPayload = useMemo(
     () => ({
-      siteName: (lokasi.siteName || 'KANTOR PUSAT').toUpperCase(),
-      period: monthLabel,
-      inspectionDate: tanggalDaftar,
+      documentTitle: judulChecklist.trim() || 'CHECKLIST BULANAN HYDRANT',
+      documentSubtitle: resolvedSite,
+      siteName: resolvedSite,
+      period: headerPeriode.trim() || monthLabel,
+      inspectionDate: headerTanggal.trim() || tanggalDaftarDefault,
       rows: units.map((u, idx) => {
         const insp = perUnit.get(u.id);
         const slot = insp ? buktiSlot[insp.id] : undefined;
@@ -204,22 +241,29 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
           caption: f.caption || 'Catatan temuan tambahan',
         })),
       signatures: {
+        petugasHeader,
         petugasNama,
         petugasJabatan,
+        mengetahuiHeader,
         mengetahuiNama,
         mengetahuiJabatan,
       },
     }),
     [
-      lokasi.siteName,
+      judulChecklist,
+      resolvedSite,
+      headerPeriode,
       monthLabel,
-      tanggalDaftar,
+      headerTanggal,
+      tanggalDaftarDefault,
       units,
       perUnit,
       buktiSlot,
       fotoTemuan.data,
+      petugasHeader,
       petugasNama,
       petugasJabatan,
+      mengetahuiHeader,
       mengetahuiNama,
       mengetahuiJabatan,
     ],
@@ -227,11 +271,15 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
 
   const payloadLaporan: HydrantLaporanPrintPayload = useMemo(
     () => ({
-      tahun,
-      bulan: namaBulan,
-      siteName: (lokasi.siteName || 'KANTOR PUSAT').toUpperCase(),
+      documentTitle: judulLaporan.trim() || 'LAPORAN PEMERIKSAAN HYDRANT',
+      keteranganLabel: headerKeterangan.trim() || 'Keterangan : Standar (✓), Tidak Standar (X)',
+      tahun: tahunDefault,
+      bulan: headerPeriode.trim() || namaBulanDefault,
+      siteName: resolvedSite,
       rows: units.map((u, idx) => {
         const insp = perUnit.get(u.id);
+        const rawNotes = insp?.notes ?? u.completedReport?.summaryNotes ?? u.draftDetails?.notes ?? '';
+        const { temuan, rekomendasi } = splitCatatanHydrant(rawNotes);
         return {
           no: idx + 1,
           kode: u.kode,
@@ -243,17 +291,35 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
           valve: mapStatusAlat(insp?.valvePillar ?? u.draftDetails?.valvePillar),
           tanggal: tanggalSingkat(insp?.createdAt),
           petugas: petugasNama.trim(),
-          keterangan: insp?.notes ?? u.completedReport?.summaryNotes ?? u.draftDetails?.notes ?? '',
+          temuan,
+          rekomendasi,
         };
       }),
       signatures: {
+        petugasHeader,
         petugasNama,
         petugasJabatan,
+        mengetahuiHeader,
         mengetahuiNama,
         mengetahuiJabatan,
       },
     }),
-    [tahun, namaBulan, lokasi.siteName, units, perUnit, petugasNama, petugasJabatan, mengetahuiNama, mengetahuiJabatan],
+    [
+      judulLaporan,
+      headerKeterangan,
+      tahunDefault,
+      headerPeriode,
+      namaBulanDefault,
+      resolvedSite,
+      units,
+      perUnit,
+      petugasHeader,
+      petugasNama,
+      petugasJabatan,
+      mengetahuiHeader,
+      mengetahuiNama,
+      mengetahuiJabatan,
+    ],
   );
 
   const sheetsHtml = useMemo(() => {
@@ -275,113 +341,138 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
     return () => window.clearTimeout(t);
   }, [autoPrint, memuat]);
 
+  const resetDefaults = () => {
+    setJudulChecklist('CHECKLIST BULANAN HYDRANT');
+    setJudulLaporan('LAPORAN PEMERIKSAAN HYDRANT');
+    setHeaderLokasi('');
+    setHeaderPeriode('');
+    setHeaderTanggal('');
+    setHeaderKeterangan('Keterangan : Standar (✓), Tidak Standar (X)');
+    setPetugasHeader('Petugas Pemeriksa :');
+    setPetugasNama('Takamay Jason Hermantika Irsyad');
+    setPetugasJabatan('Junior HSE Analyst');
+    setMengetahuiHeader('Mengetahui / Disetujui Oleh :');
+    setMengetahuiNama('Hizri');
+    setMengetahuiJabatan('Governance, Risk, HSE & Quality Group Head');
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-slate-100 text-slate-900 px-6 py-4 font-sans select-none">
+    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-[#fafafa] print:bg-white text-neutral-900 px-6 py-4 print:p-0 font-sans select-none">
       <style>{`@page { size: A4 ${isLandscape ? 'landscape' : 'portrait'}; margin: ${
         isLandscape ? '8mm 10mm' : '10mm 12mm'
       }; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
-      <div className="no-print space-y-3 pb-3 mb-4 border-b border-slate-300 bg-white px-4 py-3 rounded-[6px] shadow-xs">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={onKembali}
-            className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
-          >
-            ← Kembali ke Halaman Hydrant
-          </button>
-
-          <div className="flex flex-col">
-            <h1 className="text-sm font-bold tracking-tight text-slate-900">
-              {mode === 'checklist'
-                ? 'Pratinjau Cetak Checklist Bulanan Hydrant'
-                : mode === 'laporan'
-                  ? 'Pratinjau Cetak Laporan Pemeriksaan Hydrant'
-                  : 'Pratinjau Cetak Hydrant Lengkap'}
-            </h1>
-            <p className="text-xs text-slate-500 tabular-nums">
-              {lokasi.siteName} · Periode {period}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-[5px] border border-slate-300 text-xs">
+      <PrintCustomizationBar
+        backLabel="← Kembali ke Halaman Hydrant"
+        onKembali={onKembali}
+        title={
+          mode === 'checklist'
+            ? 'Pratinjau Cetak Checklist Bulanan Hydrant'
+            : mode === 'laporan'
+              ? 'Pratinjau Cetak Laporan Pemeriksaan Hydrant'
+              : 'Pratinjau Cetak Hydrant Lengkap'
+        }
+        subtitle={`${lokasi.siteName} · Periode ${period}`}
+        memuat={memuat}
+        onPrint={() => window.print()}
+        onResetDefaults={resetDefaults}
+        onClearSigners={() => {
+          setPetugasNama('');
+          setMengetahuiNama('');
+        }}
+        modeSelector={
+          <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-[6px] border border-neutral-200 text-xs">
             <button
               type="button"
               onClick={() => setMode('checklist')}
-              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-                mode === 'checklist' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2.5 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'checklist' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              1. Checklist Bulanan (Portrait)
+              1. Checklist (Portrait)
             </button>
             <button
               type="button"
               onClick={() => setMode('laporan')}
-              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-                mode === 'laporan' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2.5 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'laporan' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              2. Laporan Pemeriksaan (Landscape)
+              2. Laporan (Landscape)
             </button>
             <button
               type="button"
               onClick={() => setMode('semua')}
-              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-                mode === 'semua' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2.5 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'semua' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
-              Gabungan Keduanya
+              Gabungan
             </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            disabled={memuat}
-            className="ml-auto px-4 py-1.5 text-xs font-semibold rounded-[4px] text-white bg-[#2f80ed] hover:bg-[#2b77d4] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed tabular-nums"
-          >
-            {memuat ? 'Memuat…' : 'Cetak / Simpan PDF'}
-          </button>
-        </div>
-
-        {/* Kolom Handsign / Penandatangan — kosongkan jika tidak dicetak */}
-        <div className="pt-2.5 border-t border-slate-200 flex flex-wrap items-end gap-2 text-[11px]">
-          <span className="font-bold text-slate-700 mr-1 self-center">
-            Handsign / Penandatangan <span className="font-normal text-slate-500">(kosongkan jika tidak dicetak):</span>
-          </span>
-          <input
-            type="text"
-            value={petugasNama}
-            onChange={(e) => setPetugasNama(e.target.value)}
-            placeholder="Nama Petugas Pemeriksa"
-            className="w-52 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={petugasJabatan}
-            onChange={(e) => setPetugasJabatan(e.target.value)}
-            placeholder="Jabatan Petugas"
-            className="w-40 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={mengetahuiNama}
-            onChange={(e) => setMengetahuiNama(e.target.value)}
-            placeholder="Mengetahui / Disetujui Oleh"
-            className="w-44 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={mengetahuiJabatan}
-            onChange={(e) => setMengetahuiJabatan(e.target.value)}
-            placeholder="Jabatan Mengetahui"
-            className="w-52 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-        </div>
-      </div>
+        }
+        headerFields={[
+          {
+            key: 'judul',
+            label: mode === 'laporan' ? 'Judul Laporan' : 'Judul Checklist',
+            value: mode === 'laporan' ? judulLaporan : judulChecklist,
+            onChange: mode === 'laporan' ? setJudulLaporan : setJudulChecklist,
+          },
+          {
+            key: 'lokasi',
+            label: 'Lokasi / Subjudul',
+            value: headerLokasi,
+            onChange: setHeaderLokasi,
+            placeholder: lokasi.siteName || 'KANTOR PUSAT',
+          },
+          {
+            key: 'periode',
+            label: mode === 'laporan' ? 'Bulan' : 'Periode',
+            value: headerPeriode,
+            onChange: setHeaderPeriode,
+            placeholder: mode === 'laporan' ? namaBulanDefault : monthLabel,
+          },
+          mode === 'laporan'
+            ? {
+                key: 'keterangan',
+                label: 'Teks Keterangan',
+                value: headerKeterangan,
+                onChange: setHeaderKeterangan,
+              }
+            : {
+                key: 'tanggal',
+                label: 'Tanggal Inspeksi',
+                value: headerTanggal,
+                onChange: setHeaderTanggal,
+                placeholder: tanggalDaftarDefault,
+              },
+        ]}
+        signerFields={[
+          {
+            id: 'petugas',
+            headerLabel: petugasHeader,
+            onHeaderLabelChange: setPetugasHeader,
+            nama: petugasNama,
+            onNamaChange: setPetugasNama,
+            jabatan: petugasJabatan,
+            onJabatanChange: setPetugasJabatan,
+          },
+          {
+            id: 'mengetahui',
+            headerLabel: mengetahuiHeader,
+            onHeaderLabelChange: setMengetahuiHeader,
+            nama: mengetahuiNama,
+            onNamaChange: setMengetahuiNama,
+            jabatan: mengetahuiJabatan,
+            onJabatanChange: setMengetahuiJabatan,
+          },
+        ]}
+      />
 
       {memuat ? (
-        <p className="no-print text-xs text-slate-600 tabular-nums">Memuat data inspeksi Hydrant…</p>
+        <p className="no-print text-xs text-neutral-600 tabular-nums text-center py-8">
+          Memuat data inspeksi Hydrant…
+        </p>
       ) : (
         <div className="procedural-print-canvas">
           <div dangerouslySetInnerHTML={{ __html: sheetsHtml }} />

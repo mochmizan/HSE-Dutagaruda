@@ -293,7 +293,7 @@ export const ubahInspeksiHidran = (
   body: Partial<Omit<MasukanInspeksiHidran, 'unitId' | 'month'>>,
 ) => livePatch<ApiInspeksiHidran>(`/hydrant-inspections/${id}`, body);
 
-export const hapusInspeksiHidran = (id: string) => liveDelete(`/hydrant-inspections/${id}`);
+export const hapusInspeksiHidran = (id: string) => liveDelete(`/hydrant-inspections/${id}?force=1`);
 
 export interface MasukanInspeksiApar {
   unitId: string;
@@ -319,7 +319,7 @@ export const ubahInspeksiApar = (
   body: Partial<Omit<MasukanInspeksiApar, 'unitId' | 'month'>>,
 ) => livePatch<ApiInspeksiApar>(`/apar-inspections/${id}`, body);
 
-export const hapusInspeksiApar = (id: string) => liveDelete(`/apar-inspections/${id}`);
+export const hapusInspeksiApar = (id: string) => liveDelete(`/apar-inspections/${id}?force=1`);
 
 export const buatInspeksiP3k = (body: {
   boxId: string;
@@ -408,7 +408,7 @@ export const buatUnitApar = (body: MasukanUnitApar) => livePost<ApiAparUnit>('/a
 export const ubahUnitApar = (id: string, body: Partial<MasukanUnitApar>) =>
   livePatch<ApiAparUnit>(`/apar-units/${id}`, body);
 
-export const hapusUnitApar = (id: string) => liveDelete(`/apar-units/${id}`);
+export const hapusUnitApar = (id: string) => liveDelete(`/apar-units/${id}?force=1`);
 
 /** Urutan tampil unit APAR per lokasi. `ids` = seluruh unit lokasi, sudah berurutan. */
 export const simpanUrutanUnitApar = (siteId: string, ids: string[]) =>
@@ -417,7 +417,7 @@ export const simpanUrutanUnitApar = (siteId: string, ids: string[]) =>
 export const ubahUnitHidran = (id: string, body: Partial<MasukanUnitHidran>) =>
   livePatch<ApiHydrantUnit>(`/hydrant-units/${id}`, body);
 
-export const hapusUnitHidran = (id: string) => liveDelete(`/hydrant-units/${id}`);
+export const hapusUnitHidran = (id: string) => liveDelete(`/hydrant-units/${id}?force=1`);
 
 /** Urutan tampil unit per lokasi. `ids` = seluruh unit lokasi, sudah berurutan. */
 export const simpanUrutanUnitHidran = (siteId: string, ids: string[]) =>
@@ -456,6 +456,8 @@ export const hapusLokasi = (id: string) => liveDelete<{ ok: boolean }>(`/sites/$
 
 export const buatKotakP3k = (body: { siteId: string; name: string }) =>
   livePost<ApiP3kBox>('/p3k-boxes', body);
+
+export const hapusKotakP3k = (id: string) => liveDelete(`/p3k-boxes/${id}?force=1`);
 
 // ── Foto (Garage via /api/uploads + /api/photos) ──
 

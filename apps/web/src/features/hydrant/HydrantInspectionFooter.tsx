@@ -107,6 +107,7 @@ export const HydrantDeleteConfirmation: React.FC<HydrantDeleteConfirmationProps>
     }
     confirmLabel="Ya, hapus"
     accent="#eb5757"
+    requireText="HAPUS"
     onClose={onTutup}
     onConfirm={() => {
       const mode = konfirmasi;

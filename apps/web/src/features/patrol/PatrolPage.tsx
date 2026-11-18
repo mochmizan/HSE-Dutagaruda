@@ -219,6 +219,7 @@ export const PatrolPage: React.FC<PatrolPageProps> = ({ isCollapsed, onToggleCol
             message="Foto patroli ini beserta keterangannya akan dihapus permanen. Lanjutkan?"
             confirmLabel="Ya, hapus"
             accent="#eb5757"
+            requireText="HAPUS"
             onClose={() => setKonfirmasiHapusId(null)}
             onConfirm={handleKonfirmasiHapus}
           />

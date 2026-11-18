@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { PrintCustomizationBar } from '@/components/ui';
 import { formatIndonesianDate } from '@/lib/dates';
 import {
   PROCEDURAL_PRINT_CSS,
@@ -29,11 +30,19 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
   const lokasi = useKonteksLokasi();
   const laporanQuery = useLaporanPatroli();
 
+  // Customizable Header
+  const [judulDokumen, setJudulDokumen] = useState('LAPORAN KEGIATAN SAFETY PATROL');
+  const [headerLokasi, setHeaderLokasi] = useState('');
+  const [headerTanggal, setHeaderTanggal] = useState('');
+
   // Handsign / Penandatangan (kosongkan jika tidak ingin dicetak)
+  const [dibuatHeader, setDibuatHeader] = useState('Dibuat Oleh :');
   const [dibuatNama, setDibuatNama] = useState('Takamay Jason Hermantika Irsyad');
   const [dibuatJabatan, setDibuatJabatan] = useState('Junior HSE Analyst');
+  const [diketahuiHeader, setDiketahuiHeader] = useState('Diketahui Oleh :');
   const [diketahuiNama, setDiketahuiNama] = useState('');
   const [diketahuiJabatan, setDiketahuiJabatan] = useState('');
+  const [disetujuiHeader, setDisetujuiHeader] = useState('Disetujui Oleh :');
   const [disetujuiNama, setDisetujuiNama] = useState('Hizri');
   const [disetujuiJabatan, setDisetujuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
 
@@ -57,38 +66,48 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
   }, [period]);
   const labelBulan = format(monthDate, 'MMMM yyyy', { locale: idLocale });
 
-  const tanggalPatrol = useMemo(() => {
+  const tanggalPatrolDefault = useMemo(() => {
     const terbaru = umpanBulan.at(-1)?.tanggal;
     return terbaru ? formatIndonesianDate(terbaru) : labelBulan;
   }, [umpanBulan, labelBulan]);
 
   const payload: PatrolReportPrintPayload = useMemo(() => {
-    const namaSite = (lokasi.siteName || 'KANTOR PUSAT').toUpperCase();
+    const namaSite = (headerLokasi.trim() || lokasi.siteName || 'KANTOR PUSAT').toUpperCase();
     return {
+      documentTitle: judulDokumen.trim() || 'LAPORAN KEGIATAN SAFETY PATROL',
       siteName: namaSite,
-      patrolDate: tanggalPatrol,
+      patrolDate: headerTanggal.trim() || tanggalPatrolDefault,
       findings: umpanBulan.map((f, idx) => ({
         no: idx + 1,
         src: f.photoUrl || null,
         caption: f.caption,
       })),
       signatures: {
+        dibuatHeader,
         dibuatNama,
         dibuatJabatan,
+        diketahuiHeader,
         diketahuiNama,
         diketahuiJabatan,
+        disetujuiHeader,
         disetujuiNama,
         disetujuiJabatan,
       },
     };
   }, [
+    judulDokumen,
+    headerLokasi,
     lokasi.siteName,
-    tanggalPatrol,
+    headerTanggal,
+    tanggalPatrolDefault,
     umpanBulan,
+    dibuatHeader,
     dibuatNama,
     dibuatJabatan,
+    diketahuiHeader,
     diketahuiNama,
     diketahuiJabatan,
+    disetujuiHeader,
     disetujuiNama,
     disetujuiJabatan,
   ]);
@@ -104,91 +123,95 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
     return () => window.clearTimeout(t);
   }, [autoPrint, memuat]);
 
+  const resetDefaults = () => {
+    setJudulDokumen('LAPORAN KEGIATAN SAFETY PATROL');
+    setHeaderLokasi('');
+    setHeaderTanggal('');
+    setDibuatHeader('Dibuat Oleh :');
+    setDibuatNama('Takamay Jason Hermantika Irsyad');
+    setDibuatJabatan('Junior HSE Analyst');
+    setDiketahuiHeader('Diketahui Oleh :');
+    setDiketahuiNama('');
+    setDiketahuiJabatan('');
+    setDisetujuiHeader('Disetujui Oleh :');
+    setDisetujuiNama('Hizri');
+    setDisetujuiJabatan('Governance, Risk, HSE & Quality Group Head');
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-slate-100 text-slate-900 px-6 py-4 font-sans select-none">
+    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-[#fafafa] print:bg-white text-neutral-900 px-6 py-4 print:p-0 font-sans select-none">
       <style>{`@page { size: A4 portrait; margin: 10mm 12mm; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
-      <div className="no-print space-y-3 pb-3 mb-4 border-b border-slate-300 bg-white px-4 py-3 rounded-[6px] shadow-xs">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={onKembali}
-            className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
-          >
-            ← Kembali ke Halaman Safety Patrol
-          </button>
-
-          <div className="flex flex-col">
-            <h1 className="text-sm font-bold tracking-tight text-slate-900">
-              Pratinjau Cetak Laporan Kegiatan Safety Patrol
-            </h1>
-            <p className="text-xs text-slate-500 tabular-nums">
-              {lokasi.siteName} · Periode {period} ({umpanBulan.length} foto temuan)
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            disabled={memuat}
-            className="ml-auto px-4 py-1.5 text-xs font-semibold rounded-[4px] text-white bg-[#2f80ed] hover:bg-[#2b77d4] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed tabular-nums"
-          >
-            {memuat ? 'Memuat…' : 'Cetak / Simpan PDF'}
-          </button>
-        </div>
-
-        {/* Kolom Handsign / Penandatangan — kosongkan jika tidak dicetak */}
-        <div className="pt-2.5 border-t border-slate-200 flex flex-wrap items-end gap-2 text-[11px]">
-          <span className="font-bold text-slate-700 mr-1 self-center">
-            Handsign / Penandatangan <span className="font-normal text-slate-500">(kosongkan jika tidak dicetak):</span>
-          </span>
-          <input
-            type="text"
-            value={dibuatNama}
-            onChange={(e) => setDibuatNama(e.target.value)}
-            placeholder="Dibuat Oleh (Nama)"
-            className="w-44 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={dibuatJabatan}
-            onChange={(e) => setDibuatJabatan(e.target.value)}
-            placeholder="Jabatan"
-            className="w-36 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={diketahuiNama}
-            onChange={(e) => setDiketahuiNama(e.target.value)}
-            placeholder="Diketahui Oleh (opsional)"
-            className="w-40 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={diketahuiJabatan}
-            onChange={(e) => setDiketahuiJabatan(e.target.value)}
-            placeholder="Jabatan Diketahui"
-            className="w-32 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={disetujuiNama}
-            onChange={(e) => setDisetujuiNama(e.target.value)}
-            placeholder="Disetujui Oleh"
-            className="w-36 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={disetujuiJabatan}
-            onChange={(e) => setDisetujuiJabatan(e.target.value)}
-            placeholder="Jabatan Disetujui"
-            className="w-48 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-        </div>
-      </div>
+      <PrintCustomizationBar
+        backLabel="← Kembali ke Halaman Safety Patrol"
+        onKembali={onKembali}
+        title="Pratinjau Cetak Laporan Kegiatan Safety Patrol"
+        subtitle={`${lokasi.siteName} · Periode ${period} (${umpanBulan.length} foto temuan)`}
+        memuat={memuat}
+        onPrint={() => window.print()}
+        onResetDefaults={resetDefaults}
+        onClearSigners={() => {
+          setDibuatNama('');
+          setDiketahuiNama('');
+          setDisetujuiNama('');
+        }}
+        headerFields={[
+          {
+            key: 'judul',
+            label: 'Judul Dokumen',
+            value: judulDokumen,
+            onChange: setJudulDokumen,
+          },
+          {
+            key: 'lokasi',
+            label: 'Lokasi / Site',
+            value: headerLokasi,
+            onChange: setHeaderLokasi,
+            placeholder: lokasi.siteName || 'KANTOR PUSAT',
+          },
+          {
+            key: 'tanggal',
+            label: 'Tanggal Patrol',
+            value: headerTanggal,
+            onChange: setHeaderTanggal,
+            placeholder: tanggalPatrolDefault,
+          },
+        ]}
+        signerFields={[
+          {
+            id: 'dibuat',
+            headerLabel: dibuatHeader,
+            onHeaderLabelChange: setDibuatHeader,
+            nama: dibuatNama,
+            onNamaChange: setDibuatNama,
+            jabatan: dibuatJabatan,
+            onJabatanChange: setDibuatJabatan,
+          },
+          {
+            id: 'diketahui',
+            headerLabel: diketahuiHeader,
+            onHeaderLabelChange: setDiketahuiHeader,
+            nama: diketahuiNama,
+            onNamaChange: setDiketahuiNama,
+            jabatan: diketahuiJabatan,
+            onJabatanChange: setDiketahuiJabatan,
+          },
+          {
+            id: 'disetujui',
+            headerLabel: disetujuiHeader,
+            onHeaderLabelChange: setDisetujuiHeader,
+            nama: disetujuiNama,
+            onNamaChange: setDisetujuiNama,
+            jabatan: disetujuiJabatan,
+            onJabatanChange: setDisetujuiJabatan,
+          },
+        ]}
+      />
 
       {memuat ? (
-        <p className="no-print text-xs text-slate-600 tabular-nums">Memuat data Safety Patrol…</p>
+        <p className="no-print text-xs text-neutral-600 tabular-nums text-center py-8">
+          Memuat data Safety Patrol…
+        </p>
       ) : (
         <div className="procedural-print-canvas">
           <div dangerouslySetInnerHTML={{ __html: sheetsHtml }} />

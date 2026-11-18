@@ -99,3 +99,7 @@ Preconditions:
 - Lokasi kerja terisi bawaan nama lokasi aktif (dinamis, tetap bisa disunting;
   suntingan dipakai untuk unggahan (`locationNote`) dan kop cetak; kosong =
   nama lokasi aktif); hapus foto tetap via `ConfirmModal`, bukan langsung.
+
+## Pembaruan Terakhir
+- `PatrolPage.tsx` memakai konfirmasi ketik `HAPUS` saat menghapus temuan patroli.
+- `PatrolPrintPreview.tsx` memakai `PrintCustomizationBar` (header & handsign dapat dikustomisasi penuh, tanpa latar biru `bg-slate-100`).

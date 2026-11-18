@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { PrintCustomizationBar } from '@/components/ui';
 import { formatIndonesianDate } from '@/lib/dates';
 import {
   PROCEDURAL_PRINT_CSS,
@@ -105,11 +106,21 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
   );
   const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>(unitAwal);
 
+  // Customizable Header
+  const [judulBulanan, setJudulBulanan] = useState('Checklist Bulanan APAR');
+  const [judulKartu, setJudulKartu] = useState('');
+  const [headerLokasi, setHeaderLokasi] = useState('');
+  const [headerPeriode, setHeaderPeriode] = useState('');
+  const [headerTanggal, setHeaderTanggal] = useState('');
+
   // Handsign / Penandatangan (kosongkan jika tidak ingin dicetak)
+  const [dibuatHeader, setDibuatHeader] = useState('Petugas Pemeriksa :');
   const [dibuatNama, setDibuatNama] = useState('Takamay Jason Hermantika Irsyad');
   const [dibuatJabatan, setDibuatJabatan] = useState('Junior HSE Analyst');
+  const [diketahuiHeader, setDiketahuiHeader] = useState('Diketahui Oleh :');
   const [diketahuiNama, setDiketahuiNama] = useState('');
   const [diketahuiJabatan, setDiketahuiJabatan] = useState('');
+  const [disetujuiHeader, setDisetujuiHeader] = useState('Disetujui Oleh :');
   const [disetujuiNama, setDisetujuiNama] = useState('Hizri');
   const [disetujuiJabatan, setDisetujuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
   const [kartuPemeriksa, setKartuPemeriksa] = useState('Takamay Jason H. I.');
@@ -160,7 +171,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
   }, [period]);
   const monthLabel = format(monthDate, 'MMMM yyyy', { locale: idLocale });
 
-  const tanggalInspeksi = useMemo(() => {
+  const tanggalInspeksiDefault = useMemo(() => {
     if (inspeksiBulan.length === 0) return formatIndonesianDate(new Date());
     const hari = [
       ...new Set(
@@ -229,17 +240,24 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       }));
   }, [rows, units]);
 
+  const resolvedSite = headerLokasi.trim() || lokasi.siteName || 'Kantor Pusat';
+
   const docBulanan: AparMonthlyPrintPayload = useMemo(
     () => ({
-      siteName: lokasi.siteName,
-      periodLabel: `Periode : ${monthLabel}`,
-      inspectionDate: tanggalInspeksi,
+      documentTitle: judulBulanan.trim() || 'Checklist Bulanan APAR',
+      documentSubtitle: resolvedSite,
+      siteName: resolvedSite,
+      periodLabel: headerPeriode.trim() || `Periode : ${monthLabel}`,
+      inspectionDate: headerTanggal.trim() || tanggalInspeksiDefault,
       notes: catatan,
       signers: {
+        dibuatHeader,
         dibuatNama,
         dibuatJabatan,
+        diketahuiHeader,
         diketahuiNama,
         diketahuiJabatan,
+        disetujuiHeader,
         disetujuiNama,
         disetujuiJabatan,
       },
@@ -247,14 +265,20 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       expiryRows,
     }),
     [
-      lokasi.siteName,
+      judulBulanan,
+      resolvedSite,
+      headerPeriode,
       monthLabel,
-      tanggalInspeksi,
+      headerTanggal,
+      tanggalInspeksiDefault,
       catatan,
+      dibuatHeader,
       dibuatNama,
       dibuatJabatan,
+      diketahuiHeader,
       diketahuiNama,
       diketahuiJabatan,
+      disetujuiHeader,
       disetujuiNama,
       disetujuiJabatan,
       rows,
@@ -308,17 +332,18 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       : ['', '', ''];
 
     return {
+      documentTitle: judulKartu.trim() || undefined,
       tahun: tahunKartu,
       ukuran: unitAktif.ukuran || '3 kg',
       kode: unitAktif.kode.replace(/^APAR\s*/i, '').padStart(2, '0'),
       jenis: unitAktif.jenis === 'CO2' ? 'CO2' : 'Powder',
       zoneName: unitAktif.zoneName,
-      siteName: lokasi.siteName,
+      siteName: resolvedSite,
       tglPengisianTerakhir: tLast,
       tglPengisianUlang: tRefill,
       months,
     };
-  }, [unitAktif, inspeksiSite, tahunKartu, lokasi.siteName, kartuPemeriksa, kartuParaf]);
+  }, [unitAktif, inspeksiSite, tahunKartu, judulKartu, resolvedSite, kartuPemeriksa, kartuParaf]);
 
   const sheetsHtml = useMemo(() => {
     if (mode === 'kartu') {
@@ -337,34 +362,56 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
     return () => window.clearTimeout(t);
   }, [autoPrint, memuat]);
 
+  const resetDefaults = () => {
+    setJudulBulanan('Checklist Bulanan APAR');
+    setJudulKartu('');
+    setHeaderLokasi('');
+    setHeaderPeriode('');
+    setHeaderTanggal('');
+    setDibuatHeader('Petugas Pemeriksa :');
+    setDibuatNama('Takamay Jason Hermantika Irsyad');
+    setDibuatJabatan('Junior HSE Analyst');
+    setDiketahuiHeader('Diketahui Oleh :');
+    setDiketahuiNama('');
+    setDiketahuiJabatan('');
+    setDisetujuiHeader('Disetujui Oleh :');
+    setDisetujuiNama('Hizri');
+    setDisetujuiJabatan('Governance, Risk, HSE & Quality Group Head');
+    setKartuPemeriksa('Takamay Jason H. I.');
+    setKartuParaf('');
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-slate-100 text-slate-900 px-6 py-4 font-sans select-none">
+    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-[#fafafa] print:bg-white text-neutral-900 px-6 py-4 print:p-0 font-sans select-none">
       <style>{`@page { size: A4 portrait; margin: 10mm 12mm; }\n${PROCEDURAL_PRINT_CSS}`}</style>
-      <div className="no-print space-y-3 pb-3 mb-4 border-b border-slate-300 bg-white px-4 py-3 rounded-[6px] shadow-xs">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={onKembali}
-            className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
-          >
-            ← Kembali ke Halaman APAR
-          </button>
 
-          <div className="flex flex-col">
-            <h1 className="text-sm font-bold tracking-tight text-slate-900">
-              {mode === 'bulanan' ? 'Pratinjau Cetak Checklist Bulanan APAR' : 'Pratinjau Cetak Kartu Tahunan APAR'}
-            </h1>
-            <p className="text-xs text-slate-500 tabular-nums">
-              {lokasi.siteName} · {mode === 'bulanan' ? `Periode ${period}` : `Tahun ${tahunKartu}`}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-[5px] border border-slate-300 text-xs">
+      <PrintCustomizationBar
+        backLabel="← Kembali ke Halaman APAR"
+        onKembali={onKembali}
+        title={mode === 'bulanan' ? 'Pratinjau Cetak Checklist Bulanan APAR' : 'Pratinjau Cetak Kartu Tahunan APAR'}
+        subtitle={`${lokasi.siteName} · ${mode === 'bulanan' ? `Periode ${period}` : `Tahun ${tahunKartu}`}`}
+        memuat={memuat}
+        onPrint={() => window.print()}
+        onResetDefaults={resetDefaults}
+        onClearSigners={
+          mode === 'bulanan'
+            ? () => {
+                setDibuatNama('');
+                setDiketahuiNama('');
+                setDisetujuiNama('');
+              }
+            : () => {
+                setKartuPemeriksa('');
+                setKartuParaf('');
+              }
+        }
+        modeSelector={
+          <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-[6px] border border-neutral-200 text-xs">
             <button
               type="button"
               onClick={() => setMode('bulanan')}
-              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-                mode === 'bulanan' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2.5 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'bulanan' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
               1. Checklist Bulanan (Portrait)
@@ -372,21 +419,22 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
             <button
               type="button"
               onClick={() => setMode('kartu')}
-              className={`px-3 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
-                mode === 'kartu' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+              className={`px-2.5 py-1 rounded-[4px] font-semibold cursor-pointer pressable ${
+                mode === 'kartu' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600 hover:text-neutral-900'
               }`}
             >
               2. Kartu Tahunan Unit (Hang-Tag)
             </button>
           </div>
-
-          {mode === 'kartu' && units.length > 0 && (
+        }
+        extraControls={
+          mode === 'kartu' && units.length > 0 ? (
             <div className="flex items-center gap-2 text-xs">
-              <label className="font-semibold text-slate-700">Unit:</label>
+              <label className="font-semibold text-neutral-600">Unit:</label>
               <select
                 value={unitAktif?.id ?? ''}
                 onChange={(e) => setSelectedUnitId(e.target.value)}
-                className="px-2.5 py-1 rounded-[4px] border border-slate-300 bg-white text-slate-900 font-semibold tabular-nums"
+                className="px-2.5 py-1 rounded-[5px] border border-neutral-200 bg-white text-neutral-900 font-semibold tabular-nums"
               >
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -394,11 +442,11 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
                   </option>
                 ))}
               </select>
-              <label className="font-semibold text-slate-700">Tahun:</label>
+              <label className="font-semibold text-neutral-600">Tahun:</label>
               <select
                 value={tahunKartu}
                 onChange={(e) => setTahunKartu(e.target.value)}
-                className="px-2.5 py-1 rounded-[4px] border border-slate-300 bg-white text-slate-900 font-semibold tabular-nums"
+                className="px-2.5 py-1 rounded-[5px] border border-neutral-200 bg-white text-neutral-900 font-semibold tabular-nums"
               >
                 {['2025', '2026', '2027'].map((y) => (
                   <option key={y} value={y}>
@@ -407,91 +455,125 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
                 ))}
               </select>
             </div>
-          )}
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            disabled={memuat}
-            className="ml-auto px-4 py-1.5 text-xs font-semibold rounded-[4px] text-white bg-[#2f80ed] hover:bg-[#2b77d4] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed tabular-nums"
-          >
-            {memuat ? 'Memuat…' : 'Cetak / Simpan PDF'}
-          </button>
-        </div>
-
-        {/* Kolom Handsign / Penandatangan — kosongkan jika bagian tersebut tidak perlu dicetak */}
-        <div className="pt-2.5 border-t border-slate-200 flex flex-wrap items-end gap-2 text-[11px]">
-          <span className="font-bold text-slate-700 mr-1 self-center">
-            Handsign / Penandatangan <span className="font-normal text-slate-500">(kosongkan jika tidak dicetak):</span>
-          </span>
-          {mode === 'bulanan' ? (
-            <>
-              <input
-                type="text"
-                value={dibuatNama}
-                onChange={(e) => setDibuatNama(e.target.value)}
-                placeholder="Nama Pemeriksa"
-                className="w-44 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-              <input
-                type="text"
-                value={dibuatJabatan}
-                onChange={(e) => setDibuatJabatan(e.target.value)}
-                placeholder="Jabatan Pemeriksa"
-                className="w-36 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-              <input
-                type="text"
-                value={diketahuiNama}
-                onChange={(e) => setDiketahuiNama(e.target.value)}
-                placeholder="Diketahui Oleh (opsional)"
-                className="w-40 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-              <input
-                type="text"
-                value={diketahuiJabatan}
-                onChange={(e) => setDiketahuiJabatan(e.target.value)}
-                placeholder="Jabatan Diketahui"
-                className="w-32 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-              <input
-                type="text"
-                value={disetujuiNama}
-                onChange={(e) => setDisetujuiNama(e.target.value)}
-                placeholder="Disetujui Oleh"
-                className="w-36 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-              <input
-                type="text"
-                value={disetujuiJabatan}
-                onChange={(e) => setDisetujuiJabatan(e.target.value)}
-                placeholder="Jabatan Disetujui"
-                className="w-48 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-            </>
-          ) : (
-            <>
-              <input
-                type="text"
-                value={kartuPemeriksa}
-                onChange={(e) => setKartuPemeriksa(e.target.value)}
-                placeholder="Nama Pemeriksa (kosong = tidak diisi)"
-                className="w-52 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-              <input
-                type="text"
-                value={kartuParaf}
-                onChange={(e) => setKartuParaf(e.target.value)}
-                placeholder="Paraf Pemeriksa (kosong = kosong)"
-                className="w-48 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-              />
-            </>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+        headerFields={
+          mode === 'bulanan'
+            ? [
+                {
+                  key: 'judul',
+                  label: 'Judul Dokumen',
+                  value: judulBulanan,
+                  onChange: setJudulBulanan,
+                },
+                {
+                  key: 'lokasi',
+                  label: 'Lokasi / Subjudul',
+                  value: headerLokasi,
+                  onChange: setHeaderLokasi,
+                  placeholder: lokasi.siteName || 'Kantor Pusat',
+                },
+                {
+                  key: 'periode',
+                  label: 'Label Periode',
+                  value: headerPeriode,
+                  onChange: setHeaderPeriode,
+                  placeholder: `Periode : ${monthLabel}`,
+                },
+                {
+                  key: 'tanggal',
+                  label: 'Tanggal Inspeksi',
+                  value: headerTanggal,
+                  onChange: setHeaderTanggal,
+                  placeholder: tanggalInspeksiDefault,
+                },
+              ]
+            : [
+                {
+                  key: 'judulKartu',
+                  label: 'Judul Kartu',
+                  value: judulKartu,
+                  onChange: setJudulKartu,
+                  placeholder: 'CHECKLIST PEMERIKSAAN APAR',
+                },
+                {
+                  key: 'lokasi',
+                  label: 'Lokasi / Site',
+                  value: headerLokasi,
+                  onChange: setHeaderLokasi,
+                  placeholder: lokasi.siteName || 'Kantor Pusat',
+                },
+              ]
+        }
+        signerFields={
+          mode === 'bulanan'
+            ? [
+                {
+                  id: 'dibuat',
+                  headerLabel: dibuatHeader,
+                  onHeaderLabelChange: setDibuatHeader,
+                  nama: dibuatNama,
+                  onNamaChange: setDibuatNama,
+                  jabatan: dibuatJabatan,
+                  onJabatanChange: setDibuatJabatan,
+                },
+                {
+                  id: 'diketahui',
+                  headerLabel: diketahuiHeader,
+                  onHeaderLabelChange: setDiketahuiHeader,
+                  nama: diketahuiNama,
+                  onNamaChange: setDiketahuiNama,
+                  jabatan: diketahuiJabatan,
+                  onJabatanChange: setDiketahuiJabatan,
+                },
+                {
+                  id: 'disetujui',
+                  headerLabel: disetujuiHeader,
+                  onHeaderLabelChange: setDisetujuiHeader,
+                  nama: disetujuiNama,
+                  onNamaChange: setDisetujuiNama,
+                  jabatan: disetujuiJabatan,
+                  onJabatanChange: setDisetujuiJabatan,
+                },
+              ]
+            : []
+        }
+        extraSignerControls={
+          mode === 'kartu' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <label className="block space-y-1">
+                <span className="block text-[11px] font-medium text-neutral-600">
+                  Nama Pemeriksa (kosong = tidak diisi)
+                </span>
+                <input
+                  type="text"
+                  value={kartuPemeriksa}
+                  onChange={(e) => setKartuPemeriksa(e.target.value)}
+                  placeholder="Takamay Jason H. I."
+                  className="w-full px-2.5 py-1 text-xs rounded-[5px] border border-neutral-200 bg-white text-neutral-900"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="block text-[11px] font-medium text-neutral-600">
+                  Paraf Pemeriksa (opsional)
+                </span>
+                <input
+                  type="text"
+                  value={kartuParaf}
+                  onChange={(e) => setKartuParaf(e.target.value)}
+                  placeholder="Paraf"
+                  className="w-full px-2.5 py-1 text-xs rounded-[5px] border border-neutral-200 bg-white text-neutral-900"
+                />
+              </label>
+            </div>
+          ) : undefined
+        }
+      />
 
       {memuat ? (
-        <p className="no-print text-xs text-slate-600 tabular-nums">Memuat data inspeksi APAR…</p>
+        <p className="no-print text-xs text-neutral-600 tabular-nums text-center py-8">
+          Memuat data inspeksi APAR…
+        </p>
       ) : (
         <div className="procedural-print-canvas">
           <div dangerouslySetInnerHTML={{ __html: sheetsHtml }} />

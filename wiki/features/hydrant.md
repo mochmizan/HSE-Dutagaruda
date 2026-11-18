@@ -228,3 +228,8 @@ Preconditions:
   children guards memblokir hapus parent-first.
 - Presigned URL foto hanya resolve di dalam network Docker; dari host,
   tukar origin ke `caddy:80` seperti pola `fetchBytes` di `check.ts`.
+
+## Pembaruan Terakhir
+- `HydrantInspectionPhotos.tsx` kini menyediakan dua slot unggahan: `Checklist` (`Checklist Hydrant`) dan `Dokumentasi Pengecekan` (`Bukti inspeksi`).
+- `HydrantInspectionFooter.tsx` memakai konfirmasi ketik `HAPUS` dan `DELETE ...?force=1` agar unit/inspeksi dapat dihapus langsung tanpa menunggu anak data kosong.
+- `renderHydrantLaporanSheet` memisahkan kolom `Catatan Temuan Tambahan` dan `Tindakan Rekomendasi`, dan `HydrantPrintPreview.tsx` memakai `PrintCustomizationBar` (header & handsign dapat dikustomisasi penuh, tanpa latar biru `bg-slate-100`).

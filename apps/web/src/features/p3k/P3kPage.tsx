@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Eye, Printer } from 'lucide-react';
 import {
@@ -21,6 +21,7 @@ import {
   useUbahButirP3k,
   useUbahInspeksiP3k,
   useHapusInspeksiP3k,
+  useHapusKotakP3k,
 } from '@/services/api/queries';
 import { ambilButirP3k } from '@/services/api/klien';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
@@ -49,6 +50,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   const ubahInspeksi = useUbahInspeksiP3k();
   const ubahButir = useUbahButirP3k();
   const hapusInspeksi = useHapusInspeksiP3k();
+  const hapusKotak = useHapusKotakP3k();
   const buatKotak = useBuatKotakP3k();
 
   const [period, setPeriod] = useState<string>(bulanBerjalan);
@@ -69,19 +71,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
     [kotakQuery.data, lokasi.siteId],
   );
 
-  // Pastikan setiap lokasi punya minimal Kotak Lantai 2 (Tipe A) dan Lantai 3 (Tipe B).
-  const kotakDiusahakan = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!kotakQuery.isSuccess) return;
-    const sid = lokasi.siteId;
-    if (!sid) return;
-    if (daftarKotakSite.length === 0 && !kotakDiusahakan.current.has(sid)) {
-      kotakDiusahakan.current.add(sid);
-      void buatKotak.mutateAsync({ siteId: sid, name: 'P3K-01 · Lantai 2 · Kotak Tipe A' }).catch(() => {});
-      void buatKotak.mutateAsync({ siteId: sid, name: 'P3K-02 · Lantai 3 · Kotak Tipe B' }).catch(() => {});
-    }
-  }, [kotakQuery.isSuccess, daftarKotakSite.length, lokasi.siteId, buatKotak]);
-
+  
   const gridByBox = useMemo(
     () => petakanGridP3k(daftarKotakSite, inspeksiQuery.data ?? [], year),
     [daftarKotakSite, inspeksiQuery.data, year],
@@ -262,6 +252,13 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
     setActiveBoxId(null);
   };
 
+  const handleHapusUnit = () => {
+    if (activeBoxId) {
+      hapusKotak.mutate(activeBoxId);
+    }
+    setActiveBoxId(null);
+  };
+
   return (
     <InspectionPageShell
       config={KONFIG_P3K}
@@ -403,15 +400,18 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
                 ? `${activeBox.kode} (${activeBox.zoneName}) · ${MONTH_NAMES[monthIdx]} ${year}`
                 : `${MONTH_NAMES[monthIdx]} ${year}`
             }
+            unitKode={activeBox ? `${activeBox.kode} (${activeBox.zoneName} · Tipe ${activeBox.boxType})` : ''}
             initial={activeData}
             itemsCatalog={activeCatalog}
             boxType={activeBox?.boxType ?? 'A'}
             rekam={rekamAktif}
             menyimpan={menyimpan}
             menghapusBulan={hapusInspeksi.isPending}
+            menghapusUnit={hapusKotak.isPending}
             onClose={() => setActiveBoxId(null)}
             onSave={handleSave}
             onClear={handleClear}
+            onHapusUnit={handleHapusUnit}
           />
         </>
       }

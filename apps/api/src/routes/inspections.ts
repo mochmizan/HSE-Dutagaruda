@@ -7,7 +7,7 @@ import {
   firstOfMonth,
   getStandardP3kItemsForType,
 } from "@viaannn/shared";
-import { and, asc, eq, getTableColumns, gt, gte, lt } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, gt, gte, inArray, lt } from "drizzle-orm";
 import { Hono } from "hono";
 import { db } from "../db/client.js";
 import {
@@ -21,6 +21,7 @@ import {
   photos,
 } from "../db/schema.js";
 import { companyId, requireSession } from "../auth/middleware.js";
+import { deleteObject } from "../storage.js";
 import {
   blockedByChildren,
   duplicateMonth,
@@ -211,13 +212,32 @@ export const hydrantInspectionsApp = new Hono()
     .where(and(eq(hydrantInspections.id, id), eq(hydrantInspections.companyId, owned)))
     .limit(1);
   if (rows.length === 0) throw notFound("Inspeksi hidran");
+  const force = c.req.query("force") === "1";
   const attached = await db
     .select({ id: photos.id })
     .from(photos)
     .where(eq(photos.hydrantInspectionId, id))
     .limit(1);
-  if (attached.length > 0) throw blockedByChildren("Inspeksi hidran");
-  await db.delete(hydrantInspections).where(eq(hydrantInspections.id, id));
+  if (attached.length > 0 && !force) throw blockedByChildren("Inspeksi hidran");
+  if (!force) {
+    await db.delete(hydrantInspections).where(eq(hydrantInspections.id, id));
+    return c.json({ ok: true });
+  }
+  const foto = await db
+    .select({ s3Key: photos.s3Key })
+    .from(photos)
+    .where(eq(photos.hydrantInspectionId, id));
+  await db.transaction(async (tx) => {
+    await tx.delete(photos).where(eq(photos.hydrantInspectionId, id));
+    await tx.delete(hydrantInspections).where(eq(hydrantInspections.id, id));
+  });
+  for (const f of foto) {
+    try {
+      await deleteObject(f.s3Key);
+    } catch {
+      /* abaikan: baris sudah terhapus */
+    }
+  }
   return c.json({ ok: true });
 });
 
@@ -376,13 +396,32 @@ export const aparInspectionsApp = new Hono()
     .where(and(eq(aparInspections.id, id), eq(aparInspections.companyId, owned)))
     .limit(1);
   if (rows.length === 0) throw notFound("Inspeksi APAR");
+  const force = c.req.query("force") === "1";
   const attached = await db
     .select({ id: photos.id })
     .from(photos)
     .where(eq(photos.aparInspectionId, id))
     .limit(1);
-  if (attached.length > 0) throw blockedByChildren("Inspeksi APAR");
-  await db.delete(aparInspections).where(eq(aparInspections.id, id));
+  if (attached.length > 0 && !force) throw blockedByChildren("Inspeksi APAR");
+  if (!force) {
+    await db.delete(aparInspections).where(eq(aparInspections.id, id));
+    return c.json({ ok: true });
+  }
+  const foto = await db
+    .select({ s3Key: photos.s3Key })
+    .from(photos)
+    .where(eq(photos.aparInspectionId, id));
+  await db.transaction(async (tx) => {
+    await tx.delete(photos).where(eq(photos.aparInspectionId, id));
+    await tx.delete(aparInspections).where(eq(aparInspections.id, id));
+  });
+  for (const f of foto) {
+    try {
+      await deleteObject(f.s3Key);
+    } catch {
+      /* abaikan: baris sudah terhapus */
+    }
+  }
   return c.json({ ok: true });
 });
 
@@ -432,7 +471,23 @@ export const p3kInspectionsApp = new Hono()
       ),
     )
     .orderBy(asc(p3kInspections.period));
-  return c.json({ items: rows });
+  if (rows.length === 0) return c.json({ items: [] });
+  const semuaButir = await db
+    .select()
+    .from(p3kInspectionItems)
+    .where(
+      inArray(
+        p3kInspectionItems.inspectionId,
+        rows.map((r) => r.id),
+      ),
+    );
+  const perInspeksi = new Map<string, typeof semuaButir>();
+  for (const b of semuaButir) {
+    const daftar = perInspeksi.get(b.inspectionId);
+    if (daftar) daftar.push(b);
+    else perInspeksi.set(b.inspectionId, [b]);
+  }
+  return c.json({ items: rows.map((r) => ({ ...r, items: perInspeksi.get(r.id) ?? [] })) });
   })
 
   .post("/", zValidator("json", p3kInspectionBodySchema), async (c) => {

@@ -153,3 +153,9 @@ Preconditions:
   ada cermin-terbit — bulan terisi selalu terbuka langsung sunting;
   `Terbitkan` = simpan ulang (upsert), `Hapus Bulan Ini` selalu tampil
   di kiri (konfirmasi `ConfirmModal` tetap ada sebagai pengaman).
+
+## Pembaruan Terakhir
+- `GET /api/p3k-inspections` kini menyertakan array `items` (`p3k_inspection_items`) sehingga status 21 item di tabel/kartu dan pratinjau cetak tahunan tampil penuh.
+- Auto-seeding kotak P3K di sisi klien (`P3kPage.tsx`) dihapus agar kotak yang dihapus tidak muncul kembali; `seed.ts` memakai format `P3K-01 · Lantai 2 · Kotak Tipe A` dan `P3K-02 · Lantai 3 · Kotak Tipe B`.
+- `P3kInspectionFooter.tsx` kini memakai dua cakupan hapus (`Hapus unit` + `Kosongkan bulan ini`) dengan konfirmasi ketik `HAPUS` (`ConfirmModal` `requireText="HAPUS"`) dan `DELETE /api/p3k-boxes/:id?force=1`.
+- `P3kPrintPreview.tsx` memakai `PrintCustomizationBar` (header & handsign dapat dikustomisasi penuh, tanpa latar biru `bg-slate-100`).

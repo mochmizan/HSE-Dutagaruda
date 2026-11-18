@@ -400,8 +400,8 @@ for (const a of APAR_UNITS_SEED) {
 // ── 3. BENIH KOTAK P3K (Kotak Lokasi + 11 Bulan Tahun 2026 × 21 Item Baku) ──
 
 const P3K_BOXES_SEED = [
-  { id: "seed-p3k-box-1", name: "Lantai 2 (Kotak Tipe A)", boxType: "A" as const },
-  { id: "seed-p3k-box-2", name: "Lantai 3 (Kotak Tipe B)", boxType: "B" as const },
+  { id: "seed-p3k-box-1", name: "P3K-01 · Lantai 2 · Kotak Tipe A", boxType: "A" as const },
+  { id: "seed-p3k-box-2", name: "P3K-02 · Lantai 3 · Kotak Tipe B", boxType: "B" as const },
 ];
 
 for (const boxDef of P3K_BOXES_SEED) {

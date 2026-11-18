@@ -186,3 +186,8 @@ Preconditions:
   inspeksi?.approvalStatus]` — jangan menulis `terbit` dari handler.
 - `useDismiss`/portal `ConfirmModal` milik bersama; nested Esc tidak
   menutup dua lapis (capture + `stopPropagation`).
+
+## Pembaruan Terakhir
+- `komponenApar.ts` diperbarui ke label: `1. Safety Pin`, `2. Fire Hose`, `3. Segel`, `4. Pressure Gauge`, `5. Tabung/Tube`, `6. Nozzle`, `7. Katup/Tuas`.
+- `AparInspectionFooter.tsx` memakai konfirmasi ketik `HAPUS` dan `DELETE ...?force=1` untuk hapus unit/bulan langsung.
+- `AparPrintPreview.tsx` memakai `PrintCustomizationBar` (header & handsign dapat dikustomisasi penuh, tanpa latar biru `bg-slate-100`).

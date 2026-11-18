@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { PrintCustomizationBar } from '@/components/ui';
 import {
   detectP3kBoxType,
   getStandardP3kItemsForType,
@@ -51,12 +52,21 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     /^\d{4}$/.test(tahun ?? '') ? (tahun as string) : String(new Date().getFullYear()),
   );
   const [boxType, setBoxType] = useState<P3kBoxType>(bacaTipeAwal);
+
+  // Customizable Header
+  const [judulDokumen, setJudulDokumen] = useState('');
   const [unitKerja, setUnitKerja] = useState('HSE');
+  const [lokasiKerjaOverride, setLokasiKerjaOverride] = useState('');
+  const [keteranganLabel, setKeteranganLabel] = useState(
+    'Keterangan: Standar ( ✓ ) | Tidak Standar ( ✗ ) | Kadaluarsa (KD)',
+  );
 
   // Handsign / Penandatangan (kosongkan jika tidak ingin dicetak)
   const [parafOverride, setParafOverride] = useState('');
+  const [diperiksaHeader, setDiperiksaHeader] = useState('Diperiksa Oleh :');
   const [diperiksaNama, setDiperiksaNama] = useState('Takamay Jason Hermantika Irsyad');
   const [diperiksaJabatan, setDiperiksaJabatan] = useState('Junior HSE Analyst');
+  const [mengetahuiHeader, setMengetahuiHeader] = useState('Mengetahui / Disetujui Oleh :');
   const [mengetahuiNama, setMengetahuiNama] = useState('Hizri');
   const [mengetahuiJabatan, setMengetahuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
 
@@ -70,11 +80,18 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
   );
 
   const unitIdParam = useMemo(() => {
-    try { return new URLSearchParams(window.location.search).get('unit') ?? ''; } catch { return ''; }
+    try {
+      return new URLSearchParams(window.location.search).get('unit') ?? '';
+    } catch {
+      return '';
+    }
   }, []);
+
   const kotak = useMemo(() => {
     if (unitIdParam) {
-      const exact = daftarKotakSite.find((b) => b.id === unitIdParam && detectP3kBoxType(b.name) === boxType);
+      const exact = daftarKotakSite.find(
+        (b) => b.id === unitIdParam && detectP3kBoxType(b.name) === boxType,
+      );
       if (exact) return exact;
     }
     const byType = daftarKotakSite.find((b) => detectP3kBoxType(b.name) === boxType);
@@ -87,6 +104,8 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     () => (kotak ? petakanGridP3k([kotak], inspeksiQuery.data ?? [], year)[kotak.id] ?? {} : {}),
     [kotak, inspeksiQuery.data, year],
   );
+
+  const defaultLokasiLabel = `${lokasi.siteName || 'Kantor Pusat'} — Kotak Tipe ${boxType}`;
 
   const payload: P3kYearlyPrintPayload = useMemo(() => {
     const tanggalInspeksi = MONTH_KEYS.map((m) => fmtTanggalSingkat(grid[m]?.tanggal ?? ''));
@@ -122,38 +141,40 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
       };
     });
 
-    const lokasiLabel =
-      boxType === 'A'
-        ? `${lokasi.siteName} — Lantai 2 (Kotak Tipe A)`
-        : boxType === 'B'
-        ? `${lokasi.siteName} — Lantai 3 (Kotak Tipe B)`
-        : `${lokasi.siteName} — Kotak Tipe C`;
-
     return {
+      documentTitle: judulDokumen.trim() || `INSPEKSI KOTAK P3K (TIPE ${boxType})`,
+      keteranganLabel: keteranganLabel.trim() || undefined,
       tahun: year,
       unitKerja,
       boxType,
-      siteName: lokasiLabel,
+      siteName: lokasiKerjaOverride.trim() || defaultLokasiLabel,
       tanggalInspeksi,
       parafInisial,
       items,
       signatures: {
+        diperiksaHeader,
         diperiksaNama,
         diperiksaJabatan,
+        mengetahuiHeader,
         mengetahuiNama,
         mengetahuiJabatan,
       },
     };
   }, [
+    judulDokumen,
+    keteranganLabel,
     year,
     unitKerja,
     boxType,
-    lokasi.siteName,
+    lokasiKerjaOverride,
+    defaultLokasiLabel,
     grid,
     itemsCatalog,
     parafOverride,
+    diperiksaHeader,
     diperiksaNama,
     diperiksaJabatan,
+    mengetahuiHeader,
     mengetahuiNama,
     mengetahuiJabatan,
   ]);
@@ -169,46 +190,54 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     return () => window.clearTimeout(t);
   }, [autoPrint, memuat]);
 
+  const resetDefaults = () => {
+    setJudulDokumen('');
+    setUnitKerja('HSE');
+    setLokasiKerjaOverride('');
+    setKeteranganLabel('Keterangan: Standar ( ✓ ) | Tidak Standar ( ✗ ) | Kadaluarsa (KD)');
+    setParafOverride('');
+    setDiperiksaHeader('Diperiksa Oleh :');
+    setDiperiksaNama('Takamay Jason Hermantika Irsyad');
+    setDiperiksaJabatan('Junior HSE Analyst');
+    setMengetahuiHeader('Mengetahui / Disetujui Oleh :');
+    setMengetahuiNama('Hizri');
+    setMengetahuiJabatan('Governance, Risk, HSE & Quality Group Head');
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-slate-100 text-slate-900 px-6 py-4 font-sans select-none">
+    <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-[#fafafa] print:bg-white text-neutral-900 px-6 py-4 print:p-0 font-sans select-none">
       <style>{`@page { size: A4 landscape; margin: 8mm 10mm; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
-      <div className="no-print space-y-3 pb-3 mb-4 border-b border-slate-300 bg-white px-4 py-3 rounded-[6px] shadow-xs">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={onKembali}
-            className="px-3 py-1.5 text-xs font-semibold rounded-[4px] border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer pressable"
-          >
-            ← Kembali ke Halaman Kotak P3K
-          </button>
-
-          <div className="flex flex-col">
-            <h1 className="text-sm font-bold tracking-tight text-slate-900">
-              Pratinjau Cetak Inspeksi Kotak P3K — {P3K_BOX_TYPES[boxType].label}
-            </h1>
-            <p className="text-xs text-slate-500 tabular-nums">
-              {lokasi.siteName} · Tahun {year} · {P3K_BOX_TYPES[boxType].floorDefault}
-            </p>
-          </div>
-
+      <PrintCustomizationBar
+        backLabel="← Kembali ke Halaman Kotak P3K"
+        onKembali={onKembali}
+        title={`Pratinjau Cetak Inspeksi Kotak P3K — ${P3K_BOX_TYPES[boxType].label}`}
+        subtitle={`${lokasi.siteName} · Tahun ${year}`}
+        memuat={memuat}
+        onPrint={() => window.print()}
+        onResetDefaults={resetDefaults}
+        onClearSigners={() => {
+          setDiperiksaNama('');
+          setMengetahuiNama('');
+        }}
+        extraControls={
           <div className="flex items-center gap-2 text-xs">
-            <label className="font-semibold text-slate-700">Tipe Kotak:</label>
+            <label className="font-semibold text-neutral-600">Tipe:</label>
             <select
               value={boxType}
               onChange={(e) => setBoxType(e.target.value as P3kBoxType)}
-              className="px-2.5 py-1 rounded-[4px] border border-slate-300 bg-white text-slate-900 font-semibold"
+              className="px-2.5 py-1 rounded-[5px] border border-neutral-200 bg-white text-neutral-900 font-semibold"
             >
               <option value="A">Tipe A (≤ 25 Pekerja)</option>
               <option value="B">Tipe B (≤ 50 Pekerja)</option>
               <option value="C">Tipe C (≤ 100 Pekerja)</option>
             </select>
 
-            <label className="font-semibold text-slate-700">Tahun:</label>
+            <label className="font-semibold text-neutral-600">Tahun:</label>
             <select
               value={year}
               onChange={(e) => setYear(e.target.value)}
-              className="px-2.5 py-1 rounded-[4px] border border-slate-300 bg-white text-slate-900 font-semibold tabular-nums"
+              className="px-2.5 py-1 rounded-[5px] border border-neutral-200 bg-white text-neutral-900 font-semibold tabular-nums"
             >
               {['2025', '2026', '2027'].map((y) => (
                 <option key={y} value={y}>
@@ -216,70 +245,76 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
                 </option>
               ))}
             </select>
-            <label className="font-semibold text-slate-700">Unit Kerja:</label>
+          </div>
+        }
+        headerFields={[
+          {
+            key: 'judul',
+            label: 'Judul Dokumen',
+            value: judulDokumen,
+            onChange: setJudulDokumen,
+            placeholder: `INSPEKSI KOTAK P3K (TIPE ${boxType})`,
+          },
+          {
+            key: 'unitKerja',
+            label: 'Unit Kerja',
+            value: unitKerja,
+            onChange: setUnitKerja,
+          },
+          {
+            key: 'lokasiKerja',
+            label: 'Lokasi Kerja',
+            value: lokasiKerjaOverride,
+            onChange: setLokasiKerjaOverride,
+            placeholder: defaultLokasiLabel,
+          },
+          {
+            key: 'keterangan',
+            label: 'Teks Keterangan',
+            value: keteranganLabel,
+            onChange: setKeteranganLabel,
+          },
+        ]}
+        extraSignerControls={
+          <label className="block max-w-xs space-y-1">
+            <span className="block text-[11px] font-medium text-neutral-600">
+              Override Paraf Tabel (opsional)
+            </span>
             <input
               type="text"
-              value={unitKerja}
-              onChange={(e) => setUnitKerja(e.target.value)}
-              className="w-24 px-2 py-1 rounded-[4px] border border-slate-300 bg-white text-slate-900 font-semibold"
+              value={parafOverride}
+              onChange={(e) => setParafOverride(e.target.value)}
+              placeholder="Kosongkan untuk pakai paraf per bulan"
+              className="w-full px-2.5 py-1 text-xs rounded-[5px] border border-neutral-200 bg-white text-neutral-900"
             />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            disabled={memuat}
-            className="ml-auto px-4 py-1.5 text-xs font-semibold rounded-[4px] text-white bg-[#2f80ed] hover:bg-[#2b77d4] cursor-pointer pressable disabled:opacity-40 disabled:cursor-not-allowed tabular-nums"
-          >
-            {memuat ? 'Memuat…' : 'Cetak / Simpan PDF'}
-          </button>
-        </div>
-
-        {/* Kolom Handsign / Penandatangan — kosongkan jika tidak dicetak */}
-        <div className="pt-2.5 border-t border-slate-200 flex flex-wrap items-end gap-2 text-[11px]">
-          <span className="font-bold text-slate-700 mr-1 self-center">
-            Handsign / Penandatangan <span className="font-normal text-slate-500">(kosongkan jika tidak dicetak):</span>
-          </span>
-          <input
-            type="text"
-            value={parafOverride}
-            onChange={(e) => setParafOverride(e.target.value)}
-            placeholder="Override Paraf Tabel (opsional)"
-            className="w-44 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={diperiksaNama}
-            onChange={(e) => setDiperiksaNama(e.target.value)}
-            placeholder="Diperiksa Oleh"
-            className="w-48 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={diperiksaJabatan}
-            onChange={(e) => setDiperiksaJabatan(e.target.value)}
-            placeholder="Jabatan Diperiksa"
-            className="w-36 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={mengetahuiNama}
-            onChange={(e) => setMengetahuiNama(e.target.value)}
-            placeholder="Mengetahui / Disetujui"
-            className="w-40 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-          <input
-            type="text"
-            value={mengetahuiJabatan}
-            onChange={(e) => setMengetahuiJabatan(e.target.value)}
-            placeholder="Jabatan Mengetahui"
-            className="w-52 px-2 py-1 rounded border border-slate-300 bg-white text-slate-900"
-          />
-        </div>
-      </div>
+          </label>
+        }
+        signerFields={[
+          {
+            id: 'diperiksa',
+            headerLabel: diperiksaHeader,
+            onHeaderLabelChange: setDiperiksaHeader,
+            nama: diperiksaNama,
+            onNamaChange: setDiperiksaNama,
+            jabatan: diperiksaJabatan,
+            onJabatanChange: setDiperiksaJabatan,
+          },
+          {
+            id: 'mengetahui',
+            headerLabel: mengetahuiHeader,
+            onHeaderLabelChange: setMengetahuiHeader,
+            nama: mengetahuiNama,
+            onNamaChange: setMengetahuiNama,
+            jabatan: mengetahuiJabatan,
+            onJabatanChange: setMengetahuiJabatan,
+          },
+        ]}
+      />
 
       {memuat ? (
-        <p className="no-print text-xs text-slate-600 tabular-nums">Memuat data inspeksi P3K…</p>
+        <p className="no-print text-xs text-neutral-600 tabular-nums text-center py-8">
+          Memuat data inspeksi P3K…
+        </p>
       ) : (
         <div className="procedural-print-canvas">
           <div dangerouslySetInnerHTML={{ __html: sheetsHtml }} />

@@ -33,6 +33,19 @@ export function useUbahInspeksiP3k() {
   });
 }
 
+export function useHapusKotakP3k() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => k.hapusKotakP3k(id),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.kotakP3k });
+      void qc.invalidateQueries({ queryKey: kunci.inspeksiP3k });
+      void qc.invalidateQueries({ queryKey: ["umpan"] });
+    },
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 export function useBuatKotakP3k() {
   const qc = useQueryClient();
   return useMutation({

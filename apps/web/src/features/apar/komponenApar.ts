@@ -39,10 +39,10 @@ export const KOMPONEN_APAR: {
   hint: string;
 }[] = [
   { key: 'safetyPin', judul: '1. Safety Pin', hint: 'Pin Pengaman' },
-  { key: 'corong', judul: '2. Corong', hint: 'Mulut Semprot' },
+  { key: 'corong', judul: '2. Fire Hose', hint: 'Selang Pemadam' },
   { key: 'segel', judul: '3. Segel', hint: 'Segel Pabrik' },
-  { key: 'tekanan', judul: '4. Tekanan', hint: 'Jarum Manometer' },
-  { key: 'tabung', judul: '5. Tabung', hint: 'Bodi & Karat' },
-  { key: 'selang', judul: '6. Selang', hint: 'Fleksibilitas' },
+  { key: 'tekanan', judul: '4. Pressure Gauge', hint: 'Jarum Manometer' },
+  { key: 'tabung', judul: '5. Tabung/Tube', hint: 'Bodi & Karat' },
+  { key: 'selang', judul: '6. Nozzle', hint: 'Corong / Mulut Semprot' },
   { key: 'katupTuas', judul: '7. Katup/Tuas', hint: 'Tuas Penekan' },
 ];

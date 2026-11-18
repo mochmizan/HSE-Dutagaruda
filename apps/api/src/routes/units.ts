@@ -9,10 +9,13 @@ import {
   hydrantInspections,
   hydrantUnits,
   p3kBoxes,
+  p3kInspectionItems,
   p3kInspections,
+  photos,
   sites,
   zones,
 } from "../db/schema.js";
+import { deleteObject } from "../storage.js";
 import { companyId, requireSession } from "../auth/middleware.js";
 import { blockedByChildren, listPage, newId, notFound } from "./helpers.js";
 import {
@@ -180,13 +183,44 @@ export const hydrantUnitsApp = new Hono()
     .where(and(eq(hydrantUnits.id, id), eq(hydrantUnits.companyId, owned)))
     .limit(1);
   if (rows.length === 0) throw notFound("Unit hidran");
+  const force = c.req.query("force") === "1";
   const kids = await db
     .select({ id: hydrantInspections.id })
     .from(hydrantInspections)
     .where(eq(hydrantInspections.unitId, id))
     .limit(1);
-  if (kids.length > 0) throw blockedByChildren("Unit hidran");
-  await db.delete(hydrantUnits).where(eq(hydrantUnits.id, id));
+  if (kids.length > 0 && !force) throw blockedByChildren("Unit hidran");
+  if (!force) {
+    await db.delete(hydrantUnits).where(eq(hydrantUnits.id, id));
+    return c.json({ ok: true });
+  }
+  const semua = await db
+    .select({ id: hydrantInspections.id })
+    .from(hydrantInspections)
+    .where(eq(hydrantInspections.unitId, id));
+  const idsInspeksi = semua.map((r) => r.id);
+  let kunciFoto: string[] = [];
+  if (idsInspeksi.length > 0) {
+    const foto = await db
+      .select({ s3Key: photos.s3Key })
+      .from(photos)
+      .where(inArray(photos.hydrantInspectionId, idsInspeksi));
+    kunciFoto = foto.map((f) => f.s3Key);
+    await db.transaction(async (tx) => {
+      await tx.delete(photos).where(inArray(photos.hydrantInspectionId, idsInspeksi));
+      await tx.delete(hydrantInspections).where(inArray(hydrantInspections.id, idsInspeksi));
+      await tx.delete(hydrantUnits).where(eq(hydrantUnits.id, id));
+    });
+  } else {
+    await db.delete(hydrantUnits).where(eq(hydrantUnits.id, id));
+  }
+  for (const key of kunciFoto) {
+    try {
+      await deleteObject(key);
+    } catch {
+      /* abaikan: baris sudah terhapus */
+    }
+  }
   return c.json({ ok: true });
 });
 
@@ -278,13 +312,44 @@ export const aparUnitsApp = new Hono()
     .where(and(eq(aparUnits.id, id), eq(aparUnits.companyId, owned)))
     .limit(1);
   if (rows.length === 0) throw notFound("Unit APAR");
+  const force = c.req.query("force") === "1";
   const kids = await db
     .select({ id: aparInspections.id })
     .from(aparInspections)
     .where(eq(aparInspections.unitId, id))
     .limit(1);
-  if (kids.length > 0) throw blockedByChildren("Unit APAR");
-  await db.delete(aparUnits).where(eq(aparUnits.id, id));
+  if (kids.length > 0 && !force) throw blockedByChildren("Unit APAR");
+  if (!force) {
+    await db.delete(aparUnits).where(eq(aparUnits.id, id));
+    return c.json({ ok: true });
+  }
+  const semua = await db
+    .select({ id: aparInspections.id })
+    .from(aparInspections)
+    .where(eq(aparInspections.unitId, id));
+  const idsInspeksi = semua.map((r) => r.id);
+  let kunciFoto: string[] = [];
+  if (idsInspeksi.length > 0) {
+    const foto = await db
+      .select({ s3Key: photos.s3Key })
+      .from(photos)
+      .where(inArray(photos.aparInspectionId, idsInspeksi));
+    kunciFoto = foto.map((f) => f.s3Key);
+    await db.transaction(async (tx) => {
+      await tx.delete(photos).where(inArray(photos.aparInspectionId, idsInspeksi));
+      await tx.delete(aparInspections).where(inArray(aparInspections.id, idsInspeksi));
+      await tx.delete(aparUnits).where(eq(aparUnits.id, id));
+    });
+  } else {
+    await db.delete(aparUnits).where(eq(aparUnits.id, id));
+  }
+  for (const key of kunciFoto) {
+    try {
+      await deleteObject(key);
+    } catch {
+      /* abaikan: baris sudah terhapus */
+    }
+  }
   return c.json({ ok: true });
 });
 
@@ -365,12 +430,30 @@ export const p3kBoxesApp = new Hono()
     .where(and(eq(p3kBoxes.id, id), eq(p3kBoxes.companyId, owned)))
     .limit(1);
   if (rows.length === 0) throw notFound("Kotak P3K");
+  const force = c.req.query("force") === "1";
   const kids = await db
     .select({ id: p3kInspections.id })
     .from(p3kInspections)
     .where(eq(p3kInspections.boxId, id))
     .limit(1);
-  if (kids.length > 0) throw blockedByChildren("Kotak P3K");
-  await db.delete(p3kBoxes).where(eq(p3kBoxes.id, id));
+  if (kids.length > 0 && !force) throw blockedByChildren("Kotak P3K");
+  if (!force) {
+    await db.delete(p3kBoxes).where(eq(p3kBoxes.id, id));
+    return c.json({ ok: true });
+  }
+  const semua = await db
+    .select({ id: p3kInspections.id })
+    .from(p3kInspections)
+    .where(eq(p3kInspections.boxId, id));
+  const idsInspeksi = semua.map((r) => r.id);
+  if (idsInspeksi.length > 0) {
+    await db.transaction(async (tx) => {
+      await tx.delete(p3kInspectionItems).where(inArray(p3kInspectionItems.inspectionId, idsInspeksi));
+      await tx.delete(p3kInspections).where(inArray(p3kInspections.id, idsInspeksi));
+      await tx.delete(p3kBoxes).where(eq(p3kBoxes.id, id));
+    });
+  } else {
+    await db.delete(p3kBoxes).where(eq(p3kBoxes.id, id));
+  }
   return c.json({ ok: true });
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useDismiss, closeOnBackdrop } from './useDismiss';
@@ -10,6 +10,8 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel: string;
   accent: string;
+  /** Jika diisi (mis. "HAPUS"), pengguna wajib mengetik teks ini untuk mengaktifkan tombol konfirmasi. */
+  requireText?: string;
   onClose: () => void;
   onConfirm: () => void;
 }
@@ -24,8 +26,6 @@ interface ConfirmModalProps {
  * sebagai kotak abu-abu yang salah tempat.
  *
  * `escKey="escape-only"`: Esc hanya menutup lapisan ini, bukan modal induk.
- * Tanpa itu dua listener jendela menyala bersamaan dan satu Esc menghapus
- * konfirmasi sekaligus formulir di belakangnya.
  */
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
@@ -33,11 +33,27 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   message,
   confirmLabel,
   accent,
+  requireText,
   onClose,
   onConfirm,
 }) => {
+  const [typed, setTyped] = useState('');
   useDismiss(isOpen, onClose, 'escape-only');
+
+  useEffect(() => {
+    if (isOpen) setTyped('');
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const expected = requireText?.trim();
+  const isReady = !expected || typed.trim().toUpperCase() === expected.toUpperCase();
+
+  const submitConfirm = () => {
+    if (!isReady) return;
+    onConfirm();
+    onClose();
+  };
 
   return createPortal(
     <div
@@ -61,7 +77,34 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <X size={16} />
           </button>
         </div>
-        <p className="px-4 py-3 text-xs text-[var(--secondary)]">{message}</p>
+        <div className="px-4 py-3 space-y-3">
+          <p className="text-xs text-[var(--secondary)] leading-relaxed">{message}</p>
+          {expected && (
+            <label className="block space-y-1.5">
+              <span className="block text-[11px] font-medium text-[var(--secondary)]">
+                Ketik{' '}
+                <span className="font-mono font-bold text-red-600 dark:text-red-400">
+                  {expected}
+                </span>{' '}
+                untuk mengonfirmasi:
+              </span>
+              <input
+                type="text"
+                autoFocus
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    submitConfirm();
+                  }
+                }}
+                placeholder={expected}
+                className="w-full px-2.5 py-1.5 text-xs font-mono uppercase rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] focus:outline-none focus:border-red-500"
+              />
+            </label>
+          )}
+        </div>
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--border)]">
           <button
             type="button"
@@ -72,12 +115,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
+            disabled={!isReady}
+            onClick={submitConfirm}
             style={{ backgroundColor: accent }}
-            className="px-3 py-1.5 text-xs font-semibold text-white rounded-[4px] hover:brightness-95 pressable cursor-pointer"
+            className="px-3 py-1.5 text-xs font-semibold text-white rounded-[4px] hover:brightness-95 pressable cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {confirmLabel}
           </button>
