@@ -210,6 +210,9 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
   const [petugasHeader, setPetugasHeader] = useState('Petugas Pemeriksa :');
   const [petugasNama, setPetugasNama] = useState('Takamay Jason Hermantika Irsyad');
   const [petugasJabatan, setPetugasJabatan] = useState('Junior HSE Analyst');
+  const [diketahuiHeader, setDiketahuiHeader] = useState('Diketahui Oleh :');
+  const [diketahuiNama, setDiketahuiNama] = useState('');
+  const [diketahuiJabatan, setDiketahuiJabatan] = useState('');
   const [mengetahuiHeader, setMengetahuiHeader] = useState('Mengetahui / Disetujui Oleh :');
   const [mengetahuiNama, setMengetahuiNama] = useState('Hizri');
   const [mengetahuiJabatan, setMengetahuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
@@ -248,6 +251,9 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
         petugasHeader,
         petugasNama,
         petugasJabatan,
+        diketahuiHeader,
+        diketahuiNama,
+        diketahuiJabatan,
         mengetahuiHeader,
         mengetahuiNama,
         mengetahuiJabatan,
@@ -268,6 +274,9 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
       petugasHeader,
       petugasNama,
       petugasJabatan,
+      diketahuiHeader,
+      diketahuiNama,
+      diketahuiJabatan,
       mengetahuiHeader,
       mengetahuiNama,
       mengetahuiJabatan,
@@ -305,6 +314,9 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
         petugasHeader,
         petugasNama,
         petugasJabatan,
+        diketahuiHeader,
+        diketahuiNama,
+        diketahuiJabatan,
         mengetahuiHeader,
         mengetahuiNama,
         mengetahuiJabatan,
@@ -323,6 +335,9 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
       petugasHeader,
       petugasNama,
       petugasJabatan,
+      diketahuiHeader,
+      diketahuiNama,
+      diketahuiJabatan,
       mengetahuiHeader,
       mengetahuiNama,
       mengetahuiJabatan,
@@ -358,6 +373,9 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
     setPetugasHeader('Petugas Pemeriksa :');
     setPetugasNama('Takamay Jason Hermantika Irsyad');
     setPetugasJabatan('Junior HSE Analyst');
+    setDiketahuiHeader('Diketahui Oleh :');
+    setDiketahuiNama('');
+    setDiketahuiJabatan('');
     setMengetahuiHeader('Mengetahui / Disetujui Oleh :');
     setMengetahuiNama('Hizri');
     setMengetahuiJabatan('Governance, Risk, HSE & Quality Group Head');
@@ -365,9 +383,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-[#fafafa] print:bg-white text-neutral-900 px-6 py-4 print:p-0 font-sans select-none">
-      <style>{`@page { size: A4 ${isLandscape ? 'landscape' : 'portrait'}; margin: ${
-        isLandscape ? '8mm 10mm' : '10mm 12mm'
-      }; }\n${PROCEDURAL_PRINT_CSS}`}</style>
+      <style>{`@page { size: A4 ${isLandscape ? 'landscape' : 'portrait'}; margin: 0; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
       <PrintCustomizationBar
         backLabel="← Kembali ke Halaman Hydrant"
@@ -385,6 +401,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
         onResetDefaults={resetDefaults}
         onClearSigners={() => {
           setPetugasNama('');
+          setDiketahuiNama('');
           setMengetahuiNama('');
         }}
         modeSelector={
@@ -465,6 +482,15 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
             onNamaChange: setPetugasNama,
             jabatan: petugasJabatan,
             onJabatanChange: setPetugasJabatan,
+          },
+          {
+            id: 'diketahui',
+            headerLabel: diketahuiHeader,
+            onHeaderLabelChange: setDiketahuiHeader,
+            nama: diketahuiNama,
+            onNamaChange: setDiketahuiNama,
+            jabatan: diketahuiJabatan,
+            onJabatanChange: setDiketahuiJabatan,
           },
           {
             id: 'mengetahui',

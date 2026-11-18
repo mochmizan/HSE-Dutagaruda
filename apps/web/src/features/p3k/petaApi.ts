@@ -28,7 +28,7 @@ export function petakanGridP3k(
           STANDARD_P3K_ITEMS.find((s) => s.name === it.itemName);
         if (!matched) continue;
         items[matched.id] = {
-          actual: it.actualQty,
+          actual: it.status === 'DIBAWAH_STANDAR' ? 0 : it.actualQty,
           expired: it.status === 'KADALUARSA',
         };
       }

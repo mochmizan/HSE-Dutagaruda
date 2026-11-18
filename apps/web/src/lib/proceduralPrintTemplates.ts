@@ -606,13 +606,23 @@ table.hyd-mon-table tbody tr {
   .no-print {
     display: none !important;
   }
-  .print-sheet-portrait,
+  .print-sheet-portrait {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 10mm 12mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
   .print-sheet-landscape {
     width: 100% !important;
     max-width: 100% !important;
     min-height: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 8mm 10mm !important;
     box-shadow: none !important;
     border: none !important;
     background: #ffffff !important;
@@ -890,6 +900,9 @@ export interface P3kYearlyPrintPayload {
     diperiksaHeader?: string;
     diperiksaNama: string;
     diperiksaJabatan: string;
+    diketahuiHeader?: string;
+    diketahuiNama?: string;
+    diketahuiJabatan?: string;
     mengetahuiHeader?: string;
     mengetahuiNama: string;
     mengetahuiJabatan: string;
@@ -1033,6 +1046,7 @@ export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
         data.signatures
           ? [
               { header: data.signatures.diperiksaHeader || 'Diperiksa Oleh :', nama: data.signatures.diperiksaNama, jabatan: data.signatures.diperiksaJabatan, marginBottomPx: 32 },
+              { header: data.signatures.diketahuiHeader || 'Diketahui Oleh :', nama: data.signatures.diketahuiNama, jabatan: data.signatures.diketahuiJabatan, marginBottomPx: 32 },
               { header: data.signatures.mengetahuiHeader || 'Mengetahui / Disetujui Oleh :', nama: data.signatures.mengetahuiNama, jabatan: data.signatures.mengetahuiJabatan, marginBottomPx: 32 },
             ]
           : [
@@ -1395,6 +1409,9 @@ export interface HydrantLaporanPrintPayload {
     petugasHeader?: string;
     petugasNama?: string;
     petugasJabatan?: string;
+    diketahuiHeader?: string;
+    diketahuiNama?: string;
+    diketahuiJabatan?: string;
     mengetahuiHeader?: string;
     mengetahuiNama?: string;
     mengetahuiJabatan?: string;
@@ -1517,6 +1534,7 @@ export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): str
         data.signatures
           ? [
               { header: data.signatures.petugasHeader || 'Petugas Pemeriksa :', nama: data.signatures.petugasNama, jabatan: data.signatures.petugasJabatan, marginBottomPx: 36 },
+              { header: data.signatures.diketahuiHeader || 'Diketahui Oleh :', nama: data.signatures.diketahuiNama, jabatan: data.signatures.diketahuiJabatan, marginBottomPx: 36 },
               { header: data.signatures.mengetahuiHeader || 'Mengetahui / Disetujui Oleh :', nama: data.signatures.mengetahuiNama, jabatan: data.signatures.mengetahuiJabatan, marginBottomPx: 36 },
             ]
           : [
@@ -1555,6 +1573,9 @@ export interface HydrantMonthlyPrintPayload {
     petugasHeader?: string;
     petugasNama?: string;
     petugasJabatan?: string;
+    diketahuiHeader?: string;
+    diketahuiNama?: string;
+    diketahuiJabatan?: string;
     mengetahuiHeader?: string;
     mengetahuiNama?: string;
     mengetahuiJabatan?: string;
@@ -1692,6 +1713,7 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
     ? renderDynamicSignTable(
         [
           { header: data.signatures.petugasHeader || 'Petugas Pemeriksa :', nama: data.signatures.petugasNama, jabatan: data.signatures.petugasJabatan, marginBottomPx: 44 },
+          { header: data.signatures.diketahuiHeader || 'Diketahui Oleh :', nama: data.signatures.diketahuiNama, jabatan: data.signatures.diketahuiJabatan, marginBottomPx: 44 },
           { header: data.signatures.mengetahuiHeader || 'Mengetahui / Disetujui Oleh :', nama: data.signatures.mengetahuiNama, jabatan: data.signatures.mengetahuiJabatan, marginBottomPx: 44 },
         ],
         16,

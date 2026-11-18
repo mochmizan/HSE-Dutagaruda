@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { Eye, Printer } from 'lucide-react';
 import {
@@ -23,7 +23,7 @@ import {
   useHapusInspeksiP3k,
   useHapusKotakP3k,
 } from '@/services/api/queries';
-import { ambilButirP3k } from '@/services/api/klien';
+import { ambilButirP3k, type ApiInspeksiP3k } from '@/services/api/klien';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
 import { InspectionPageShell, KONFIG_P3K } from '@/features/inspeksi';
 import { FilterBar, type FilterTab } from '@/features/pageChrome';
@@ -72,9 +72,56 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   );
 
   
+  const [hydratedItemsById, setHydratedItemsById] = useState<
+    Record<string, NonNullable<ApiInspeksiP3k['items']>>
+  >({});
+
+  const missingItemInspIds = useMemo(() => {
+    const boxIds = new Set(daftarKotakSite.map((b) => b.id));
+    return (inspeksiQuery.data ?? [])
+      .filter(
+        (i) =>
+          boxIds.has(i.boxId) &&
+          i.period.startsWith(period) &&
+          (!i.items || i.items.length === 0) &&
+          !hydratedItemsById[i.id],
+      )
+      .map((i) => i.id);
+  }, [daftarKotakSite, inspeksiQuery.data, period, hydratedItemsById]);
+
+  useEffect(() => {
+    if (missingItemInspIds.length === 0) return;
+    let cancelled = false;
+    void Promise.all(
+      missingItemInspIds.map(async (id) => {
+        try {
+          const detail = await ambilButirP3k(id);
+          return [id, detail.items ?? []] as const;
+        } catch {
+          return [id, []] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (!cancelled) {
+        setHydratedItemsById((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [missingItemInspIds]);
+
+  const inspeksiWithItems = useMemo(
+    () =>
+      (inspeksiQuery.data ?? []).map((i) =>
+        i.items && i.items.length > 0 ? i : { ...i, items: hydratedItemsById[i.id] ?? [] },
+      ),
+    [inspeksiQuery.data, hydratedItemsById],
+  );
+
   const gridByBox = useMemo(
-    () => petakanGridP3k(daftarKotakSite, inspeksiQuery.data ?? [], year),
-    [daftarKotakSite, inspeksiQuery.data, year],
+    () => petakanGridP3k(daftarKotakSite, inspeksiWithItems, year),
+    [daftarKotakSite, inspeksiWithItems, year],
   );
 
   const units: P3kUnitRow[] = useMemo(() => {
@@ -400,18 +447,18 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
                 ? `${activeBox.kode} (${activeBox.zoneName}) · ${MONTH_NAMES[monthIdx]} ${year}`
                 : `${MONTH_NAMES[monthIdx]} ${year}`
             }
-            unitKode={activeBox ? `${activeBox.kode} (${activeBox.zoneName} · Tipe ${activeBox.boxType})` : ''}
             initial={activeData}
             itemsCatalog={activeCatalog}
             boxType={activeBox?.boxType ?? 'A'}
             rekam={rekamAktif}
             menyimpan={menyimpan}
             menghapusBulan={hapusInspeksi.isPending}
+            unitKode={activeBox ? `${activeBox.kode} (${activeBox.zoneName} · Tipe ${activeBox.boxType})` : ''}
             menghapusUnit={hapusKotak.isPending}
+            onHapusUnit={handleHapusUnit}
             onClose={() => setActiveBoxId(null)}
             onSave={handleSave}
             onClear={handleClear}
-            onHapusUnit={handleHapusUnit}
           />
         </>
       }

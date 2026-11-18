@@ -389,7 +389,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-[#fafafa] print:bg-white text-neutral-900 px-6 py-4 print:p-0 font-sans select-none">
-      <style>{`@page { size: A4 portrait; margin: 10mm 12mm; }\n${PROCEDURAL_PRINT_CSS}`}</style>
+      <style>{`@page { size: A4 portrait; margin: 0; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
       <PrintCustomizationBar
         backLabel="← Kembali ke Halaman APAR"

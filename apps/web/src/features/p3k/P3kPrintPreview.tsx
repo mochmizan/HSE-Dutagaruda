@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { PrintCustomizationBar } from '@/components/ui';
@@ -15,6 +15,7 @@ import {
   type P3kYearlyPrintPayload,
 } from '@/lib/proceduralPrintTemplates';
 import { petakanGridP3k } from './petaApi';
+import { ambilButirP3k, type ApiInspeksiP3k } from '@/services/api/klien';
 import { useInspeksiP3k, useKotakP3k } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
 import { MONTH_KEYS, MONTH_SHORT, markFor, type P3kYearGrid } from './types';
@@ -69,6 +70,9 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
   const [diperiksaHeader, setDiperiksaHeader] = useState('Diperiksa Oleh :');
   const [diperiksaNama, setDiperiksaNama] = useState('Takamay Jason Hermantika Irsyad');
   const [diperiksaJabatan, setDiperiksaJabatan] = useState('Junior HSE Analyst');
+  const [diketahuiHeader, setDiketahuiHeader] = useState('Diketahui Oleh :');
+  const [diketahuiNama, setDiketahuiNama] = useState('');
+  const [diketahuiJabatan, setDiketahuiJabatan] = useState('');
   const [mengetahuiHeader, setMengetahuiHeader] = useState('Mengetahui / Disetujui Oleh :');
   const [mengetahuiNama, setMengetahuiNama] = useState('Hizri');
   const [mengetahuiJabatan, setMengetahuiJabatan] = useState('Governance, Risk, HSE & Quality Group Head');
@@ -103,9 +107,58 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
 
   const itemsCatalog = useMemo(() => getStandardP3kItemsForType(boxType), [boxType]);
 
+  const [hydratedItemsById, setHydratedItemsById] = useState<
+    Record<string, NonNullable<ApiInspeksiP3k['items']>>
+  >({});
+  const [hydratingItems, setHydratingItems] = useState(false);
+
+  const missingItemInspIds = useMemo(() => {
+    if (!kotak) return [];
+    return (inspeksiQuery.data ?? [])
+      .filter(
+        (i) =>
+          i.boxId === kotak.id &&
+          i.period.startsWith(`${year}-`) &&
+          (!i.items || i.items.length === 0) &&
+          !hydratedItemsById[i.id],
+      )
+      .map((i) => i.id);
+  }, [kotak, inspeksiQuery.data, year, hydratedItemsById]);
+
+  useEffect(() => {
+    if (missingItemInspIds.length === 0) return;
+    let cancelled = false;
+    setHydratingItems(true);
+    void Promise.all(
+      missingItemInspIds.map(async (id) => {
+        try {
+          const detail = await ambilButirP3k(id);
+          return [id, detail.items ?? []] as const;
+        } catch {
+          return [id, []] as const;
+        }
+      }),
+    ).then((entries) => {
+      if (cancelled) return;
+      setHydratedItemsById((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+      setHydratingItems(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [missingItemInspIds]);
+
+  const inspeksiWithItems = useMemo(
+    () =>
+      (inspeksiQuery.data ?? []).map((i) =>
+        i.items && i.items.length > 0 ? i : { ...i, items: hydratedItemsById[i.id] ?? [] },
+      ),
+    [inspeksiQuery.data, hydratedItemsById],
+  );
+
   const grid: P3kYearGrid = useMemo(
-    () => (kotak ? petakanGridP3k([kotak], inspeksiQuery.data ?? [], year)[kotak.id] ?? {} : {}),
-    [kotak, inspeksiQuery.data, year],
+    () => (kotak ? petakanGridP3k([kotak], inspeksiWithItems, year)[kotak.id] ?? {} : {}),
+    [kotak, inspeksiWithItems, year],
   );
 
   const defaultLokasiLabel = `${lokasi.siteName || 'Kantor Pusat'} — Kotak Tipe ${boxType}`;
@@ -159,6 +212,9 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
         diperiksaHeader,
         diperiksaNama,
         diperiksaJabatan,
+        diketahuiHeader,
+        diketahuiNama,
+        diketahuiJabatan,
         mengetahuiHeader,
         mengetahuiNama,
         mengetahuiJabatan,
@@ -179,13 +235,16 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     diperiksaHeader,
     diperiksaNama,
     diperiksaJabatan,
+    diketahuiHeader,
+    diketahuiNama,
+    diketahuiJabatan,
     mengetahuiHeader,
     mengetahuiNama,
     mengetahuiJabatan,
   ]);
 
   const sheetsHtml = useMemo(() => renderP3kYearlySheet(payload), [payload]);
-  const memuat = kotakQuery.isPending || inspeksiQuery.isPending;
+  const memuat = kotakQuery.isPending || inspeksiQuery.isPending || hydratingItems;
 
   useEffect(() => {
     if (!autoPrint || memuat) return;
@@ -204,6 +263,9 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     setDiperiksaHeader('Diperiksa Oleh :');
     setDiperiksaNama('Takamay Jason Hermantika Irsyad');
     setDiperiksaJabatan('Junior HSE Analyst');
+    setDiketahuiHeader('Diketahui Oleh :');
+    setDiketahuiNama('');
+    setDiketahuiJabatan('');
     setMengetahuiHeader('Mengetahui / Disetujui Oleh :');
     setMengetahuiNama('Hizri');
     setMengetahuiJabatan('Governance, Risk, HSE & Quality Group Head');
@@ -211,7 +273,7 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col min-h-screen overflow-y-auto bg-[#fafafa] print:bg-white text-neutral-900 px-6 py-4 print:p-0 font-sans select-none">
-      <style>{`@page { size: A4 landscape; margin: 8mm 10mm; }\n${PROCEDURAL_PRINT_CSS}`}</style>
+      <style>{`@page { size: A4 landscape; margin: 0; }\n${PROCEDURAL_PRINT_CSS}`}</style>
 
       <PrintCustomizationBar
         backLabel="← Kembali ke Halaman Kotak P3K"
@@ -223,6 +285,7 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
         onResetDefaults={resetDefaults}
         onClearSigners={() => {
           setDiperiksaNama('');
+          setDiketahuiNama('');
           setMengetahuiNama('');
         }}
         extraControls={
@@ -305,6 +368,15 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
             onNamaChange: setDiperiksaNama,
             jabatan: diperiksaJabatan,
             onJabatanChange: setDiperiksaJabatan,
+          },
+          {
+            id: 'diketahui',
+            headerLabel: diketahuiHeader,
+            onHeaderLabelChange: setDiketahuiHeader,
+            nama: diketahuiNama,
+            onNamaChange: setDiketahuiNama,
+            jabatan: diketahuiJabatan,
+            onJabatanChange: setDiketahuiJabatan,
           },
           {
             id: 'mengetahui',
