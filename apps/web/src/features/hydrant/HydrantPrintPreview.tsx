@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { PrintCustomizationBar } from '@/components/ui';
+import { usePrintHeaderImages } from '@/lib/printHeaderConfig';
 import {
   PROCEDURAL_PRINT_CSS,
   renderHydrantLaporanSheet,
@@ -195,6 +196,8 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
     return `${hari.slice(0, -1).join(', ')} dan ${hari[hari.length - 1]} ${monthLabel}`;
   }, [inspeksiBulan, monthLabel]);
 
+  const { config: headerLogos, setConfig: setHeaderLogos } = usePrintHeaderImages();
+
   // Customizable Header fields
   const [judulChecklist, setJudulChecklist] = useState('CHECKLIST BULANAN HYDRANT');
   const [judulLaporan, setJudulLaporan] = useState('LAPORAN PEMERIKSAAN HYDRANT');
@@ -215,6 +218,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
 
   const payloadChecklist: HydrantMonthlyPrintPayload = useMemo(
     () => ({
+      headerLogos,
       documentTitle: judulChecklist.trim() || 'CHECKLIST BULANAN HYDRANT',
       documentSubtitle: resolvedSite,
       siteName: resolvedSite,
@@ -250,6 +254,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
       },
     }),
     [
+      headerLogos,
       judulChecklist,
       resolvedSite,
       headerPeriode,
@@ -271,6 +276,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
 
   const payloadLaporan: HydrantLaporanPrintPayload = useMemo(
     () => ({
+      headerLogos,
       documentTitle: judulLaporan.trim() || 'LAPORAN PEMERIKSAAN HYDRANT',
       keteranganLabel: headerKeterangan.trim() || 'Keterangan : Standar (✓), Tidak Standar (X)',
       tahun: tahunDefault,
@@ -305,6 +311,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
       },
     }),
     [
+      headerLogos,
       judulLaporan,
       headerKeterangan,
       tahunDefault,
@@ -411,6 +418,8 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
             </button>
           </div>
         }
+        headerImageConfig={headerLogos}
+        onHeaderImageChange={setHeaderLogos}
         headerFields={[
           {
             key: 'judul',

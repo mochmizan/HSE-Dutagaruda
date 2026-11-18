@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { PrintCustomizationBar } from '@/components/ui';
+import { usePrintHeaderImages } from '@/lib/printHeaderConfig';
 import { formatIndonesianDate } from '@/lib/dates';
 import {
   PROCEDURAL_PRINT_CSS,
@@ -29,6 +30,8 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
   const period = /^\d{4}-\d{2}$/.test(bulan ?? '') ? (bulan as string) : bulanBerjalan();
   const lokasi = useKonteksLokasi();
   const laporanQuery = useLaporanPatroli();
+
+  const { config: headerLogos, setConfig: setHeaderLogos } = usePrintHeaderImages();
 
   // Customizable Header
   const [judulDokumen, setJudulDokumen] = useState('LAPORAN KEGIATAN SAFETY PATROL');
@@ -74,6 +77,7 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
   const payload: PatrolReportPrintPayload = useMemo(() => {
     const namaSite = (headerLokasi.trim() || lokasi.siteName || 'KANTOR PUSAT').toUpperCase();
     return {
+      headerLogos,
       documentTitle: judulDokumen.trim() || 'LAPORAN KEGIATAN SAFETY PATROL',
       siteName: namaSite,
       patrolDate: headerTanggal.trim() || tanggalPatrolDefault,
@@ -95,6 +99,7 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
       },
     };
   }, [
+    headerLogos,
     judulDokumen,
     headerLokasi,
     lokasi.siteName,
@@ -155,6 +160,8 @@ export const PatrolPrintPreview: React.FC<PatrolPrintPreviewProps> = ({
           setDiketahuiNama('');
           setDisetujuiNama('');
         }}
+        headerImageConfig={headerLogos}
+        onHeaderImageChange={setHeaderLogos}
         headerFields={[
           {
             key: 'judul',

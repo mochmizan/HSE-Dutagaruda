@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format, isValid, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { PrintCustomizationBar } from '@/components/ui';
+import { usePrintHeaderImages } from '@/lib/printHeaderConfig';
 import { formatIndonesianDate } from '@/lib/dates';
 import {
   PROCEDURAL_PRINT_CSS,
@@ -105,6 +106,8 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
     () => (/^\d{4}$/.test(tahunAwal ?? '') ? (tahunAwal as string) : period.slice(0, 4)),
   );
   const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>(unitAwal);
+
+  const { config: headerLogos, setConfig: setHeaderLogos } = usePrintHeaderImages();
 
   // Customizable Header
   const [judulBulanan, setJudulBulanan] = useState('Checklist Bulanan APAR');
@@ -244,6 +247,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
 
   const docBulanan: AparMonthlyPrintPayload = useMemo(
     () => ({
+      headerLogos,
       documentTitle: judulBulanan.trim() || 'Checklist Bulanan APAR',
       documentSubtitle: resolvedSite,
       siteName: resolvedSite,
@@ -265,6 +269,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       expiryRows,
     }),
     [
+      headerLogos,
       judulBulanan,
       resolvedSite,
       headerPeriode,
@@ -332,6 +337,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       : ['', '', ''];
 
     return {
+      headerLogos,
       documentTitle: judulKartu.trim() || undefined,
       tahun: tahunKartu,
       ukuran: unitAktif.ukuran || '3 kg',
@@ -343,7 +349,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       tglPengisianUlang: tRefill,
       months,
     };
-  }, [unitAktif, inspeksiSite, tahunKartu, judulKartu, resolvedSite, kartuPemeriksa, kartuParaf]);
+  }, [headerLogos, unitAktif, inspeksiSite, tahunKartu, judulKartu, resolvedSite, kartuPemeriksa, kartuParaf]);
 
   const sheetsHtml = useMemo(() => {
     if (mode === 'kartu') {
@@ -457,6 +463,8 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
             </div>
           ) : undefined
         }
+        headerImageConfig={headerLogos}
+        onHeaderImageChange={setHeaderLogos}
         headerFields={
           mode === 'bulanan'
             ? [

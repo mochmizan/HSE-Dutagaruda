@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { PrintCustomizationBar } from '@/components/ui';
+import { usePrintHeaderImages } from '@/lib/printHeaderConfig';
 import {
   detectP3kBoxType,
   getStandardP3kItemsForType,
@@ -52,6 +53,8 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     /^\d{4}$/.test(tahun ?? '') ? (tahun as string) : String(new Date().getFullYear()),
   );
   const [boxType, setBoxType] = useState<P3kBoxType>(bacaTipeAwal);
+
+  const { config: headerLogos, setConfig: setHeaderLogos } = usePrintHeaderImages();
 
   // Customizable Header
   const [judulDokumen, setJudulDokumen] = useState('');
@@ -142,6 +145,7 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
     });
 
     return {
+      headerLogos,
       documentTitle: judulDokumen.trim() || `INSPEKSI KOTAK P3K (TIPE ${boxType})`,
       keteranganLabel: keteranganLabel.trim() || undefined,
       tahun: year,
@@ -161,6 +165,7 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
       },
     };
   }, [
+    headerLogos,
     judulDokumen,
     keteranganLabel,
     year,
@@ -247,6 +252,8 @@ export const P3kPrintPreview: React.FC<P3kPrintPreviewProps> = ({
             </select>
           </div>
         }
+        headerImageConfig={headerLogos}
+        onHeaderImageChange={setHeaderLogos}
         headerFields={[
           {
             key: 'judul',

@@ -12,6 +12,7 @@
  * tersemat data-URI dari `printLogos.ts` sehingga nol ketergantungan jaringan.
  */
 
+import type { PrintHeaderImageConfig } from './printHeaderConfig';
 import {
   LOGO_DUTAGARUDA_B64,
   LOGO_ITJ_B64,
@@ -650,11 +651,21 @@ function renderDynamicSignTable(slots: PrintSignerSlot[], marginTopPx = 12): str
   `;
 }
 
-export function renderKopHeaderJpm(): string {
+export function renderKopHeaderJpm(headerLogos?: PrintHeaderImageConfig): string {
+  const h = headerLogos?.heightPx || 44;
+  if (headerLogos?.mode === 'banner' && headerLogos.bannerSrc) {
+    return `
+      <div class="kop-header" style="justify-content:center;min-height:${h + 8}px;">
+        <img src="${escPrint(headerLogos.bannerSrc)}" alt="Header" style="max-height:${h}px;width:100%;object-fit:contain;display:block;margin:0 auto;" />
+      </div>
+    `;
+  }
+  const leftSrc = headerLogos?.leftLogoSrc || LOGO_DUTAGARUDA_B64;
+  const rightSrc = headerLogos?.rightLogoSrc || LOGO_K3_B64;
   return `
-    <div class="kop-header">
-      <img class="kop-logo-left" src="${LOGO_DUTAGARUDA_B64}" alt="PT Dutagaruda Piranti Prima" style="height:44px;width:auto;" />
-      <img class="kop-logo-right" src="${LOGO_K3_B64}" alt="Logo K3" style="height:44px;width:auto;" />
+    <div class="kop-header" style="min-height:${h + 8}px;">
+      <img class="kop-logo-left" src="${escPrint(leftSrc)}" alt="Logo Kiri" style="height:${h}px;width:auto;object-fit:contain;" />
+      <img class="kop-logo-right" src="${escPrint(rightSrc)}" alt="Logo Kanan" style="height:${h}px;width:auto;object-fit:contain;" />
     </div>
   `;
 }
@@ -678,6 +689,7 @@ export interface AparCardMonthItem {
 }
 
 export interface AparCardPrintPayload {
+  headerLogos?: PrintHeaderImageConfig;
   documentTitle?: string;
   tahun: number | string;
   ukuran?: string | null;
@@ -736,9 +748,22 @@ export function renderAparCardSheet(data: AparCardPrintPayload): string {
       <div class="apar-card-outer">
         <table class="apar-card-head-table">
           <tbody>
+            ${data.headerLogos?.mode === 'banner' && data.headerLogos.bannerSrc ? `
+            <tr>
+              <td colspan="3" style="text-align:center;padding:4px;">
+                <img src="${escPrint(data.headerLogos.bannerSrc)}" alt="Header" style="max-height:${data.headerLogos.heightPx || 44}px;width:100%;object-fit:contain;margin:0 auto;display:block;" />
+              </td>
+            </tr>
+            <tr>
+              <td colspan="3" style="padding:4px 6px;">
+                <div class="apar-card-title">
+                  ${data.documentTitle ? escPrint(data.documentTitle) : 'CHECKLIST PEMERIKSAAN<br/>ALAT PEMADAM API RINGAN (APAR)'}
+                </div>
+              </td>
+            </tr>` : `
             <tr>
               <td style="width:24%;text-align:center;">
-                <img src="${LOGO_DUTAGARUDA_B64}" alt="Dutagaruda" style="height:34px;width:auto;margin:0 auto;display:block;" />
+                <img src="${escPrint(data.headerLogos?.leftLogoSrc || LOGO_DUTAGARUDA_B64)}" alt="Logo Kiri" style="height:${data.headerLogos?.heightPx || 34}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
               </td>
               <td style="width:58%;">
                 <div class="apar-card-title">
@@ -746,9 +771,9 @@ export function renderAparCardSheet(data: AparCardPrintPayload): string {
                 </div>
               </td>
               <td style="width:18%;text-align:center;">
-                <img src="${LOGO_K3_B64}" alt="K3" style="height:38px;width:auto;margin:0 auto;display:block;" />
+                <img src="${escPrint(data.headerLogos?.rightLogoSrc || LOGO_K3_B64)}" alt="Logo Kanan" style="height:${data.headerLogos?.heightPx || 38}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
               </td>
-            </tr>
+            </tr>`}
           </tbody>
         </table>
 
@@ -851,6 +876,7 @@ export interface P3kYearlyPrintItem {
 }
 
 export interface P3kYearlyPrintPayload {
+  headerLogos?: PrintHeaderImageConfig;
   documentTitle?: string;
   keteranganLabel?: string;
   tahun: number | string;
@@ -933,17 +959,28 @@ export function renderP3kYearlySheet(data: P3kYearlyPrintPayload): string {
             <col style="width:8.5%;" />
           </colgroup>
           <tbody>
+            ${data.headerLogos?.mode === 'banner' && data.headerLogos.bannerSrc ? `
+            <tr>
+              <td colspan="28" style="text-align:center;padding:4px 6px;">
+                <img src="${escPrint(data.headerLogos.bannerSrc)}" alt="Header" style="max-height:${data.headerLogos.heightPx || 44}px;width:100%;object-fit:contain;margin:0 auto;display:block;" />
+              </td>
+            </tr>
+            <tr>
+              <td colspan="28" style="text-align:center;font-size:13.5pt;font-weight:700;letter-spacing:0.02em;padding:4px 6px;">
+                ${escPrint(data.documentTitle || `INSPEKSI KOTAK P3K ${data.boxType ? `(TIPE ${escPrint(data.boxType)})` : ''}`)}
+              </td>
+            </tr>` : `
             <tr>
               <td colspan="3" style="text-align:center;padding:6px 4px;">
-                <img src="${LOGO_DUTAGARUDA_B64}" alt="Dutagaruda" style="height:36px;width:auto;margin:0 auto;display:block;" />
+                <img src="${escPrint(data.headerLogos?.leftLogoSrc || LOGO_DUTAGARUDA_B64)}" alt="Logo Kiri" style="height:${data.headerLogos?.heightPx || 36}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
               </td>
               <td colspan="18" style="text-align:center;font-size:13.5pt;font-weight:700;letter-spacing:0.02em;">
                 ${escPrint(data.documentTitle || `INSPEKSI KOTAK P3K ${data.boxType ? `(TIPE ${escPrint(data.boxType)})` : ''}`)}
               </td>
               <td colspan="7" style="text-align:center;padding:4px;">
-                <img src="${LOGO_K3_B64}" alt="K3" style="height:36px;width:auto;margin:0 auto;display:block;" />
+                <img src="${escPrint(data.headerLogos?.rightLogoSrc || LOGO_K3_B64)}" alt="Logo Kanan" style="height:${data.headerLogos?.heightPx || 36}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
               </td>
-            </tr>
+            </tr>`}
 
             <tr class="p3k-double-divider">
               <td colspan="28" style="font-weight:700;padding:3px 6px;font-size:8pt;text-align:left;">
@@ -1019,6 +1056,7 @@ export interface PatrolFindingPrintItem {
 }
 
 export interface PatrolReportPrintPayload {
+  headerLogos?: PrintHeaderImageConfig;
   documentTitle?: string;
   siteName: string;
   patrolDate: string;
@@ -1096,9 +1134,22 @@ export function renderPatrolReportSheets(data: PatrolReportPrintPayload): string
         <div class="print-sheet-portrait">
           <table class="patrol-head-table">
             <tbody>
+              ${data.headerLogos?.mode === 'banner' && data.headerLogos.bannerSrc ? `
+              <tr>
+                <td colspan="3" style="padding:4px 6px;">
+                  <img src="${escPrint(data.headerLogos.bannerSrc)}" alt="Header" style="max-height:${data.headerLogos.heightPx || 56}px;width:100%;object-fit:contain;margin:0 auto;display:block;" />
+                </td>
+              </tr>
+              <tr>
+                <td colspan="3" class="patrol-head-center" style="padding:4px 6px;">
+                  <div>${escPrint(data.documentTitle || 'LAPORAN KEGIATAN SAFETY PATROL')}</div>
+                  <div>${escPrint(data.siteName || 'ITJ JPM DUKUH ATAS')}</div>
+                  <div class="num">${escPrint(data.patrolDate || '')}</div>
+                </td>
+              </tr>` : `
               <tr>
                 <td style="width:33%;">
-                  <img src="${LOGO_DUTAGARUDA_B64}" alt="Dutagaruda" style="height:46px;width:auto;margin:0 auto;display:block;" />
+                  <img src="${escPrint(data.headerLogos?.leftLogoSrc || LOGO_DUTAGARUDA_B64)}" alt="Logo Kiri" style="height:${data.headerLogos?.heightPx || 46}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
                 </td>
                 <td style="width:34%;" class="patrol-head-center">
                   <div>${escPrint(data.documentTitle || 'LAPORAN KEGIATAN SAFETY PATROL')}</div>
@@ -1106,9 +1157,9 @@ export function renderPatrolReportSheets(data: PatrolReportPrintPayload): string
                   <div class="num">${escPrint(data.patrolDate || '')}</div>
                 </td>
                 <td style="width:33%;">
-                  <img src="${LOGO_K3_B64}" alt="Logo K3" style="height:48px;width:auto;margin:0 auto;display:block;" />
+                  <img src="${escPrint(data.headerLogos?.rightLogoSrc || LOGO_K3_B64)}" alt="Logo Kanan" style="height:${data.headerLogos?.heightPx || 48}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
                 </td>
-              </tr>
+              </tr>`}
             </tbody>
           </table>
 
@@ -1147,6 +1198,7 @@ export interface AparMonthlyExpiryRow {
 }
 
 export interface AparMonthlyPrintPayload {
+  headerLogos?: PrintHeaderImageConfig;
   documentTitle?: string;
   documentSubtitle?: string;
   siteName: string;
@@ -1292,7 +1344,7 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
 
     sheets.push(`
       <div class="print-sheet-portrait">
-        ${renderKopHeaderJpm()}
+        ${renderKopHeaderJpm(docData.headerLogos)}
         ${titleHtml}
         <table class="apar-table ${isFirst ? 'page-1-table' : ''}">
           <colgroup>
@@ -1332,6 +1384,7 @@ export interface HydrantLaporanPrintRow {
 }
 
 export interface HydrantLaporanPrintPayload {
+  headerLogos?: PrintHeaderImageConfig;
   documentTitle?: string;
   keteranganLabel?: string;
   tahun: string;
@@ -1408,17 +1461,28 @@ export function renderHydrantLaporanSheet(data: HydrantLaporanPrintPayload): str
           <col style="width:14.0%;" />
         </colgroup>
         <tbody>
+          ${data.headerLogos?.mode === 'banner' && data.headerLogos.bannerSrc ? `
+          <tr>
+            <td colspan="18" style="padding:4px 6px;">
+              <img src="${escPrint(data.headerLogos.bannerSrc)}" alt="Header" style="max-height:${data.headerLogos.heightPx || 44}px;width:100%;object-fit:contain;margin:0 auto;display:block;" />
+            </td>
+          </tr>
+          <tr>
+            <td colspan="18" style="font-size:13pt;font-weight:700;padding:5px 6px;">
+              ${escPrint(data.documentTitle || 'LAPORAN PEMERIKSAAN HYDRANT')}
+            </td>
+          </tr>` : `
           <tr>
             <td colspan="4" style="padding:6px;">
-              <img src="${LOGO_DUTAGARUDA_B64}" alt="PT Dutagaruda Piranti Prima" style="height:36px;width:auto;margin:0 auto;display:block;" />
+              <img src="${escPrint(data.headerLogos?.leftLogoSrc || LOGO_DUTAGARUDA_B64)}" alt="Logo Kiri" style="height:${data.headerLogos?.heightPx || 36}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
             </td>
             <td colspan="12" style="font-size:13pt;font-weight:700;">
               ${escPrint(data.documentTitle || 'LAPORAN PEMERIKSAAN HYDRANT')}
             </td>
             <td colspan="2" style="padding:6px;">
-              <img src="${LOGO_K3_B64}" alt="Logo K3" style="height:36px;width:auto;margin:0 auto;display:block;" />
+              <img src="${escPrint(data.headerLogos?.rightLogoSrc || LOGO_K3_B64)}" alt="Logo Kanan" style="height:${data.headerLogos?.heightPx || 36}px;width:auto;object-fit:contain;margin:0 auto;display:block;" />
             </td>
-          </tr>
+          </tr>`}
           <tr>
             <td colspan="8" style="text-align:left;font-weight:700;padding:5px 6px;">
               Tahun Pemeriksaan : <span class="num">${escPrint(data.tahun || '2026')}</span>
@@ -1479,6 +1543,7 @@ export interface HydrantMonthlyPrintRow {
 }
 
 export interface HydrantMonthlyPrintPayload {
+  headerLogos?: PrintHeaderImageConfig;
   documentTitle?: string;
   documentSubtitle?: string;
   siteName: string;
@@ -1567,7 +1632,7 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
 
     sheets.push(`
       <div class="print-sheet-portrait">
-        ${renderKopHeaderJpm()}
+        ${renderKopHeaderJpm(data.headerLogos)}
         ${headBlock}
         <table class="hyd-mon-table">
           ${theadHtml}
@@ -1614,7 +1679,7 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
 
     sheets.push(`
       <div class="print-sheet-portrait">
-        ${renderKopHeaderJpm()}
+        ${renderKopHeaderJpm(data.headerLogos)}
         <div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Catatan Temuan Tambahan &amp; Tindakan Rekomendasi</div>
         <table style="width:100%;border-collapse:collapse;border:none !important;">
           <tbody>${temuanRows.join('')}</tbody>
