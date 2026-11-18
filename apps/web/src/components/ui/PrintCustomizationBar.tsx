@@ -61,7 +61,7 @@ export const PrintCustomizationBar: React.FC<PrintCustomizationBarProps> = ({
   const activeSignersCount = signerFields.filter((s) => s.nama.trim().length > 0).length;
 
   return (
-    <div className="no-print max-w-[1180px] w-full mx-auto mb-5 rounded-[8px] border border-neutral-200 bg-white shadow-xs overflow-hidden text-neutral-900">
+    <div className="no-print max-w-[1180px] w-full mx-auto mb-5 shrink-0 rounded-[8px] border border-neutral-200 bg-white shadow-xs overflow-hidden text-neutral-900">
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">
         <button
           type="button"
