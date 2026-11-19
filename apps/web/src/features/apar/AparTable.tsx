@@ -246,10 +246,10 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah })
                     </span>
                   )}
                   {statusList.length > 0 && (
-                    <ul className="w-full text-left list-disc pl-3.5 space-y-0.5 text-[10px] leading-snug text-[var(--secondary)]">
+                    <ul className="w-full text-left list-none space-y-0.5 text-[10px] leading-snug text-[var(--secondary)]">
                       {statusList.map((item, i) => (
-                        <li key={i} className="break-words">
-                          {item}
+                        <li key={i} className="pl-2.5 -indent-2.5 break-words">
+                          - {item}
                         </li>
                       ))}
                     </ul>

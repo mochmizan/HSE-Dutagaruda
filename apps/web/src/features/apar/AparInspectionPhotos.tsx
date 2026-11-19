@@ -241,7 +241,7 @@ export const AparInspectionPhotos: React.FC<AparInspectionPhotosProps> = ({
                       type="button"
                       onClick={handlePrevTemuan}
                       aria-label="Foto temuan sebelumnya"
-                      className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/65 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer pressable"
+                      className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/65 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-[transform,background-color] duration-150 ease-out active:scale-[0.97]"
                     >
                       <ChevronLeft size={16} />
                     </button>
@@ -249,7 +249,7 @@ export const AparInspectionPhotos: React.FC<AparInspectionPhotosProps> = ({
                       type="button"
                       onClick={handleNextTemuan}
                       aria-label="Foto temuan berikutnya"
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/65 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer pressable"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/65 hover:bg-black/80 text-white flex items-center justify-center cursor-pointer transition-[transform,background-color] duration-150 ease-out active:scale-[0.97]"
                     >
                       <ChevronRight size={16} />
                     </button>

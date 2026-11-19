@@ -14,7 +14,7 @@ import {
   type AparMonthlyPrintRow,
 } from '@/lib/proceduralPrintTemplates';
 import { formatNoList } from './kartuApar';
-import { daftarCatatanStatusApar } from './catatanApar';
+import { daftarCatatanStatusApar, uraiCatatanApar } from './catatanApar';
 import { ambilFotoInspeksi } from '@/services/api/klien';
 import { livePhotoUrl } from '@/services/api/liveClient';
 import { petakanUnitApar, useInspeksiApar, useUnitApar } from '@/services/api/queries';
@@ -207,14 +207,18 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
     return `${hari.slice(0, -1).join(', ')} dan ${hari[hari.length - 1]} ${monthLabel}`;
   }, [inspeksiBulan, monthLabel]);
 
-  const catatan = useMemo(() => {
-    const unik: string[] = [];
-    for (const i of inspeksiBulan) {
-      const t = (i.notes ?? '').trim();
-      if (t && !unik.includes(t)) unik.push(t);
+  const tindakanRekomendasi = useMemo(() => {
+    const baris: string[] = [];
+    for (const u of units) {
+      const insp = inspeksiPerUnit.get(u.id);
+      if (!insp?.notes) continue;
+      const rek = uraiCatatanApar(insp.notes).tindakLanjut.trim();
+      if (!rek) continue;
+      const entri = `- ${u.kode} (${u.zoneName}): ${rek}`;
+      if (!baris.includes(entri)) baris.push(entri);
     }
-    return unik.join('\n');
-  }, [inspeksiBulan]);
+    return baris.join('\n');
+  }, [units, inspeksiPerUnit]);
 
   const rows: AparMonthlyPrintRow[] = useMemo(
     () =>
@@ -273,7 +277,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       siteName: resolvedSite,
       periodLabel: headerPeriode.trim() || `Periode : ${monthLabel}`,
       inspectionDate: headerTanggal.trim() || tanggalInspeksiDefault,
-      notes: catatan,
+      notes: tindakanRekomendasi,
       signers: {
         dibuatHeader,
         dibuatNama,
@@ -308,7 +312,7 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       monthLabel,
       headerTanggal,
       tanggalInspeksiDefault,
-      catatan,
+      tindakanRekomendasi,
       dibuatHeader,
       dibuatNama,
       dibuatJabatan,

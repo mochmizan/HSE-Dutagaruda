@@ -188,14 +188,14 @@ table.apar-table thead th {
   padding: 5px 4px !important;
   background: #ffffff !important;
 }
-table.apar-table col.col-no         { width: 4.0%; }
-table.apar-table col.col-zona       { width: 9.5%; }
-table.apar-table col.col-kode       { width: 6.5%; }
-table.apar-table col.col-expired    { width: 9.0%; }
+table.apar-table col.col-no         { width: 3.8%; }
+table.apar-table col.col-zona       { width: 8.2%; }
+table.apar-table col.col-kode       { width: 5.8%; }
+table.apar-table col.col-expired    { width: 8.2%; }
 table.apar-table col.col-kartu      { width: 19.5%; }
 table.apar-table col.col-berat      { width: 17.5%; }
 table.apar-table col.col-pengecekan { width: 20.5%; }
-table.apar-table col.col-status     { width: 13.5%; }
+table.apar-table col.col-status     { width: 16.5%; }
 table.apar-table tbody tr           { height: 124px; }
 table.apar-table.page-1-table tbody tr { height: 116px; }
 .cell-no      { font-size: 10pt !important; font-weight: 600; }
@@ -203,27 +203,41 @@ table.apar-table.page-1-table tbody tr { height: 116px; }
 .cell-kode    { font-size: 10pt !important; font-weight: 600; }
 .cell-expired { font-size: 8.8pt !important; line-height: 1.2; white-space: pre-line; }
 .status-standar-cell {
-  text-align: center !important;
+  text-align: left !important;
   vertical-align: middle !important;
-  padding: 4px 5px !important;
+  padding: 5px 6px !important;
+  font-family: inherit;
+  font-size: 9.5pt !important;
+  font-weight: 400;
+  line-height: 1.3;
+}
+table.hyd-mon-table td.status-standar-cell {
+  font-size: 10.5pt !important;
 }
 .status-main-label {
   font-weight: 700 !important;
-  font-size: 8.8pt !important;
-  line-height: 1.2;
+  font-size: inherit !important;
+  line-height: inherit;
   white-space: pre-line;
   text-align: center;
 }
 .status-notes-list {
+  list-style: none !important;
   margin: 4px 0 0 0;
-  padding-left: 13px;
+  padding: 0;
   text-align: left;
-  font-size: 7.4pt !important;
-  line-height: 1.24;
-  word-break: break-word;
+  font-size: inherit !important;
+  font-weight: 400 !important;
+  line-height: inherit;
+  overflow-wrap: break-word;
 }
 .status-notes-list li {
+  padding-left: 10px;
+  text-indent: -10px;
   margin-bottom: 2px;
+}
+.status-notes-list li:last-child {
+  margin-bottom: 0;
 }
 .temuan-unit-meta {
   font-size: 9.5pt;
@@ -1323,7 +1337,7 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
   );
   const signHtml = `
     <div class="catatan-sign-section">
-      <p class="catatan-label">Catatan :</p>
+      <p class="catatan-label">Tindakan Rekomendasi :</p>
       ${notesHtml}
       ${aparSignTable}
     </div>
@@ -1385,7 +1399,7 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
           <div class="status-main-label"><strong>${escPrint(r.statusText || '')}</strong></div>
           ${
             r.statusNotes && r.statusNotes.length > 0
-              ? `<ul class="status-notes-list">${r.statusNotes.map((n) => `<li>${escPrint(n)}</li>`).join('')}</ul>`
+              ? `<ul class="status-notes-list">${r.statusNotes.map((n) => `<li>-&nbsp;${escPrint(n)}</li>`).join('')}</ul>`
               : ''
           }
         </td>
@@ -1419,42 +1433,50 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
 
   const temuanList = docData.temuan ?? [];
   if (temuanList.length > 0) {
-    const temuanRows: string[] = [];
-    for (let i = 0; i < temuanList.length; i += 2) {
-      const left = temuanList[i];
-      const right = temuanList[i + 1];
-      const renderCard = (item?: (typeof temuanList)[number]) => {
-        if (!item) return '';
-        const meta = [item.kode, item.zoneName].filter(Boolean).join(' · ');
-        return `
-          <div style="height:200px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">
-            ${item.src ? `<img src="${escPrint(item.src)}" alt="Temuan" style="max-height:195px;max-width:100%;object-fit:contain;" />` : ''}
-          </div>
-          ${meta ? `<div class="temuan-unit-meta num">${escPrint(meta)}</div>` : ''}
-          <div style="font-size:10pt;text-align:center;white-space:pre-line;">${escPrint(item.caption)}</div>
-        `;
-      };
-      temuanRows.push(`
-        <tr>
-          <td style="padding:8px 14px 16px 14px;text-align:left;vertical-align:top;width:50%;border:none !important;">
-            ${renderCard(left)}
-          </td>
-          <td style="padding:8px 14px 16px 14px;text-align:left;vertical-align:top;width:50%;border:none !important;">
-            ${renderCard(right)}
-          </td>
-        </tr>
-      `);
+    const temuanChunks: (typeof temuanList)[] = [];
+    for (let i = 0; i < temuanList.length; i += 6) {
+      temuanChunks.push(temuanList.slice(i, i + 6));
     }
-    sheets.push(`
-      <div class="print-sheet-portrait">
-        ${renderKopHeaderJpm(docData.headerLogos)}
-        <div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Catatan Temuan Tambahan &amp; Tindakan Rekomendasi</div>
-        <table style="width:100%;border-collapse:collapse;border:none !important;">
-          <tbody>${temuanRows.join('')}</tbody>
-        </table>
-        ${signHtml}
-      </div>
-    `);
+    temuanChunks.forEach((tChunk, tIdx) => {
+      const isFirstTemuan = tIdx === 0;
+      const isLastTemuan = tIdx === temuanChunks.length - 1;
+      const temuanRows: string[] = [];
+      for (let i = 0; i < tChunk.length; i += 2) {
+        const left = tChunk[i];
+        const right = tChunk[i + 1];
+        const renderCard = (item?: (typeof temuanList)[number]) => {
+          if (!item) return '';
+          const meta = [item.kode, item.zoneName].filter(Boolean).join(' · ');
+          return `
+            <div style="height:200px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;">
+              ${item.src ? `<img src="${escPrint(item.src)}" alt="Temuan" style="max-height:195px;max-width:100%;object-fit:contain;" />` : ''}
+            </div>
+            ${meta ? `<div class="temuan-unit-meta num">${escPrint(meta)}</div>` : ''}
+            <div style="font-size:10pt;text-align:center;white-space:pre-line;">${escPrint(item.caption)}</div>
+          `;
+        };
+        temuanRows.push(`
+          <tr>
+            <td style="padding:8px 14px 16px 14px;text-align:left;vertical-align:top;width:50%;border:none !important;">
+              ${renderCard(left)}
+            </td>
+            <td style="padding:8px 14px 16px 14px;text-align:left;vertical-align:top;width:50%;border:none !important;">
+              ${renderCard(right)}
+            </td>
+          </tr>
+        `);
+      }
+      sheets.push(`
+        <div class="print-sheet-portrait">
+          ${renderKopHeaderJpm(docData.headerLogos)}
+          ${isFirstTemuan ? '<div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Catatan Temuan Tambahan &amp; Tindakan Rekomendasi</div>' : ''}
+          <table style="width:100%;border-collapse:collapse;border:none !important;">
+            <tbody>${temuanRows.join('')}</tbody>
+          </table>
+          ${isLastTemuan ? signHtml : ''}
+        </div>
+      `);
+    });
   }
 
   return sheets.join('\n');
@@ -1733,7 +1755,7 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
           <div class="status-main-label"><strong>${escPrint(r.statusText || '')}</strong></div>
           ${
             r.statusNotes && r.statusNotes.length > 0
-              ? `<ul class="status-notes-list">${r.statusNotes.map((n) => `<li>${escPrint(n)}</li>`).join('')}</ul>`
+              ? `<ul class="status-notes-list">${r.statusNotes.map((n) => `<li>-&nbsp;${escPrint(n)}</li>`).join('')}</ul>`
               : ''
           }
         </td>
