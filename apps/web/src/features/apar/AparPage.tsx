@@ -6,16 +6,17 @@ import { AparUnitItem, InspectionReport } from '../../types/hse';
 import { AparInspectionModal } from './AparInspectionModal';
 import { AparTable } from './AparTable';
 import { AparCards } from './AparCards';
-import { AparFindings } from './AparFindings';
 import { AparExpiryRecap } from './AparExpiryRecap';
 import { AparYearCard } from './AparYearCard';
 import { AparPrintHeader, AparPrintSignatures } from './AparPrintChrome';
 import { AparStats } from './AparStats';
 import { FilterBar } from '@/features/pageChrome';
 import { EmptyUnits, InspectionPageShell, KONFIG_APAR } from '@/features/inspeksi';
-import { AddZoneAparModal, AparCreationItem } from './AddZoneAparModal';
-import { AddFindingAparModal } from './AddFindingAparModal';
-import { AparFindingItem } from './types';
+import {
+  AddZoneAparModal,
+  AparCreationItem,
+  type AparUpdatePayload,
+} from './AddZoneAparModal';
 import {
   petakanUnitApar,
   useUnitApar,
@@ -26,8 +27,10 @@ import {
   useHapusUnitApar,
   useBuatUnitApar,
   useUbahUnitApar,
+  useBuatZona,
   useUrutkanUnit,
   useUnggahFoto,
+  useUbahCaptionFoto,
   useHapusFoto,
   useFotoInspeksi,
 } from '@/services/api/queries';
@@ -62,6 +65,7 @@ export const AparPage: React.FC<AparPageProps> = ({
   const hapusUnit = useHapusUnitApar();
   const buatUnit = useBuatUnitApar();
   const ubahUnit = useUbahUnitApar();
+  const buatZona = useBuatZona();
 
   const unitSite = useMemo(
     () => (unitQuery.data ?? []).filter((u) => u.siteId === lokasi.siteId),
@@ -80,9 +84,9 @@ export const AparPage: React.FC<AparPageProps> = ({
   // Modals state
   const [activeInspectionUnit, setActiveInspectionUnit] = useState<AparUnitItem | null>(null);
   const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
-  const [isAddFindingModalOpen, setIsAddFindingModalOpen] = useState(false);
 
   const unggahFoto = useUnggahFoto();
+  const ubahCaptionFoto = useUbahCaptionFoto();
   const hapusFoto = useHapusFoto();
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
     const kini = new Date();
@@ -107,6 +111,7 @@ export const AparPage: React.FC<AparPageProps> = ({
 
   const fotoAktif = useFotoInspeksi(inspeksiAktif?.id ?? null, 'apar');
   const buktiAktif = (fotoAktif.data ?? []).filter((f) => !f.temuan);
+  const temuanAktif = (fotoAktif.data ?? []).filter((f) => f.temuan);
 
   const handleHapusBulan = () => {
     if (!inspeksiAktif) return;
@@ -162,20 +167,7 @@ export const AparPage: React.FC<AparPageProps> = ({
   );
   const zones = lokasi.zonaNamaList;
 
-  const jangkarTemuan =
-    inspeksiSite.find((i) => i.period.startsWith(period))?.id ?? null;
-  const fotoTemuan = useFotoInspeksi(jangkarTemuan, 'apar');
-  const findings: AparFindingItem[] = useMemo(
-    () =>
-      (fotoTemuan.data ?? [])
-        .filter((f) => f.temuan)
-        .map((f) => ({
-          id: f.id,
-          imageUrl: f.url,
-          description: f.caption || 'Temuan dokumentasi',
-        })),
-    [fotoTemuan.data],
-  );
+
 
   const totalUnits = units.length;
   const onProgressUnits = units.filter(
@@ -248,9 +240,17 @@ export const AparPage: React.FC<AparPageProps> = ({
     await batalkanTerbit.mutateAsync(inspectionId);
   };
 
-  const handleAddZone = (_zoneName: string) => {};
+  const handleAddZone = (zoneName: string) => {
+    if (!lokasi.siteId || !zoneName.trim()) return;
+    buatZona.mutate({ siteId: lokasi.siteId, name: zoneName.trim() });
+  };
 
-  const handleUnggahFoto = (file: File, caption: string, nilai?: AparUnitItem['draftDetails']) => {
+  const handleUnggahFoto = (
+    file: File,
+    caption: string,
+    nilai?: AparUnitItem['draftDetails'],
+    temuan = false,
+  ) => {
     if (!activeInspectionUnit) return;
     const unggah = (inspectionId: string) =>
       unggahFoto.mutate({
@@ -258,7 +258,7 @@ export const AparPage: React.FC<AparPageProps> = ({
         inspectionId,
         file,
         caption,
-        temuan: false,
+        temuan,
       });
     if (inspeksiAktif) {
       unggah(inspeksiAktif.id);
@@ -281,6 +281,11 @@ export const AparPage: React.FC<AparPageProps> = ({
       },
       { onSuccess: (baru) => unggah(baru.id) },
     );
+  };
+
+  const handleUbahCaptionFoto = (fotoId: string, caption: string) => {
+    if (!inspeksiAktif) return;
+    ubahCaptionFoto.mutate({ id: fotoId, caption, inspectionId: inspeksiAktif.id });
   };
 
   const handleHapusFoto = (fotoId: string) => {
@@ -311,32 +316,25 @@ export const AparPage: React.FC<AparPageProps> = ({
   const handleReassignUnitZone = (unitId: string, newZoneName: string) => {
     ubahUnit.mutate({
       id: unitId,
-      body: { zoneId: lokasi.zonaNamaKeId(newZoneName) || newZoneName },
+      siteId: lokasi.siteId,
+      zoneName: newZoneName,
+      body: {},
     });
   };
 
-  const handleAddFinding = (item: { file: File; description: string; unitCode?: string }) => {
-    if (!jangkarTemuan) {
-      window.alert('Belum ada inspeksi bulan ini — simpan inspeksi satu unit dahulu.');
-      return;
-    }
-    unggahFoto.mutate(
-      {
-        kind: 'apar',
-        inspectionId: jangkarTemuan,
-        file: item.file,
-        caption: item.description,
-        temuan: true,
+  const handleUpdateAparUnit = (unitId: string, data: AparUpdatePayload) => {
+    ubahUnit.mutate({
+      id: unitId,
+      siteId: lokasi.siteId,
+      zoneName: data.zoneName,
+      body: {
+        ...(data.kode ? { kode: data.kode } : {}),
+        jenis: data.jenis,
+        ukuran: data.ukuran,
+        tahun: data.tahunPembuatan,
+        expiredDate: data.expiredDate,
       },
-      {
-        onError: () => {},
-      },
-    );
-  };
-
-  const handleDeleteFinding = (id: string) => {
-    if (!jangkarTemuan) return;
-    hapusFoto.mutate({ id, inspectionId: jangkarTemuan });
+    });
   };
 
   /** Buka halaman prosedur cetak APAR (baik mode bulanan maupun kartu tahunan, dengan/tanpa autoprint). */
@@ -458,12 +456,6 @@ export const AparPage: React.FC<AparPageProps> = ({
       }
       tambahan={
         <>
-          <AparFindings
-            findings={findings}
-            onTambah={() => setIsAddFindingModalOpen(true)}
-            onHapus={handleDeleteFinding}
-            aksen={AKSEN}
-          />
           <AparExpiryRecap units={units} />
           <AparYearCard
             units={units}
@@ -480,11 +472,21 @@ export const AparPage: React.FC<AparPageProps> = ({
             isOpen={isAddZoneModalOpen}
             onClose={() => setIsAddZoneModalOpen(false)}
             existingZones={zones}
-            existingUnits={units.map((u) => ({ id: u.id, kode: u.kode, zoneName: u.zoneName }))}
+            existingUnits={units.map((u) => ({
+              id: u.id,
+              kode: u.kode,
+              zoneName: u.zoneName,
+              jenis: u.jenis,
+              ukuran: u.ukuran,
+              tahunPembuatan: u.tahunPembuatan,
+              tanggalRefill: u.tanggalRefill,
+              expiredDate: u.expiredDate,
+            }))}
             lastUnitNumber={maxUnitNumber}
             onAddZone={handleAddZone}
             onAddAparUnits={handleAddAparUnits}
             onReassignUnitZone={handleReassignUnitZone}
+            onUpdateAparUnit={handleUpdateAparUnit}
           />
 
           <AparInspectionModal
@@ -492,9 +494,11 @@ export const AparPage: React.FC<AparPageProps> = ({
             isOpen={Boolean(activeInspectionUnit)}
             inspeksi={inspeksiAktif}
             foto={inspeksiAktif ? buktiAktif : []}
+            temuanFoto={inspeksiAktif ? temuanAktif : []}
             mengunggah={unggahFoto.isPending}
             onUnggahFoto={handleUnggahFoto}
             onHapusFoto={handleHapusFoto}
+            onUbahCaptionFoto={handleUbahCaptionFoto}
             onClose={() => setActiveInspectionUnit(null)}
             onCompleteInspection={handleCompleteInspection}
             onBatalkanTerbit={handleBatalkanTerbit}
@@ -502,13 +506,6 @@ export const AparPage: React.FC<AparPageProps> = ({
             menghapusBulan={hapusInspeksi.isPending}
             onHapusUnit={handleHapusUnit}
             menghapusUnit={hapusUnit.isPending}
-          />
-
-          <AddFindingAparModal
-            isOpen={isAddFindingModalOpen}
-            onClose={() => setIsAddFindingModalOpen(false)}
-            onAddFinding={handleAddFinding}
-            existingUnits={units.map((u) => u.kode)}
           />
         </>
       }

@@ -22,9 +22,11 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
   isOpen,
   inspeksi,
   foto,
+  temuanFoto,
   mengunggah,
   onUnggahFoto,
   onHapusFoto,
+  onUbahCaptionFoto,
   onClose,
   onCompleteInspection,
   onBatalkanTerbit,
@@ -187,6 +189,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
     >
       <AparInspectionBody
         foto={foto}
+        temuanFoto={temuanFoto}
         mengunggah={mengunggah}
         terbit={terbit}
         komponen={nilaiKomponen}
@@ -206,6 +209,7 @@ export const AparInspectionModal: React.FC<AparInspectionModalProps> = ({
         idRekam={idRekam}
         onUnggahFoto={onUnggahFoto}
         onHapusFoto={onHapusFoto}
+        onUbahCaptionFoto={onUbahCaptionFoto}
         onUbahStatus={ubahStatus}
         onUbahCatatan={ubahCatatan}
         onUbahOverallStatus={ubahOverallStatus}

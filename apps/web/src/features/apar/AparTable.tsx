@@ -5,16 +5,17 @@ import { id as idLocale } from 'date-fns/locale';
 import { formatIndonesianDate } from '@/lib/dates';
 import { KeteranganTeks, NoUrut } from '@/features/pageChrome';
 import { hariMenujuKedaluwarsa } from './kartuApar';
-import type { AparUnitItem } from '../../types/hse';
+import { daftarCatatanStatusApar } from './catatanApar';
+import type { AparUnitItem, OverallStatus } from '../../types/hse';
 
 /** Tujuh komponen APAR, urut sesuai kertas. */
 const KOMPONEN = [
   { label: 'Safety Pin', kunci: 'safetyPin' },
-  { label: 'Corong', kunci: 'corong' },
+  { label: 'Fire Hose', kunci: 'corong' },
   { label: 'Segel', kunci: 'segel' },
-  { label: 'Tekanan', kunci: 'tekanan' },
-  { label: 'Tabung', kunci: 'tabung' },
-  { label: 'Selang', kunci: 'selang' },
+  { label: 'Pressure Gauge', kunci: 'tekanan' },
+  { label: 'Tabung/Tube', kunci: 'tabung' },
+  { label: 'Nozzle', kunci: 'selang' },
   { label: 'Katup/Tuas', kunci: 'katupTuas' },
 ] as const;
 
@@ -24,14 +25,26 @@ export function detailKomponen(unit: AparUnitItem) {
   return KOMPONEN.map((k) => ({ label: k.label, status: details?.[k.kunci] }));
 }
 
-/** Satu unit dianggap tidak standar bila rekam menyatakannya, atau ada komponen
- *  yang TIDAK_BAIK. Dipakai tabel dan kartu supaya keduanya konsisten. */
+/**
+ * Status akhir efektif unit APAR: hormati `overallStatus` tersimpan (termasuk
+ * penyesuaian manual `LAYAK_DENGAN_CATATAN`), lalu jatuh ke evaluasi komponen.
+ */
+export function statusAkhirUnit(
+  unit: AparUnitItem,
+  komponen: { status?: string }[],
+): OverallStatus | null {
+  const eksplisit = unit.completedReport?.overallStatus ?? unit.draftDetails?.overallStatus;
+  if (eksplisit) return eksplisit;
+  if (komponen.some((k) => k.status === 'TIDAK_BAIK' || k.status === 'NA')) {
+    return 'TIDAK_LAYAK';
+  }
+  if (unit.status === 'SELESAI') return 'LAYAK';
+  return null;
+}
+
+/** Satu unit dianggap tidak standar bila status akhirnya TIDAK_LAYAK. */
 export function unitTidakLayak(unit: AparUnitItem, komponen: { status?: string }[]): boolean {
-  return (
-    unit.completedReport?.overallStatus === 'TIDAK_LAYAK' ||
-    unit.draftDetails?.overallStatus === 'TIDAK_LAYAK' ||
-    komponen.some((k) => k.status === 'TIDAK_BAIK' || k.status === 'NA')
-  );
+  return statusAkhirUnit(unit, komponen) === 'TIDAK_LAYAK';
 }
 
 /** Tanggal tampil: tanggal rekam bila sudah terbit, selain itu jadwal. */
@@ -62,49 +75,49 @@ interface AparTableProps {
 
 /**
  * Tabel Section A halaman APAR: satu baris per unit, sembilan kolom.
- * Sesuai revisi:
- * - Tulisan Layak diganti Standar / Tidak Standar.
- * - Tulisan Hilang dihapus.
- * - Tanggal Pembuatan diganti Tanggal Refill (+ Periode Expired).
- * - Menampilkan Catatan Temuan Tambahan & Tindakan Rekomendasi.
+ * - Mendukung 3 status: STANDAR (hijau), STANDAR DENGAN CATATAN (kuning), TIDAK STANDAR (merah).
+ * - Kolom Status Standar menampilkan status utama tebal + daftar catatan komponen/catatan/rekomendasi.
  */
 export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah }) => (
   <div className="overflow-x-auto rounded-[6px] border border-[var(--border)] bg-[var(--bg-main)] shadow-2xs">
     <table className="table-fixed w-full text-center border-collapse text-xs [&_th]:border [&_th]:border-[var(--border)] [&_td]:border [&_td]:border-[var(--border)]">
       <colgroup>
-        <col style={{ width: 64 }} />
-        <col style={{ width: 80 }} />
-        <col style={{ width: 80 }} />
-        <col style={{ width: 110 }} />
-        <col style={{ width: 120 }} />
+        <col style={{ width: 60 }} />
+        <col style={{ width: 78 }} />
+        <col style={{ width: 78 }} />
+        <col style={{ width: 104 }} />
+        <col style={{ width: 118 }} />
         <col style={{ width: 145 }} />
-        <col style={{ width: 140 }} />
-        <col style={{ width: 170 }} />
-        <col style={{ width: 119 }} />
+        <col style={{ width: 175 }} />
+        <col style={{ width: 155 }} />
+        <col style={{ width: 115 }} />
       </colgroup>
       <thead>
         <tr className="border-b border-[var(--border)] bg-[var(--bg-sidebar)]/80 text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">
           <th className="py-2.5 px-3 w-16 text-center align-middle">No.</th>
-          <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Kode APAR</th>
-          <th className="py-2.5 px-3 min-w-[80px] text-center align-middle">Zona</th>
-          <th className="py-2.5 px-3 min-w-[110px] text-center align-middle">Jenis / Ukuran</th>
-          <th className="py-2.5 px-3 min-w-[120px] text-center align-middle">Tgl Refill &amp; Expired</th>
+          <th className="py-2.5 px-3 min-w-[78px] text-center align-middle">Kode APAR</th>
+          <th className="py-2.5 px-3 min-w-[78px] text-center align-middle">Zona</th>
+          <th className="py-2.5 px-3 min-w-[104px] text-center align-middle">Jenis / Ukuran</th>
+          <th className="py-2.5 px-3 min-w-[118px] text-center align-middle">Tgl Refill &amp; Expired</th>
           <th className="py-2.5 px-3 min-w-[145px] text-center align-middle">
             <div className="flex items-center justify-center gap-1 text-center">
               <span>Verifikasi 7 Komponen</span>
             </div>
           </th>
-          <th className="py-2.5 px-3 min-w-[140px] text-center align-middle">Status Standar</th>
-          <th className="py-2.5 px-3 min-w-[170px] text-center align-middle">Petugas &amp; Tanggal</th>
-          <th className="py-2.5 px-3 min-w-[119px] text-center align-middle">Catatan Temuan &amp; Rekomendasi</th>
+          <th className="py-2.5 px-3 min-w-[175px] text-center align-middle">Status Standar</th>
+          <th className="py-2.5 px-3 min-w-[155px] text-center align-middle">Petugas &amp; Tanggal</th>
+          <th className="py-2.5 px-3 min-w-[115px] text-center align-middle">Catatan Temuan &amp; Rekomendasi</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-[var(--border)] text-xs">
         {units.map((unit, idx) => {
-          const isCompleted = unit.status === 'SELESAI';
           const komponen = detailKomponen(unit);
-          const tidakStandar = unitTidakLayak(unit, komponen);
+          const statusAkhir = statusAkhirUnit(unit, komponen);
+          const tidakStandar = statusAkhir === 'TIDAK_LAYAK';
+          const denganCatatan = statusAkhir === 'LAYAK_DENGAN_CATATAN';
+          const standar = statusAkhir === 'LAYAK';
           const notesText = unit.completedReport?.summaryNotes || unit.draftDetails?.notes || '';
+          const statusList = daftarCatatanStatusApar(notesText);
 
           return (
             <tr
@@ -114,7 +127,9 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah })
               className={`transition-colors cursor-pointer ${
                 tidakStandar
                   ? 'bg-gradient-to-r from-[#eb5757]/[0.12] via-[#eb5757]/[0.06] to-[#eb5757]/[0.02] dark:from-[#eb5757]/[0.18] dark:via-[#eb5757]/[0.09] dark:to-[#eb5757]/[0.04] hover:from-[#eb5757]/[0.18] hover:to-[#eb5757]/[0.08]'
-                  : isCompleted
+                  : denganCatatan
+                  ? 'bg-gradient-to-r from-amber-500/[0.15] via-amber-500/[0.08] to-amber-500/[0.02] dark:from-amber-500/[0.22] dark:via-amber-500/[0.11] dark:to-amber-500/[0.04] hover:from-amber-500/[0.22] hover:to-amber-500/[0.10]'
+                  : standar
                   ? 'bg-gradient-to-r from-emerald-500/[0.12] via-emerald-500/[0.06] to-emerald-500/[0.02] dark:from-emerald-500/[0.18] dark:via-emerald-500/[0.09] dark:to-emerald-500/[0.04] hover:from-emerald-500/[0.18] hover:to-emerald-500/[0.08]'
                   : 'hover:bg-[var(--bg-hover)]/60'
               }`}
@@ -212,24 +227,39 @@ export const AparTable: React.FC<AparTableProps> = ({ units, onBuka, onPindah })
               </td>
 
               <td className="py-2.5 px-3 text-center align-middle">
-                {tidakStandar ? (
-                  <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
-                    <X size={11} strokeWidth={2.5} /> TIDAK STANDAR
-                  </span>
-                ) : isCompleted ? (
-                  <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    <CheckCircle2 size={11} /> STANDAR
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-medium bg-[var(--bg-hover)] text-[var(--muted)] border border-[var(--border)]">
-                    <AlertCircle size={11} /> Belum Diperiksa
-                  </span>
-                )}
+                <div className="flex flex-col items-center gap-1">
+                  {tidakStandar ? (
+                    <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
+                      <X size={11} strokeWidth={2.5} /> TIDAK STANDAR
+                    </span>
+                  ) : denganCatatan ? (
+                    <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35">
+                      <AlertCircle size={11} strokeWidth={2.3} /> STANDAR DENGAN CATATAN
+                    </span>
+                  ) : standar ? (
+                    <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <CheckCircle2 size={11} /> STANDAR
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-medium bg-[var(--bg-hover)] text-[var(--muted)] border border-[var(--border)]">
+                      <AlertCircle size={11} /> Belum Diperiksa
+                    </span>
+                  )}
+                  {statusList.length > 0 && (
+                    <ul className="w-full text-left list-disc pl-3.5 space-y-0.5 text-[10px] leading-snug text-[var(--secondary)]">
+                      {statusList.map((item, i) => (
+                        <li key={i} className="break-words">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </td>
 
               <td className="py-2.5 px-3 text-center align-middle text-[11px] text-[var(--secondary)]">
                 <div className="leading-tight text-center flex flex-col items-center justify-center">
-                  <p className="font-medium text-[var(--primary)] truncate max-w-[155px] text-center">
+                  <p className="font-medium text-[var(--primary)] truncate max-w-[145px] text-center">
                     {unit.inspectorName || 'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)'}
                   </p>
                   <p className="text-[10px] text-[var(--muted)] font-mono mt-0.5 text-center tabular-nums">

@@ -16,6 +16,7 @@ import { petakanGridP3k } from './petaApi';
 import {
   useKotakP3k,
   useBuatKotakP3k,
+  useUbahKotakP3k,
   useInspeksiP3k,
   useSimpanInspeksiP3k,
   useUbahButirP3k,
@@ -52,6 +53,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
   const hapusInspeksi = useHapusInspeksiP3k();
   const hapusKotak = useHapusKotakP3k();
   const buatKotak = useBuatKotakP3k();
+  const ubahKotak = useUbahKotakP3k();
 
   const [period, setPeriod] = useState<string>(bulanBerjalan);
   const [filterTab, setFilterTab] = useState<FilterTab>('ALL');
@@ -223,6 +225,15 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
     await buatKotak.mutateAsync({
       siteId: lokasi.siteId,
       name: formatP3kBoxName(data.kode, data.zoneName, data.boxType),
+    });
+  };
+
+  const handleUpdateP3kBox = async (boxId: string, data: P3kBoxCreationPayload) => {
+    await ubahKotak.mutateAsync({
+      id: boxId,
+      body: {
+        name: formatP3kBoxName(data.kode, data.zoneName, data.boxType),
+      },
     });
   };
 
@@ -439,6 +450,7 @@ export const P3kPage: React.FC<P3kPageProps> = ({ isCollapsed, onToggleCollapsed
               boxType: u.boxType,
             }))}
             onAddP3kBox={handleAddP3kBox}
+            onUpdateP3kBox={handleUpdateP3kBox}
           />
           <P3kInspectionModal
             isOpen={activeBoxId !== null}

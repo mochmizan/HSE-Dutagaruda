@@ -31,6 +31,16 @@ export function useUnggahFoto() {
   });
 }
 
+export function useUbahCaptionFoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; caption: string; inspectionId?: string }) =>
+      k.ubahCaptionFoto(args.id, args.caption),
+    onSuccess: (_res, args) => invalidateFoto(qc, args.inspectionId),
+    onError: (err) => window.alert(gagal(err)),
+  });
+}
+
 export function useHapusFoto() {
   const qc = useQueryClient();
   return useMutation({

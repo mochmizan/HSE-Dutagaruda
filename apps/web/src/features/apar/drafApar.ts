@@ -31,7 +31,7 @@ export function potretDrafApar(unit: AparUnitItem): PotretDrafApar {
     catatanKomponen: unit.draftDetails ? urai.catatanKomponen : {},
     notes: unit.draftDetails ? urai.tambahan : '',
     tindakLanjut: unit.draftDetails ? urai.tindakLanjut : '',
-    overallStatus: (d as { overallStatus?: OverallStatus } | undefined)?.overallStatus,
+    overallStatus: (d as { overallStatus?: OverallStatus } | undefined)?.overallStatus ?? unit.completedReport?.overallStatus,
   };
 }
 

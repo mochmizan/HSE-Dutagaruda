@@ -14,6 +14,7 @@ import {
   type AparMonthlyPrintRow,
 } from '@/lib/proceduralPrintTemplates';
 import { formatNoList } from './kartuApar';
+import { daftarCatatanStatusApar } from './catatanApar';
 import { ambilFotoInspeksi } from '@/services/api/klien';
 import { livePhotoUrl } from '@/services/api/liveClient';
 import { petakanUnitApar, useInspeksiApar, useUnitApar } from '@/services/api/queries';
@@ -34,10 +35,18 @@ function bulanBerjalan(): string {
   return format(new Date(), 'yyyy-MM');
 }
 
+function statusTeksApar(status?: string): string {
+  if (status === 'LAYAK') return 'Standar';
+  if (status === 'LAYAK_DENGAN_CATATAN') return 'Standar dengan Catatan';
+  if (status === 'TIDAK_LAYAK') return 'Tidak Standar';
+  return 'Belum Diperiksa';
+}
+
 interface FotoSlot {
   kartu?: string;
   berat?: string;
   cek: string[];
+  temuan: Array<{ id: string; src: string; caption: string }>;
 }
 
 function useFotoSlotApar(inspeksiIds: string[]): { peta: Record<string, FotoSlot>; selesai: boolean } {
@@ -57,18 +66,25 @@ function useFotoSlotApar(inspeksiIds: string[]): { peta: Record<string, FotoSlot
         inspeksiIds.map(async (id) => {
           try {
             const res = await ambilFotoInspeksi('apar', id);
-            const slot: FotoSlot = { cek: [] };
+            const slot: FotoSlot = { cek: [], temuan: [] };
             for (const f of res.items) {
-              if (f.temuan) continue;
-              const caption = (f.caption ?? '').trim().toLowerCase();
               const url = livePhotoUrl(f.id);
+              if (f.temuan) {
+                slot.temuan.push({
+                  id: f.id,
+                  src: url,
+                  caption: (f.caption ?? '').trim() || 'Catatan temuan tambahan',
+                });
+                continue;
+              }
+              const caption = (f.caption ?? '').trim().toLowerCase();
               if ((caption.includes('kartu') || caption.includes('checklist')) && !slot.kartu) slot.kartu = url;
               else if ((caption.includes('berat') || caption.includes('co2')) && !slot.berat) slot.berat = url;
               else slot.cek.push(url);
             }
             return [id, slot] as const;
           } catch {
-            return [id, { cek: [] }] as const;
+            return [id, { cek: [], temuan: [] }] as const;
           }
         }),
       );
@@ -206,6 +222,8 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
         const insp = inspeksiPerUnit.get(u.id);
         const slot = insp ? slotFoto[insp.id] : undefined;
         const tampil = formatIndonesianDate(u.expiredDate) || u.expiredDate;
+        const st = insp?.overallStatus ?? u.completedReport?.overallStatus ?? u.draftDetails?.overallStatus;
+        const rawNotes = insp?.notes ?? u.completedReport?.summaryNotes ?? u.draftDetails?.notes ?? '';
         return {
           no: idx + 1,
           zoneName: u.zoneName,
@@ -215,6 +233,8 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
           beratSrc: slot?.berat,
           pengecekanSrc: slot?.cek[0],
           pengecekanExtraSrc: slot?.cek[1],
+          statusText: statusTeksApar(st),
+          statusNotes: daftarCatatanStatusApar(rawNotes),
         };
       }),
     [units, inspeksiPerUnit, slotFoto],
@@ -267,6 +287,18 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       },
       rows,
       expiryRows,
+      temuan: units
+        .flatMap((u) => {
+          const insp = inspeksiPerUnit.get(u.id);
+          const slot = insp ? slotFoto[insp.id] : undefined;
+          return (slot?.temuan ?? []).map((t) => ({
+            src: t.src,
+            caption: t.caption,
+            kode: u.kode,
+            zoneName: u.zoneName,
+          }));
+        })
+        .map((item, idx) => ({ no: idx + 1, ...item })),
     }),
     [
       headerLogos,
@@ -288,6 +320,9 @@ export const AparPrintPreview: React.FC<AparPrintPreviewProps> = ({
       disetujuiJabatan,
       rows,
       expiryRows,
+      units,
+      inspeksiPerUnit,
+      slotFoto,
     ],
   );
 

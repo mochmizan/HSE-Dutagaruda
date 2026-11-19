@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Layers, Check, AlertCircle } from 'lucide-react';
 import { UnifiedCombobox, type UnifiedComboboxItem } from '@/components/ui';
 
@@ -13,18 +13,59 @@ export interface AparCreationItem {
   inspectorName?: string;
 }
 
+export interface AparExistingUnitOption {
+  id: string;
+  kode: string;
+  zoneName: string;
+  jenis?: 'POWDER' | 'CO2';
+  ukuran?: string;
+  tahunPembuatan?: number;
+  tanggalRefill?: string;
+  expiredDate?: string;
+}
+
+export interface AparUpdatePayload {
+  kode?: string;
+  zoneName: string;
+  jenis: 'POWDER' | 'CO2';
+  ukuran: string;
+  tahunPembuatan: number;
+  expiredDate: string;
+}
+
 export interface AddZoneAparModalProps {
   isOpen: boolean;
   onClose: () => void;
   existingZones: string[];
-  existingUnits: { id: string; kode: string; zoneName: string }[];
+  existingUnits: AparExistingUnitOption[];
   lastUnitNumber?: number;
   onAddZone: (zoneName: string) => void;
   onAddAparUnits: (newUnits: AparCreationItem[]) => void;
   onReassignUnitZone: (unitId: string, newZoneName: string) => void;
+  onUpdateAparUnit?: (unitId: string, data: AparUpdatePayload) => void;
 }
 
 const DEFAULT_REFILL_DATE = '2026-01-15';
+
+function deriveRefillDate(unit: AparExistingUnitOption): string {
+  if (unit.tanggalRefill && /^\d{4}-\d{2}-\d{2}$/.test(unit.tanggalRefill)) {
+    return unit.tanggalRefill;
+  }
+  if (unit.expiredDate && /^\d{4}-\d{2}-\d{2}/.test(unit.expiredDate)) {
+    const expYear = Number(unit.expiredDate.slice(0, 4));
+    const refillYear =
+      unit.tahunPembuatan && unit.tahunPembuatan >= 1990 && unit.tahunPembuatan <= 2100
+        ? unit.tahunPembuatan
+        : Number.isFinite(expYear)
+          ? expYear - 2
+          : 2026;
+    return `${refillYear}${unit.expiredDate.slice(4, 10)}`;
+  }
+  if (unit.tahunPembuatan && unit.tahunPembuatan >= 1990 && unit.tahunPembuatan <= 2100) {
+    return `${unit.tahunPembuatan}-01-15`;
+  }
+  return DEFAULT_REFILL_DATE;
+}
 
 export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
   isOpen,
@@ -34,9 +75,11 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
   onAddZone,
   onAddAparUnits,
   onReassignUnitZone,
+  onUpdateAparUnit,
 }) => {
   const [zoneInput, setZoneInput] = useState<string>('');
   const [aparInput, setAparInput] = useState<string>('');
+  const [newKodeInput, setNewKodeInput] = useState<string>('');
   const [jenis, setJenis] = useState<'POWDER' | 'CO2'>('POWDER');
   const [ukuran, setUkuran] = useState<string>('3 kg');
   const [ukuranTouched, setUkuranTouched] = useState(false);
@@ -46,11 +89,13 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
     'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)',
   );
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const lastMatchedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setZoneInput(existingZones.length > 0 ? existingZones[0] : '');
       setAparInput('');
+      setNewKodeInput('');
       setJenis('POWDER');
       setUkuran('3 kg');
       setUkuranTouched(false);
@@ -58,8 +103,31 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
       setExpiredDate('');
       setInspectorName('Takamay Jason Hermantika Irsyad (Junior HSE Analyst)');
       setErrorMessage('');
+      lastMatchedIdRef.current = null;
     }
   }, [isOpen, existingZones]);
+
+  const matchedExistingUnit = existingUnits.find(
+    (u) => u.kode.toLowerCase() === aparInput.trim().toLowerCase(),
+  );
+
+  // Prefill seluruh detail unit saat pengguna memilih unit APAR yang sudah ada.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (matchedExistingUnit && lastMatchedIdRef.current !== matchedExistingUnit.id) {
+      lastMatchedIdRef.current = matchedExistingUnit.id;
+      const nextJenis = matchedExistingUnit.jenis === 'CO2' ? 'CO2' : 'POWDER';
+      setZoneInput(matchedExistingUnit.zoneName);
+      setNewKodeInput(matchedExistingUnit.kode);
+      setJenis(nextJenis);
+      setUkuran(matchedExistingUnit.ukuran || (nextJenis === 'CO2' ? '5 kg' : '3 kg'));
+      setUkuranTouched(true);
+      setTanggalRefill(deriveRefillDate(matchedExistingUnit));
+      setExpiredDate(matchedExistingUnit.expiredDate ? matchedExistingUnit.expiredDate.slice(0, 10) : '');
+    } else if (!matchedExistingUnit) {
+      lastMatchedIdRef.current = null;
+    }
+  }, [isOpen, matchedExistingUnit]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -84,9 +152,7 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
     Boolean(zoneInput.trim()) &&
     !existingZones.some((z) => z.toLowerCase() === zoneInput.trim().toLowerCase());
 
-  const isNewApar =
-    Boolean(aparInput.trim()) &&
-    !existingUnits.some((u) => u.kode.toLowerCase() === aparInput.trim().toLowerCase());
+  const isNewApar = Boolean(aparInput.trim()) && !matchedExistingUnit;
 
   const zoneOptions: UnifiedComboboxItem[] = existingZones.map((z) => ({
     id: z,
@@ -96,7 +162,7 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
   const aparOptions: UnifiedComboboxItem[] = existingUnits.map((u) => ({
     id: u.id,
     label: u.kode,
-    sublabel: `Zona saat ini: ${u.zoneName}`,
+    sublabel: `${u.zoneName}${u.expiredDate ? ` · Exp ${u.expiredDate.slice(0, 10)}` : ''}`,
   }));
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -121,26 +187,13 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
       return;
     }
 
-    const matchedExistingUnit = existingUnits.find(
-      (u) => u.kode.toLowerCase() === targetApar.toLowerCase()
-    );
-
-    if (matchedExistingUnit) {
-      if (isNewZone) {
-        onAddZone(targetZone);
-      }
-      onReassignUnitZone(matchedExistingUnit.id, targetZone);
-      onClose();
-      return;
-    }
-
     if (!tanggalRefill) {
-      setErrorMessage('Tanggal refill wajib diisi untuk unit APAR baru.');
+      setErrorMessage('Tanggal refill wajib diisi.');
       return;
     }
 
     if (!expiredDate) {
-      setErrorMessage('Tanggal kedaluwarsa wajib diisi untuk unit APAR baru.');
+      setErrorMessage('Tanggal kedaluwarsa wajib diisi.');
       return;
     }
 
@@ -151,9 +204,36 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
 
     const parsedRefillYear = Number(tanggalRefill.slice(0, 4));
     const tahunPembuatan =
-      Number.isFinite(parsedRefillYear) && parsedRefillYear >= 1990 && parsedRefillYear <= 2035
+      Number.isFinite(parsedRefillYear) && parsedRefillYear >= 1990 && parsedRefillYear <= 2100
         ? parsedRefillYear
         : 2026;
+
+    if (matchedExistingUnit) {
+      const updatedKode = newKodeInput.trim() || matchedExistingUnit.kode;
+      const duplicateOther = existingUnits.find(
+        (u) =>
+          u.id !== matchedExistingUnit.id &&
+          u.kode.toLowerCase() === updatedKode.toLowerCase(),
+      );
+      if (duplicateOther) {
+        setErrorMessage(`Kode APAR “${updatedKode}” sudah digunakan unit lain.`);
+        return;
+      }
+      if (onUpdateAparUnit) {
+        onUpdateAparUnit(matchedExistingUnit.id, {
+          kode: updatedKode,
+          zoneName: targetZone,
+          jenis,
+          ukuran: ukuran.trim(),
+          tahunPembuatan,
+          expiredDate,
+        });
+      } else {
+        onReassignUnitZone(matchedExistingUnit.id, targetZone);
+      }
+      onClose();
+      return;
+    }
 
     const codes = targetApar
       .split(',')
@@ -166,15 +246,11 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
     }
 
     const duplicate = codes.find((c) =>
-      existingUnits.some((u) => u.kode.toLowerCase() === c.toLowerCase())
+      existingUnits.some((u) => u.kode.toLowerCase() === c.toLowerCase()),
     );
     if (duplicate) {
       setErrorMessage(`Kode APAR “${duplicate}” sudah terdaftar. Gunakan kode lain.`);
       return;
-    }
-
-    if (isNewZone) {
-      onAddZone(targetZone);
     }
 
     const payload: AparCreationItem[] = codes.map((kode) => ({
@@ -218,7 +294,7 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
                 Kelola Zona &amp; APAR
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
-                Pilih dari daftar dropdown atau ketik langsung untuk baru
+                Pilih unit yang ada untuk mengubah data, atau ketik kode baru
               </p>
             </div>
           </div>
@@ -241,6 +317,23 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
             </div>
           )}
 
+          {matchedExistingUnit && (
+            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[11px]">
+              Mode sunting unit <strong>{matchedExistingUnit.kode}</strong> — ubah zona, jenis, ukuran, tanggal refill, atau kedaluwarsa lalu klik <strong>Simpan Perubahan</strong>.
+            </div>
+          )}
+
+          <UnifiedCombobox
+            label="Unit APAR"
+            value={aparInput}
+            onChange={setAparInput}
+            items={aparOptions}
+            placeholder="Pilih unit yang ada atau ketik kode baru..."
+            isNewItem={isNewApar}
+            accent="#f2994a"
+            tabularNums
+          />
+
           <UnifiedCombobox
             label="Zona"
             value={zoneInput}
@@ -252,16 +345,20 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
             tabularNums
           />
 
-          <UnifiedCombobox
-            label="Unit APAR"
-            value={aparInput}
-            onChange={setAparInput}
-            items={aparOptions}
-            placeholder="Pilih atau ketik kode APAR..."
-            isNewItem={isNewApar}
-            accent="#f2994a"
-            tabularNums
-          />
+          {matchedExistingUnit && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[var(--primary)]">
+                Kode Unit APAR
+              </label>
+              <input
+                type="text"
+                value={newKodeInput}
+                onChange={(e) => setNewKodeInput(e.target.value)}
+                placeholder="cth: APAR 01"
+                className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] font-mono tabular-nums focus:outline-none focus:border-[#f2994a]"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -352,7 +449,7 @@ export const AddZoneAparModal: React.FC<AddZoneAparModalProps> = ({
               className="px-4 py-1.5 text-xs font-semibold rounded bg-[#f2994a] hover:bg-[#e08838] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable"
             >
               <Check size={13} strokeWidth={2.5} />
-              <span>Simpan</span>
+              <span>{matchedExistingUnit ? 'Simpan Perubahan' : 'Simpan'}</span>
             </button>
           </div>
         </form>

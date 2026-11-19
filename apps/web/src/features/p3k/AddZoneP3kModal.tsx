@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Check, Layers, X } from 'lucide-react';
 import { UnifiedCombobox, type UnifiedComboboxItem } from '@/components/ui';
 import type { P3kBoxType } from '@/lib/p3kItems';
@@ -16,6 +16,7 @@ interface AddZoneP3kModalProps {
   existingZones: string[];
   existingBoxes: { id: string; kode: string; zoneName: string; boxType: P3kBoxType }[];
   onAddP3kBox: (data: P3kBoxCreationPayload) => Promise<void> | void;
+  onUpdateP3kBox?: (boxId: string, data: P3kBoxCreationPayload) => Promise<void> | void;
 }
 
 export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
@@ -24,24 +25,46 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
   existingZones,
   existingBoxes,
   onAddP3kBox,
+  onUpdateP3kBox,
 }) => {
   const [zoneInput, setZoneInput] = useState('');
   const [kodeInput, setKodeInput] = useState('');
+  const [newKodeInput, setNewKodeInput] = useState('');
   const [boxType, setBoxType] = useState<P3kBoxType>('A');
   const [inspectorName, setInspectorName] = useState(
     'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)',
   );
   const [errorMessage, setErrorMessage] = useState('');
+  const lastMatchedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setZoneInput(existingZones[0] ?? 'Lantai 2');
       setKodeInput(`P3K-${String(existingBoxes.length + 1).padStart(2, '0')}`);
+      setNewKodeInput('');
       setBoxType('A');
       setInspectorName('Takamay Jason Hermantika Irsyad (Junior HSE Analyst)');
       setErrorMessage('');
+      lastMatchedIdRef.current = null;
     }
   }, [isOpen, existingZones, existingBoxes.length]);
+
+  const matchedExistingBox = existingBoxes.find(
+    (b) => b.kode.toLowerCase() === kodeInput.trim().toLowerCase(),
+  );
+
+  // Prefill zona & tipe saat pengguna memilih kotak P3K yang sudah ada.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (matchedExistingBox && lastMatchedIdRef.current !== matchedExistingBox.id) {
+      lastMatchedIdRef.current = matchedExistingBox.id;
+      setZoneInput(matchedExistingBox.zoneName);
+      setBoxType(matchedExistingBox.boxType);
+      setNewKodeInput(matchedExistingBox.kode);
+    } else if (!matchedExistingBox) {
+      lastMatchedIdRef.current = null;
+    }
+  }, [isOpen, matchedExistingBox]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -57,9 +80,7 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
     Boolean(zoneInput.trim()) &&
     !existingZones.some((z) => z.toLowerCase() === zoneInput.trim().toLowerCase());
 
-  const isNewKode =
-    Boolean(kodeInput.trim()) &&
-    !existingBoxes.some((b) => b.kode.toLowerCase() === kodeInput.trim().toLowerCase());
+  const isNewKode = Boolean(kodeInput.trim()) && !matchedExistingBox;
 
   const zoneOptions: UnifiedComboboxItem[] = existingZones.map((z) => ({ id: z, label: z }));
   const boxOptions: UnifiedComboboxItem[] = existingBoxes.map((b) => ({
@@ -81,8 +102,25 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
       setErrorMessage('Tentukan kode kotak P3K (mis. P3K-01).');
       return;
     }
-    const dup = existingBoxes.find((b) => b.kode.toLowerCase() === kode.toLowerCase());
-    if (dup) {
+    if (matchedExistingBox) {
+      const updatedKode = newKodeInput.trim() || matchedExistingBox.kode;
+      const dupOther = existingBoxes.find(
+        (b) => b.id !== matchedExistingBox.id && b.kode.toLowerCase() === updatedKode.toLowerCase(),
+      );
+      if (dupOther) {
+        setErrorMessage(`Kode kotak “${updatedKode}” sudah digunakan kotak lain.`);
+        return;
+      }
+      if (onUpdateP3kBox) {
+        await onUpdateP3kBox(matchedExistingBox.id, {
+          kode: updatedKode,
+          zoneName: zone,
+          boxType,
+          inspectorName,
+        });
+        onClose();
+        return;
+      }
       setErrorMessage(`Kode kotak “${kode}” sudah terdaftar. Gunakan kode lain.`);
       return;
     }
@@ -113,7 +151,7 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
                 Kelola Zona &amp; Kotak P3K
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
-                Tambahkan kotak P3K baru beserta tipe standarnya (A, B, atau C)
+                Pilih kotak yang ada untuk mengubahnya, atau ketik kode kotak baru
               </p>
             </div>
           </div>
@@ -136,6 +174,23 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
             </div>
           )}
 
+          {matchedExistingBox && (
+            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[11px]">
+              Mode sunting kotak <strong>{matchedExistingBox.kode}</strong> — ubah zona/lantai, kode, atau tipe kotak lalu klik <strong>Simpan Perubahan</strong>.
+            </div>
+          )}
+
+          <UnifiedCombobox
+            label="Kode Kotak P3K"
+            value={kodeInput}
+            onChange={setKodeInput}
+            items={boxOptions}
+            placeholder="Pilih kotak yang ada atau ketik kode baru (cth: P3K-03)..."
+            isNewItem={isNewKode}
+            accent="#27ae60"
+            tabularNums
+          />
+
           <UnifiedCombobox
             label="Zona / Lantai"
             value={zoneInput}
@@ -146,16 +201,20 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
             accent="#27ae60"
           />
 
-          <UnifiedCombobox
-            label="Kode Kotak P3K"
-            value={kodeInput}
-            onChange={setKodeInput}
-            items={boxOptions}
-            placeholder="Ketik kode kotak (cth: P3K-03)..."
-            isNewItem={isNewKode}
-            accent="#27ae60"
-            tabularNums
-          />
+          {matchedExistingBox && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[var(--primary)]">
+                Ubah Kode Kotak P3K
+              </label>
+              <input
+                type="text"
+                value={newKodeInput}
+                onChange={(e) => setNewKodeInput(e.target.value)}
+                placeholder="cth: P3K-01"
+                className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] font-mono tabular-nums focus:outline-none focus:border-[#27ae60]"
+              />
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-[var(--primary)]">
@@ -203,7 +262,7 @@ export const AddZoneP3kModal: React.FC<AddZoneP3kModalProps> = ({
               className="px-4 py-1.5 text-xs font-semibold rounded bg-[#27ae60] hover:bg-[#219653] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable"
             >
               <Check size={13} strokeWidth={2.5} />
-              <span>Simpan</span>
+              <span>{matchedExistingBox ? 'Simpan Perubahan' : 'Simpan'}</span>
             </button>
           </div>
         </form>

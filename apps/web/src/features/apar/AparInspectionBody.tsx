@@ -15,6 +15,7 @@ import type { CakupanHapus } from './AparInspectionFooter';
 
 interface AparInspectionBodyProps {
   foto: FotoTampil[];
+  temuanFoto?: FotoTampil[];
   mengunggah: boolean;
   terbit: boolean;
   komponen: NilaiKomponenApar;
@@ -32,8 +33,14 @@ interface AparInspectionBodyProps {
   menerbitkan: boolean;
   membatalkanTerbit: boolean;
   idRekam: string | null;
-  onUnggahFoto: (file: File, caption: string, nilai?: AparUnitItem['draftDetails']) => void;
+  onUnggahFoto: (
+    file: File,
+    caption: string,
+    nilai?: AparUnitItem['draftDetails'],
+    temuan?: boolean,
+  ) => void;
   onHapusFoto: (fotoId: string) => void;
+  onUbahCaptionFoto?: (fotoId: string, caption: string) => void;
   onUbahStatus: (key: KunciKomponenApar, value: AparComponentStatus) => void;
   onUbahCatatan: (key: KunciKomponenApar, value: string) => void;
   onUbahOverallStatus: (value: OverallStatus) => void;
@@ -48,6 +55,7 @@ interface AparInspectionBodyProps {
 /** Isi form modal inspeksi APAR: bukti foto → 7 komponen → status → kontrol. */
 export const AparInspectionBody: React.FC<AparInspectionBodyProps> = ({
   foto,
+  temuanFoto,
   mengunggah,
   terbit,
   komponen,
@@ -67,6 +75,7 @@ export const AparInspectionBody: React.FC<AparInspectionBodyProps> = ({
   idRekam,
   onUnggahFoto,
   onHapusFoto,
+  onUbahCaptionFoto,
   onUbahStatus,
   onUbahCatatan,
   onUbahOverallStatus,
@@ -80,6 +89,7 @@ export const AparInspectionBody: React.FC<AparInspectionBodyProps> = ({
   <>
     <AparInspectionPhotos
       foto={foto}
+      temuanFoto={temuanFoto}
       mengunggah={mengunggah}
       terbit={terbit}
       nilaiDraf={{ ...komponen, notes: catatanGabung, overallStatus }}
@@ -87,6 +97,7 @@ export const AparInspectionBody: React.FC<AparInspectionBodyProps> = ({
       kode={kode}
       onUnggahFoto={onUnggahFoto}
       onHapusFoto={onHapusFoto}
+      onUbahCaptionFoto={onUbahCaptionFoto}
     />
 
     <AparComponentChecklist

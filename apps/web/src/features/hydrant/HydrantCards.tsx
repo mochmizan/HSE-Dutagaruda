@@ -1,7 +1,7 @@
 import React from 'react';
-import { Check, CheckCircle2, ChevronRight, ExternalLink, X } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle2, ChevronRight, ExternalLink, X } from 'lucide-react';
 import type { HydrantUnitItem } from '../../types/hse';
-import { detailKomponen, tanggalTampil, unitTidakLayak } from './HydrantTable';
+import { detailKomponen, statusAkhirUnit, tanggalTampil } from './HydrantTable';
 
 interface HydrantCardsProps {
   units: HydrantUnitItem[];
@@ -12,14 +12,17 @@ interface HydrantCardsProps {
 
 /**
  * Tampilan kartu Section A halaman Hydrant.
- * Sesuai revisi: status Standar / Tidak Standar, tanpa Sedang Berjalan / Hilang.
+ * Mendukung 3 status: STANDAR (hijau), STANDAR DENGAN CATATAN (kuning), TIDAK STANDAR (merah).
  */
 export const HydrantCards: React.FC<HydrantCardsProps> = ({ units, onBuka, aksen }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
     {units.map((unit) => {
       const isCompleted = unit.status === 'SELESAI';
       const komponen = detailKomponen(unit);
-      const tidakStandar = unitTidakLayak(unit, komponen);
+      const statusAkhir = statusAkhirUnit(unit, komponen);
+      const tidakStandar = statusAkhir === 'TIDAK_LAYAK';
+      const denganCatatan = statusAkhir === 'LAYAK_DENGAN_CATATAN';
+      const standar = statusAkhir === 'LAYAK';
 
       return (
         <div
@@ -27,7 +30,9 @@ export const HydrantCards: React.FC<HydrantCardsProps> = ({ units, onBuka, aksen
           className={`p-3.5 rounded-[6px] border bg-[var(--bg-main)] hover:shadow-xs transition-all flex flex-col justify-between ${
             tidakStandar
               ? 'border-red-500/40 bg-gradient-to-r from-red-500/[0.04] to-transparent'
-              : isCompleted
+              : denganCatatan
+              ? 'border-amber-500/45 bg-gradient-to-r from-amber-500/[0.08] to-transparent'
+              : standar
               ? 'border-emerald-500/30'
               : 'border-[var(--border)]'
           }`}
@@ -45,7 +50,11 @@ export const HydrantCards: React.FC<HydrantCardsProps> = ({ units, onBuka, aksen
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
                   <X size={11} strokeWidth={2.5} /> TIDAK STANDAR
                 </span>
-              ) : isCompleted ? (
+              ) : denganCatatan ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35">
+                  <AlertCircle size={11} strokeWidth={2.3} /> STANDAR DENGAN CATATAN
+                </span>
+              ) : standar ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 size={11} /> STANDAR
                 </span>

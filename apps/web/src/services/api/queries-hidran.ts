@@ -115,9 +115,23 @@ export function useBuatUnitHidran() {
 export function useUbahUnitHidran() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: string; body: Partial<k.MasukanUnitHidran> }) =>
-      k.ubahUnitHidran(args.id, args.body),
-    onSettled: () => void qc.invalidateQueries({ queryKey: kunci.unitHidran }),
+    mutationFn: async (args: {
+      id: string;
+      siteId?: string;
+      zoneName?: string;
+      body: Partial<k.MasukanUnitHidran>;
+    }) => {
+      const payload: Partial<k.MasukanUnitHidran> = { ...args.body };
+      if (args.zoneName && args.siteId) {
+        payload.zoneId = await idZonaAtauBuat(args.siteId, args.zoneName);
+      }
+      return k.ubahUnitHidran(args.id, payload);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.unitHidran });
+      void qc.invalidateQueries({ queryKey: kunci.zona });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
     onError: (err) => window.alert(gagal(err)),
   });
 }

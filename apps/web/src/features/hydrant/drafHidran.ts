@@ -30,7 +30,7 @@ export function potretDrafHidran(unit: HydrantUnitItem): PotretDrafHidran {
     catatanKomponen: d ? urai.catatanKomponen : {},
     notes: d ? urai.tambahan : '',
     tindakLanjut: d ? urai.tindakLanjut : '',
-    overallStatus: d?.overallStatus,
+    overallStatus: d?.overallStatus ?? unit.completedReport?.overallStatus,
   };
 }
 

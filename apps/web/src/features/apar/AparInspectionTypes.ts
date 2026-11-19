@@ -9,10 +9,18 @@ export interface AparInspectionModalProps {
   inspeksi: ApiInspeksiApar | null;
   /** Foto bukti sesi (unggahan → URL foto langsung). */
   foto: FotoTampil[];
+  /** Foto temuan unit ini (`temuan: true`). */
+  temuanFoto?: FotoTampil[];
   /** Status unggahan berjalan (tombol menandai proses). */
   mengunggah: boolean;
-  onUnggahFoto: (file: File, caption: string, nilai?: AparUnitItem['draftDetails']) => void;
+  onUnggahFoto: (
+    file: File,
+    caption: string,
+    nilai?: AparUnitItem['draftDetails'],
+    temuan?: boolean,
+  ) => void;
   onHapusFoto: (fotoId: string) => void;
+  onUbahCaptionFoto?: (fotoId: string, caption: string) => void;
   onClose: () => void;
   onCompleteInspection: (newReport: InspectionReport) => void | Promise<void>;
   /** `Edit` pada rekam terbit = batalkan terbit rekam yang tampil (turun jadi

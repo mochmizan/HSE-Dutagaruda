@@ -15,6 +15,7 @@ import type { CakupanHapus } from './HydrantInspectionFooter';
 
 interface HydrantInspectionBodyProps {
   foto: FotoTampil[];
+  temuanFoto?: FotoTampil[];
   mengunggah: boolean;
   terbit: boolean;
   komponen: NilaiKomponenHidran;
@@ -30,8 +31,14 @@ interface HydrantInspectionBodyProps {
   menerbitkan: boolean;
   membatalkanTerbit: boolean;
   idRekam: string | null;
-  onUnggahFoto: (file: File, caption: string, nilai?: HydrantUnitItem['draftDetails']) => void;
+  onUnggahFoto: (
+    file: File,
+    caption: string,
+    nilai?: HydrantUnitItem['draftDetails'],
+    temuan?: boolean,
+  ) => void;
   onHapusFoto: (fotoId: string) => void;
+  onUbahCaptionFoto?: (fotoId: string, caption: string) => void;
   onUbahStatus: (key: KunciKomponenHidran, value: HydrantComponentStatus) => void;
   onUbahCatatan: (key: KunciKomponenHidran, value: string) => void;
   onUbahOverallStatus: (value: OverallStatus) => void;
@@ -46,6 +53,7 @@ interface HydrantInspectionBodyProps {
 /** Isi form modal inspeksi hydrant: bukti foto → 6 komponen → status → kontrol. */
 export const HydrantInspectionBody: React.FC<HydrantInspectionBodyProps> = ({
   foto,
+  temuanFoto,
   mengunggah,
   terbit,
   komponen,
@@ -63,6 +71,7 @@ export const HydrantInspectionBody: React.FC<HydrantInspectionBodyProps> = ({
   idRekam,
   onUnggahFoto,
   onHapusFoto,
+  onUbahCaptionFoto,
   onUbahStatus,
   onUbahCatatan,
   onUbahOverallStatus,
@@ -76,11 +85,13 @@ export const HydrantInspectionBody: React.FC<HydrantInspectionBodyProps> = ({
   <>
     <HydrantInspectionPhotos
       foto={foto}
+      temuanFoto={temuanFoto}
       mengunggah={mengunggah}
       terbit={terbit}
       nilaiDraf={{ ...komponen, notes: catatanGabung, overallStatus }}
       onUnggahFoto={onUnggahFoto}
       onHapusFoto={onHapusFoto}
+      onUbahCaptionFoto={onUbahCaptionFoto}
     />
 
     <HydrantComponentChecklist

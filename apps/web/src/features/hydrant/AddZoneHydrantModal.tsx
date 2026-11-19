@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Layers, Check, AlertCircle } from 'lucide-react';
 import { UnifiedCombobox, type UnifiedComboboxItem } from '@/components/ui';
 
@@ -6,6 +6,11 @@ export interface HydrantCreationItem {
   kode: string;
   zoneName: string;
   inspectorName?: string;
+}
+
+export interface HydrantUpdatePayload {
+  kode?: string;
+  zoneName: string;
 }
 
 export interface AddZoneHydrantModalProps {
@@ -16,6 +21,7 @@ export interface AddZoneHydrantModalProps {
   onAddZone?: (zoneName: string) => void;
   onAddHydrantUnits: (newUnits: HydrantCreationItem[]) => void;
   onReassignUnitZone?: (unitId: string, newZoneName: string) => void;
+  onUpdateHydrantUnit?: (unitId: string, data: HydrantUpdatePayload) => void;
   lastUnitNumber?: number;
   onAddZoneAndUnits?: (data: {
     zoneName: string;
@@ -34,23 +40,44 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
   onAddZone,
   onAddHydrantUnits,
   onReassignUnitZone,
+  onUpdateHydrantUnit,
   onAddZoneAndUnits,
 }) => {
   const [zoneInput, setZoneInput] = useState<string>('');
   const [hydrantInput, setHydrantInput] = useState<string>('');
+  const [newKodeInput, setNewKodeInput] = useState<string>('');
   const [inspectorName, setInspectorName] = useState<string>(
     'Takamay Jason Hermantika Irsyad (Junior HSE Analyst)',
   );
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const lastMatchedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setZoneInput(existingZones.length > 0 ? existingZones[0] : '');
       setHydrantInput('');
+      setNewKodeInput('');
       setInspectorName('Takamay Jason Hermantika Irsyad (Junior HSE Analyst)');
       setErrorMessage('');
+      lastMatchedIdRef.current = null;
     }
   }, [isOpen, existingZones]);
+
+  const matchedExistingUnit = existingUnits.find(
+    (u) => u.kode.toLowerCase() === hydrantInput.trim().toLowerCase(),
+  );
+
+  // Prefill zona & kode saat pengguna memilih unit hydrant yang sudah ada.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (matchedExistingUnit && lastMatchedIdRef.current !== matchedExistingUnit.id) {
+      lastMatchedIdRef.current = matchedExistingUnit.id;
+      setZoneInput(matchedExistingUnit.zoneName);
+      setNewKodeInput(matchedExistingUnit.kode);
+    } else if (!matchedExistingUnit) {
+      lastMatchedIdRef.current = null;
+    }
+  }, [isOpen, matchedExistingUnit]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -68,9 +95,7 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
     Boolean(zoneInput.trim()) &&
     !existingZones.some((z) => z.toLowerCase() === zoneInput.trim().toLowerCase());
 
-  const isNewHydrant =
-    Boolean(hydrantInput.trim()) &&
-    !existingUnits.some((u) => u.kode.toLowerCase() === hydrantInput.trim().toLowerCase());
+  const isNewHydrant = Boolean(hydrantInput.trim()) && !matchedExistingUnit;
 
   const zoneOptions: UnifiedComboboxItem[] = existingZones.map((z) => ({
     id: z,
@@ -105,46 +130,55 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
       return;
     }
 
-    if (isNewZone && onAddZone) {
-      onAddZone(targetZone);
-    }
-
-    const matchedExistingUnit = existingUnits.find(
-      (u) => u.kode.toLowerCase() === targetHydrant.toLowerCase()
-    );
-
     if (matchedExistingUnit) {
-      if (onReassignUnitZone) {
-        onReassignUnitZone(matchedExistingUnit.id, targetZone);
-      }
-    } else {
-      const codes = targetHydrant
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean);
-
-      if (codes.length === 0) {
-        setErrorMessage('Masukkan kode hydrant yang valid.');
+      const updatedKode = newKodeInput.trim() || matchedExistingUnit.kode;
+      const duplicateOther = existingUnits.find(
+        (u) =>
+          u.id !== matchedExistingUnit.id &&
+          u.kode.toLowerCase() === updatedKode.toLowerCase(),
+      );
+      if (duplicateOther) {
+        setErrorMessage(`Kode hydrant “${updatedKode}” sudah digunakan unit lain.`);
         return;
       }
-
-      const payload: HydrantCreationItem[] = codes.map((kode) => ({
-        kode,
-        zoneName: targetZone,
-        inspectorName,
-      }));
-
-      onAddHydrantUnits(payload);
-
-      if (onAddZoneAndUnits) {
-        onAddZoneAndUnits({
+      if (onUpdateHydrantUnit) {
+        onUpdateHydrantUnit(matchedExistingUnit.id, {
+          kode: updatedKode,
           zoneName: targetZone,
-          isNewZone,
-          count: codes.length,
-          inspectorName,
-          unitCodes: codes,
         });
+      } else if (onReassignUnitZone) {
+        onReassignUnitZone(matchedExistingUnit.id, targetZone);
       }
+      onClose();
+      return;
+    }
+
+    const codes = targetHydrant
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    if (codes.length === 0) {
+      setErrorMessage('Masukkan kode hydrant yang valid.');
+      return;
+    }
+
+    const payload: HydrantCreationItem[] = codes.map((kode) => ({
+      kode,
+      zoneName: targetZone,
+      inspectorName,
+    }));
+
+    onAddHydrantUnits(payload);
+
+    if (onAddZoneAndUnits) {
+      onAddZoneAndUnits({
+        zoneName: targetZone,
+        isNewZone,
+        count: codes.length,
+        inspectorName,
+        unitCodes: codes,
+      });
     }
 
     onClose();
@@ -176,7 +210,7 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
                 Kelola Zona &amp; Hydrant
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
-                Pilih dari daftar dropdown atau ketik langsung untuk baru
+                Pilih unit yang ada untuk mengubahnya, atau ketik kode baru
               </p>
             </div>
           </div>
@@ -199,6 +233,21 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
             </div>
           )}
 
+          {matchedExistingUnit && (
+            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-300 text-[11px]">
+              Mode sunting unit <strong>{matchedExistingUnit.kode}</strong> — ubah zona atau kode di bawah lalu klik <strong>Simpan Perubahan</strong>.
+            </div>
+          )}
+
+          <UnifiedCombobox
+            label="Unit Hydrant"
+            value={hydrantInput}
+            onChange={setHydrantInput}
+            items={hydrantOptions}
+            placeholder="Pilih unit yang ada atau ketik kode baru..."
+            isNewItem={isNewHydrant}
+          />
+
           <UnifiedCombobox
             label="Zona"
             value={zoneInput}
@@ -208,14 +257,20 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
             isNewItem={isNewZone}
           />
 
-          <UnifiedCombobox
-            label="Unit Hydrant"
-            value={hydrantInput}
-            onChange={setHydrantInput}
-            items={hydrantOptions}
-            placeholder="Pilih atau ketik kode hydrant..."
-            isNewItem={isNewHydrant}
-          />
+          {matchedExistingUnit && (
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[var(--primary)]">
+                Kode Unit Hydrant
+              </label>
+              <input
+                type="text"
+                value={newKodeInput}
+                onChange={(e) => setNewKodeInput(e.target.value)}
+                placeholder="cth: HYD-01"
+                className="w-full text-xs px-2.5 py-2 rounded-[4px] border border-[var(--border)] bg-[var(--bg-main)] text-[var(--primary)] font-mono tabular-nums focus:outline-none focus:border-[#eb5757]"
+              />
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="block text-xs font-bold text-[var(--primary)]">
@@ -248,7 +303,7 @@ export const AddZoneHydrantModal: React.FC<AddZoneHydrantModalProps> = ({
               className="px-4 py-1.5 text-xs font-semibold rounded bg-[#eb5757] hover:bg-[#d94444] text-white shadow-2xs cursor-pointer flex items-center gap-1.5 pressable"
             >
               <Check size={13} strokeWidth={2.5} />
-              <span>Simpan</span>
+              <span>{matchedExistingUnit ? 'Simpan Perubahan' : 'Simpan'}</span>
             </button>
           </div>
         </form>

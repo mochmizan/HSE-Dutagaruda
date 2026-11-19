@@ -56,6 +56,7 @@ export function petakanUnitHidran(
         hoseRack: insp.hoseRack,
         nozzle: insp.nozzle,
         valvePillar: insp.valvePillar,
+        overallStatus: insp.overallStatus as OverallStatus,
         notes: insp.notes ?? undefined,
       },
       completedReport: {
@@ -131,6 +132,7 @@ export function petakanUnitApar(
         tabung: insp.tabung,
         selang: insp.selang,
         katupTuas: insp.katupTuas,
+        overallStatus: insp.overallStatus as OverallStatus,
         notes: insp.notes ?? undefined,
       },
       completedReport: {

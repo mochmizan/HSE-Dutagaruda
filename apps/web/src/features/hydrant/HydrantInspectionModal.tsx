@@ -21,9 +21,11 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
   isOpen,
   inspeksi,
   foto,
+  temuanFoto,
   mengunggah,
   onUnggahFoto,
   onHapusFoto,
+  onUbahCaptionFoto,
   onClose,
   onCompleteInspection,
   onBatalkanTerbit,
@@ -189,6 +191,7 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
     >
       <HydrantInspectionBody
         foto={foto}
+        temuanFoto={temuanFoto}
         mengunggah={mengunggah}
         terbit={terbit}
         komponen={nilaiKomponen}
@@ -206,6 +209,7 @@ export const HydrantInspectionModal: React.FC<HydrantInspectionModalProps> = ({
         idRekam={idRekam}
         onUnggahFoto={onUnggahFoto}
         onHapusFoto={onHapusFoto}
+        onUbahCaptionFoto={onUbahCaptionFoto}
         onUbahStatus={ubahStatus}
         onUbahCatatan={ubahCatatan}
         onUbahOverallStatus={ubahOverallStatus}

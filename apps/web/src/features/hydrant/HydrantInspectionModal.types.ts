@@ -9,10 +9,18 @@ export interface HydrantInspectionModalProps {
   inspeksi: ApiInspeksiHidran | null;
   /** Foto bukti sesi (unggahan → URL foto langsung). */
   foto: FotoTampil[];
+  /** Foto temuan unit ini (`temuan: true`). */
+  temuanFoto?: FotoTampil[];
   /** Status unggahan berjalan (tombol menandai proses). */
   mengunggah: boolean;
-  onUnggahFoto: (file: File, caption: string, nilai?: HydrantUnitItem['draftDetails']) => void;
+  onUnggahFoto: (
+    file: File,
+    caption: string,
+    nilai?: HydrantUnitItem['draftDetails'],
+    temuan?: boolean,
+  ) => void;
   onHapusFoto: (fotoId: string) => void;
+  onUbahCaptionFoto?: (fotoId: string, caption: string) => void;
   onClose: () => void;
   onCompleteInspection: (newReport: InspectionReport) => void | Promise<void>;
   /** `Edit` pada rekam terbit = batalkan terbit rekam yang tampil (turun jadi

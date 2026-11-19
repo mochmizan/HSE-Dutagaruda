@@ -8,6 +8,8 @@ export const LABEL_KOMPONEN: Record<string, string> = {
   valvePillar: 'Valve/Pillar Hydrant',
 };
 
+const CATATAN_BAWAAN_HIDRAN = 'Pemeriksaan 6 komponen selesai dan diverifikasi.';
+
 /** Gabungkan komentar per komponen + catatan tambahan + tindak lanjut jadi satu teks. */
 export function susunCatatan(
   statuses: Record<string, string>,
@@ -52,4 +54,24 @@ export function uraiCatatan(penuh: string): {
     else tambahan = tambahan ? `${tambahan}\n${baris}` : baris;
   }
   return { catatanKomponen, tambahan, tindakLanjut };
+}
+
+/** Susun daftar butir catatan (komponen + catatan + rekomendasi) untuk kolom Status Standar. */
+export function daftarCatatanStatusHidran(penuh?: string | null): string[] {
+  if (!penuh?.trim()) return [];
+  const parsed = uraiCatatan(penuh);
+  const items: string[] = [];
+  for (const [key, label] of Object.entries(LABEL_KOMPONEN)) {
+    const val = parsed.catatanKomponen[key]?.trim();
+    if (val) items.push(`${label}: ${val}`);
+  }
+  const tambahan = parsed.tambahan.trim();
+  if (tambahan && tambahan !== CATATAN_BAWAAN_HIDRAN) {
+    items.push(`Catatan: ${tambahan}`);
+  }
+  const rekomendasi = parsed.tindakLanjut.trim();
+  if (rekomendasi) {
+    items.push(`Rekomendasi: ${rekomendasi}`);
+  }
+  return items;
 }

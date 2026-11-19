@@ -116,9 +116,23 @@ export function useBuatUnitApar() {
 export function useUbahUnitApar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: string; body: Partial<k.MasukanUnitApar> }) =>
-      k.ubahUnitApar(args.id, args.body),
-    onSettled: () => void qc.invalidateQueries({ queryKey: kunci.unitApar }),
+    mutationFn: async (args: {
+      id: string;
+      siteId?: string;
+      zoneName?: string;
+      body: Partial<k.MasukanUnitApar>;
+    }) => {
+      const payload: Partial<k.MasukanUnitApar> = { ...args.body };
+      if (args.zoneName && args.siteId) {
+        payload.zoneId = await idZonaAtauBuat(args.siteId, args.zoneName);
+      }
+      return k.ubahUnitApar(args.id, payload);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: kunci.unitApar });
+      void qc.invalidateQueries({ queryKey: kunci.zona });
+      void qc.invalidateQueries({ queryKey: ['umpan'] });
+    },
     onError: (err) => window.alert(gagal(err)),
   });
 }

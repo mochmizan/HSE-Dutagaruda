@@ -191,3 +191,7 @@ Preconditions:
 - `komponenApar.ts` diperbarui ke label: `1. Safety Pin`, `2. Fire Hose`, `3. Segel`, `4. Pressure Gauge`, `5. Tabung/Tube`, `6. Nozzle`, `7. Katup/Tuas`.
 - `AparInspectionFooter.tsx` memakai konfirmasi ketik `HAPUS` dan `DELETE ...?force=1` untuk hapus unit/bulan langsung.
 - `AparPrintPreview.tsx` memakai `PrintCustomizationBar` (header & handsign dapat dikustomisasi penuh, tanpa latar biru `bg-slate-100`).
+- `AddZoneAparModal.tsx` & `AparPage.tsx`: memilih unit APAR yang ada kini mengisi otomatis zona, kode, jenis, ukuran, tanggal refill, dan tanggal kedaluwarsa serta memperbarui semua kolom via `PATCH /api/apar-units/:id` (termasuk resolusi zona baru).
+- `pemetaan-unit.ts`, `AparTable.tsx`, `AparCards.tsx`: status manual `LAYAK_DENGAN_CATATAN` (`STANDAR DENGAN CATATAN`) dipertahankan di draf & ditampilkan dengan warna kuning/amber; kolom `Status Standar` menampilkan status utama tebal + daftar catatan komponen, catatan tambahan, dan rekomendasi.
+- `proceduralPrintTemplates.ts` & `AparPrintPreview.tsx`: menambah kolom `Status Standar` (`13.5%`) pada `apar-table` tanpa mengurangi lebar 3 kolom foto (`19.5%`, `17.5%`, `20.5%`).
+- `AparInspectionPhotos.tsx`, `AparPage.tsx`, `AparPrintPreview.tsx`: menambah bagian unggahan multi-foto `Temuan` dengan navigasi `< >` dan komentar (`PATCH /api/photos/:id`); Section B dihapus dari halaman utama namun tetap tampil di halaman cetak dari seluruh foto `temuan: true` lengkap dengan info kode unit dan zona.

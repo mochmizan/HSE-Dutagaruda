@@ -14,12 +14,11 @@ import { ambilFotoInspeksi, type ApiFoto } from '@/services/api/klien';
 import { livePhotoUrl } from '@/services/api/liveClient';
 import {
   petakanUnitHidran,
-  useFotoInspeksi,
   useInspeksiHidran,
   useUnitHidran,
 } from '@/services/api/queries';
 import { useKonteksLokasi } from '@/features/konteksLokasi';
-import { LABEL_KOMPONEN, uraiCatatan } from './catatanHidran';
+import { LABEL_KOMPONEN, daftarCatatanStatusHidran, uraiCatatan } from './catatanHidran';
 
 export type ModeCetakHydrant = 'checklist' | 'laporan' | 'semua';
 
@@ -45,13 +44,15 @@ function tanggalSingkat(iso?: string): string {
 
 function statusTeksHydrant(status?: string): string {
   if (status === 'LAYAK') return 'Standar';
-  if (status === 'LAYAK_DENGAN_CATATAN') return 'Standar\ndengan\ncatatan';
-  return 'Tidak\nStandar';
+  if (status === 'LAYAK_DENGAN_CATATAN') return 'Standar dengan Catatan';
+  if (status === 'TIDAK_LAYAK') return 'Tidak Standar';
+  return 'Belum Diperiksa';
 }
 
 interface BuktiHydrantSlot {
   pemeriksaan?: string;
   checklist?: string;
+  temuan: Array<{ id: string; src: string; caption: string }>;
 }
 
 function useBuktiHydrant(inspeksiIds: string[]): { peta: Record<string, BuktiHydrantSlot>; selesai: boolean } {
@@ -89,13 +90,16 @@ function useBuktiHydrant(inspeksiIds: string[]): { peta: Record<string, BuktiHyd
                   ? livePhotoUrl(checklistFoto.id)
                   : bukti[1]
                     ? livePhotoUrl(bukti[1].id)
-                    : temuan[0]
-                      ? livePhotoUrl(temuan[0].id)
-                      : undefined,
+                    : undefined,
+                temuan: temuan.map((t) => ({
+                  id: t.id,
+                  src: livePhotoUrl(t.id),
+                  caption: (t.caption ?? '').trim() || 'Catatan temuan tambahan',
+                })),
               },
             ] as const;
           } catch {
-            return [id, {}] as const;
+            return [id, { temuan: [] }] as const;
           }
         }),
       );
@@ -169,8 +173,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
     useMemo(() => inspeksiBulan.map((i) => i.id), [inspeksiBulan]),
   );
 
-  const jangkarTemuan = inspeksiBulan[0]?.id ?? null;
-  const fotoTemuan = useFotoInspeksi(jangkarTemuan, 'hydrant');
+
 
   const monthDate = useMemo(() => {
     const [y, m] = period.split('-').map(Number);
@@ -231,6 +234,7 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
         const insp = perUnit.get(u.id);
         const slot = insp ? buktiSlot[insp.id] : undefined;
         const st = insp?.overallStatus ?? u.completedReport?.overallStatus ?? u.draftDetails?.overallStatus;
+        const rawNotes = insp?.notes ?? u.completedReport?.summaryNotes ?? u.draftDetails?.notes ?? '';
         return {
           no: idx + 1,
           zoneName: u.zoneName,
@@ -238,15 +242,19 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
           pemeriksaanSrc: slot?.pemeriksaan ?? null,
           checklistSrc: slot?.checklist ?? null,
           statusText: statusTeksHydrant(st),
+          statusNotes: daftarCatatanStatusHidran(rawNotes),
         };
       }),
-      temuan: (fotoTemuan.data ?? [])
-        .filter((f) => f.temuan)
-        .map((f, idx) => ({
-          no: idx + 1,
-          src: f.url,
-          caption: f.caption || 'Catatan temuan tambahan',
-        })),
+      temuan: units.flatMap((u) => {
+        const insp = perUnit.get(u.id);
+        const slot = insp ? buktiSlot[insp.id] : undefined;
+        return (slot?.temuan ?? []).map((t) => ({
+          src: t.src,
+          caption: t.caption,
+          kode: u.kode,
+          zoneName: u.zoneName,
+        }));
+      }).map((item, idx) => ({ no: idx + 1, ...item })),
       signatures: {
         petugasHeader,
         petugasNama,
@@ -270,7 +278,6 @@ export const HydrantPrintPreview: React.FC<HydrantPrintPreviewProps> = ({
       units,
       perUnit,
       buktiSlot,
-      fotoTemuan.data,
       petugasHeader,
       petugasNama,
       petugasJabatan,

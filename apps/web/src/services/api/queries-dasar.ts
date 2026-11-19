@@ -3,7 +3,7 @@
  * ekspor PDF, dan dua helper yang dipakai lebih dari satu modul mutasi.
  */
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from './client';
 import * as k from './klien';
 
@@ -98,8 +98,17 @@ export async function hapusZonaBilaKosong(
 export async function idZonaAtauBuat(siteId: string, zoneName: string): Promise<string> {
   const nama = zoneName.trim();
   const daftar = await k.ambilZona({ siteId });
-  const ada = daftar.find((z) => z.siteId === siteId && z.name === nama);
+  const ada = daftar.find((z) => z.siteId === siteId && z.name.trim().toLowerCase() === nama.toLowerCase());
   if (ada) return ada.id;
   const baru = await k.buatZona({ siteId, name: nama });
   return baru.id;
+}
+
+export function useBuatZona() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { siteId: string; name: string }) => idZonaAtauBuat(args.siteId, args.name),
+    onSettled: () => void qc.invalidateQueries({ queryKey: kunci.zona }),
+    onError: (err) => window.alert(gagal(err)),
+  });
 }

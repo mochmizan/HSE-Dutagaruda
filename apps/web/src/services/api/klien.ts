@@ -426,6 +426,9 @@ export const simpanUrutanUnitHidran = (siteId: string, ids: string[]) =>
 export const buatZona = (body: { siteId: string; name: string }) =>
   livePost<ApiZone>('/zones', body);
 
+export const ubahZona = (id: string, body: { name?: string }) =>
+  livePatch<ApiZone>(`/zones/${id}`, body);
+
 export const hapusZona = (id: string) => liveDelete(`/zones/${id}`);
 
 export interface ApiPerusahaan {
@@ -457,6 +460,9 @@ export const hapusLokasi = (id: string) => liveDelete<{ ok: boolean }>(`/sites/$
 export const buatKotakP3k = (body: { siteId: string; name: string }) =>
   livePost<ApiP3kBox>('/p3k-boxes', body);
 
+export const ubahKotakP3k = (id: string, body: { siteId?: string; name?: string }) =>
+  livePatch<ApiP3kBox>(`/p3k-boxes/${id}`, body);
+
 export const hapusKotakP3k = (id: string) => liveDelete(`/p3k-boxes/${id}?force=1`);
 
 // ── Foto (Garage via /api/uploads + /api/photos) ──
@@ -486,6 +492,9 @@ export const unggahFoto = async (
   form.append('temuan', temuan ? 'true' : 'false');
   return livePostForm<ApiFoto & { key: string }>('/uploads', form);
 };
+
+export const ubahCaptionFoto = (id: string, caption: string) =>
+  livePatch<{ id: string; caption: string | null }>(`/photos/${id}`, { caption });
 
 export const hapusFoto = (id: string) => liveDelete<{ ok: boolean }>(`/photos/${id}`);
 

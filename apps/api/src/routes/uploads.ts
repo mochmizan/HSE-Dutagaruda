@@ -116,6 +116,29 @@ export const photosApp = new Hono()
   return c.redirect(url, 302);
   })
 
+  .patch(
+    "/:id",
+    zValidator("param", idParamSchema),
+    zValidator("json", z.object({ caption: z.string().max(500).optional() })),
+    async (c) => {
+      const { id } = c.req.valid("param");
+      const { caption } = c.req.valid("json");
+      const owned = companyId(c);
+      const rows = await db
+        .select({ id: photos.id })
+        .from(photos)
+        .where(and(eq(photos.id, id), eq(photos.companyId, owned)))
+        .limit(1);
+      if (rows.length === 0) throw notFound("Foto");
+      const [updated] = await db
+        .update(photos)
+        .set({ caption: caption ?? null })
+        .where(and(eq(photos.id, id), eq(photos.companyId, owned)))
+        .returning({ id: photos.id, caption: photos.caption });
+      return c.json(updated);
+    },
+  )
+
   .delete("/:id", zValidator("param", idParamSchema), async (c) => {
   const { id } = c.req.valid("param");
   const owned = companyId(c);

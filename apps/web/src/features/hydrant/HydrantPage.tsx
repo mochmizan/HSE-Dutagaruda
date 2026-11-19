@@ -5,14 +5,16 @@ import { HydrantUnitItem, InspectionReport } from '../../types/hse';
 import { HydrantInspectionModal } from './HydrantInspectionModal';
 import { HydrantTable } from './HydrantTable';
 import { HydrantCards } from './HydrantCards';
-import { HydrantFindings } from './HydrantFindings';
 import { HydrantPrintKertas, HydrantPrintSignatures } from './HydrantPrintChrome';
 import { HydrantStats } from './HydrantStats';
 import { FilterBar } from '@/features/pageChrome';
 import { UnduhPdfButton } from '@/components/ui';
 import { EmptyUnits, InspectionPageShell, KONFIG_HYDRANT } from '@/features/inspeksi';
-import { AddZoneHydrantModal, HydrantCreationItem } from './AddZoneHydrantModal';
-import { AddFindingModal } from './AddFindingModal';
+import {
+  AddZoneHydrantModal,
+  HydrantCreationItem,
+  type HydrantUpdatePayload,
+} from './AddZoneHydrantModal';
 import { HydrantFindingItem } from './types';
 import {
   petakanUnitHidran,
@@ -24,8 +26,10 @@ import {
   useHapusUnitHidran,
   useBuatUnitHidran,
   useUbahUnitHidran,
+  useBuatZona,
   useUrutkanUnit,
   useUnggahFoto,
+  useUbahCaptionFoto,
   useHapusFoto,
   useFotoInspeksi,
 } from '@/services/api/queries';
@@ -60,6 +64,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const hapusUnit = useHapusUnitHidran();
   const buatUnit = useBuatUnitHidran();
   const ubahUnit = useUbahUnitHidran();
+  const buatZona = useBuatZona();
 
   const unitSite = useMemo(
     () => (unitQuery.data ?? []).filter((u) => u.siteId === lokasi.siteId),
@@ -78,9 +83,9 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   // Modals state
   const [activeInspectionUnit, setActiveInspectionUnit] = useState<HydrantUnitItem | null>(null);
   const [isAddZoneModalOpen, setIsAddZoneModalOpen] = useState(false);
-  const [isAddFindingModalOpen, setIsAddFindingModalOpen] = useState(false);
 
   const unggahFoto = useUnggahFoto();
+  const ubahCaptionFoto = useUbahCaptionFoto();
   const hapusFoto = useHapusFoto();
   const [selectedMonth, setSelectedMonth] = useState<Date>(() => {
     const kini = new Date();
@@ -104,6 +109,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
 
   const fotoAktif = useFotoInspeksi(inspeksiAktif?.id ?? null, 'hydrant');
   const buktiAktif = (fotoAktif.data ?? []).filter((f) => !f.temuan);
+  const temuanAktif = (fotoAktif.data ?? []).filter((f) => f.temuan);
 
   const handleHapusBulan = () => {
     if (!inspeksiAktif) return;
@@ -240,9 +246,17 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     await batalkanTerbit.mutateAsync(inspectionId);
   };
 
-  const handleAddZone = (_zoneName: string) => {};
+  const handleAddZone = (zoneName: string) => {
+    if (!lokasi.siteId || !zoneName.trim()) return;
+    buatZona.mutate({ siteId: lokasi.siteId, name: zoneName.trim() });
+  };
 
-  const handleUnggahFoto = (file: File, caption: string, nilai?: HydrantUnitItem['draftDetails']) => {
+  const handleUnggahFoto = (
+    file: File,
+    caption: string,
+    nilai?: HydrantUnitItem['draftDetails'],
+    temuan = false,
+  ) => {
     if (!activeInspectionUnit) return;
     const unggah = (inspectionId: string) =>
       unggahFoto.mutate({
@@ -250,7 +264,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
         inspectionId,
         file,
         caption,
-        temuan: false,
+        temuan,
       });
     if (inspeksiAktif) {
       unggah(inspeksiAktif.id);
@@ -274,6 +288,11 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
     );
   };
 
+  const handleUbahCaptionFoto = (fotoId: string, caption: string) => {
+    if (!inspeksiAktif) return;
+    ubahCaptionFoto.mutate({ id: fotoId, caption, inspectionId: inspeksiAktif.id });
+  };
+
   const handleHapusFoto = (fotoId: string) => {
     if (!inspeksiAktif) return;
     hapusFoto.mutate({ id: fotoId, inspectionId: inspeksiAktif.id });
@@ -292,32 +311,19 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
   const handleReassignUnitZone = (unitId: string, newZoneName: string) => {
     ubahUnit.mutate({
       id: unitId,
-      body: { zoneId: lokasi.zonaNamaKeId(newZoneName) || newZoneName },
+      siteId: lokasi.siteId,
+      zoneName: newZoneName,
+      body: {},
     });
   };
 
-  const handleAddFinding = (item: { file: File; description: string; unitCode?: string }) => {
-    if (!jangkarTemuan) {
-      window.alert('Belum ada inspeksi bulan ini — simpan inspeksi satu unit dahulu.');
-      return;
-    }
-    unggahFoto.mutate(
-      {
-        kind: 'hydrant',
-        inspectionId: jangkarTemuan,
-        file: item.file,
-        caption: item.description,
-        temuan: true,
-      },
-      {
-        onError: () => {},
-      },
-    );
-  };
-
-  const handleDeleteFinding = (id: string) => {
-    if (!jangkarTemuan) return;
-    hapusFoto.mutate({ id, inspectionId: jangkarTemuan });
+  const handleUpdateHydrantUnit = (unitId: string, data: HydrantUpdatePayload) => {
+    ubahUnit.mutate({
+      id: unitId,
+      siteId: lokasi.siteId,
+      zoneName: data.zoneName,
+      body: data.kode ? { kode: data.kode } : {},
+    });
   };
 
   const bukaHalamanCetakHydrant = (
@@ -439,14 +445,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
           )}
         </div>
       }
-      tambahan={
-        <HydrantFindings
-          findings={findings}
-          onTambah={() => setIsAddFindingModalOpen(true)}
-          onHapus={handleDeleteFinding}
-          aksen={AKSEN}
-        />
-      }
+      tambahan={undefined}
       tandaTangan={<HydrantPrintSignatures />}
       modals={
         <>
@@ -459,6 +458,7 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             onAddZone={handleAddZone}
             onAddHydrantUnits={handleAddHydrantUnits}
             onReassignUnitZone={handleReassignUnitZone}
+            onUpdateHydrantUnit={handleUpdateHydrantUnit}
           />
 
           <HydrantInspectionModal
@@ -466,9 +466,11 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             isOpen={Boolean(activeInspectionUnit)}
             inspeksi={inspeksiAktif}
             foto={inspeksiAktif ? buktiAktif : []}
+            temuanFoto={inspeksiAktif ? temuanAktif : []}
             mengunggah={unggahFoto.isPending}
             onUnggahFoto={handleUnggahFoto}
             onHapusFoto={handleHapusFoto}
+            onUbahCaptionFoto={handleUbahCaptionFoto}
             onClose={() => setActiveInspectionUnit(null)}
             onCompleteInspection={handleCompleteInspection}
             onBatalkanTerbit={handleBatalkanTerbit}
@@ -476,13 +478,6 @@ export const HydrantPage: React.FC<HydrantPageProps> = ({
             menghapusBulan={hapusInspeksi.isPending}
             onHapusUnit={handleHapusUnit}
             menghapusUnit={hapusUnit.isPending}
-          />
-
-          <AddFindingModal
-            isOpen={isAddFindingModalOpen}
-            onClose={() => setIsAddFindingModalOpen(false)}
-            onAddFinding={handleAddFinding}
-            existingUnits={units.map((u) => u.kode)}
           />
         </>
       }
