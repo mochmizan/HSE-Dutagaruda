@@ -1325,8 +1325,10 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
   `;
 
   const s = docData.signers;
-  const notesHtml =
-    docData.notes && docData.notes.trim() ? `<div class="catatan-text">${escPrint(docData.notes)}</div>` : '';
+  const rekomendasiHtml =
+    docData.notes && docData.notes.trim()
+      ? `<p class="catatan-label">Tindakan Rekomendasi :</p><div class="catatan-text">${escPrint(docData.notes.trim())}</div>`
+      : '';
   const aparSignTable = renderDynamicSignTable(
     [
       { header: s.dibuatHeader || 'Petugas Pemeriksa :', nama: s.dibuatNama, jabatan: s.dibuatJabatan, marginBottomPx: 52 },
@@ -1337,8 +1339,7 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
   );
   const signHtml = `
     <div class="catatan-sign-section">
-      <p class="catatan-label">Tindakan Rekomendasi :</p>
-      ${notesHtml}
+      ${rekomendasiHtml}
       ${aparSignTable}
     </div>
   `;
@@ -1469,7 +1470,7 @@ export function renderAparMonthlySheets(docData: AparMonthlyPrintPayload): strin
       sheets.push(`
         <div class="print-sheet-portrait">
           ${renderKopHeaderJpm(docData.headerLogos)}
-          ${isFirstTemuan ? '<div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Catatan Temuan Tambahan &amp; Tindakan Rekomendasi</div>' : ''}
+          ${isFirstTemuan ? '<div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Dokumentasi dan Catatan Temuan</div>' : ''}
           <table style="width:100%;border-collapse:collapse;border:none !important;">
             <tbody>${temuanRows.join('')}</tbody>
           </table>
@@ -1807,7 +1808,7 @@ export function renderHydrantMonthlySheets(data: HydrantMonthlyPrintPayload): st
     sheets.push(`
       <div class="print-sheet-portrait">
         ${renderKopHeaderJpm(data.headerLogos)}
-        <div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Catatan Temuan Tambahan &amp; Tindakan Rekomendasi</div>
+        <div class="hyd-mon-section-heading" style="margin-top:6px;">B. &nbsp;Dokumentasi dan Catatan Temuan</div>
         <table style="width:100%;border-collapse:collapse;border:none !important;">
           <tbody>${temuanRows.join('')}</tbody>
         </table>
